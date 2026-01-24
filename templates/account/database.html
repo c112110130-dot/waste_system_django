@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}資料庫管理{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/account/manage.css' %}">
+{% endblock %}
+{% block navbar-start %}
+    <div class="ts-tab" style="">
+        <div class="item tab-item" data-href="{% url 'main' %}">
+            <span class="ts-icon is-huge is-arrow-left-icon"></span>
+        </div>
+        <div class="item is-text">部門廢棄物資料表管理</div>
+    </div>
+{% endblock %}
+{% block headline %}
+    <div class="ts-content is-tertiary" style="background-color: var(--ts-gray-200)">
+        <div class="ts-container has-vertically-spaced" style="--width: 1650px">
+            <div class="ts-header is-big is-heavy">部門廢棄物資料表管理</div>
+            <div class="ts-text is-secondary">管理部門廢棄物資料表的地方。</div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    {% csrf_token %}
+    <div class="ts-container has-vertically-spaced-large" style="--width: 1800px">
+        <div class="ts-grid is-evenly-divided is-divided is-relaxed">
+            <!-- Left: Waste Type -->
+            <div class="column">
+                <!-- Control Panel -->
+                <div class="ts-grid is-start-aligned-aligned">
+                    <div class="column">
+                        <!-- Display when checkbox ISN'T checked -->
+                        <button class="ts-button is-positive is-start-icon btn-add-waste-type">
+                            <span class="ts-icon is-plus-icon"></span>
+                            新增廢棄物種類
+                        </button>
+                        <!-- Display when checkbox IS checked -->
+                        <button class="ts-button is-negative is-start-icon btn-delete-waste-types" style="display: none;">
+                            <span class="ts-icon is-trash-can-icon"></span>
+                            刪除廢棄物種類
+                        </button>
+                    </div>
+                    <div class="column is-6-wide">
+                        <div class="ts-input is-relaxed is-start-icon">
+                            <span class="ts-icon is-magnifying-glass-icon"></span>
+                            <input type="text" placeholder="搜尋廢棄物種類...">
+                        </div>
+                    </div>
+                </div>
+                <!-- Waste Type List -->
+                <div class="ts-box has-shadow has-vertically-spaced-large">
+                    <table class="ts-table is-large is-relaxed is-single-line waste-type-table">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-column">
+                                    <label class="ts-checkbox is-solo is-large">
+                                        <input type="checkbox">
+                                    </label>
+                                </th>
+                                <th>名稱</th>
+                                <th class="unit-column">單位</th>
+                                <th class="action-column">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamic content will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- For empty waste type list -->
+                <div class="ts-box is-hollowed has-top-spaced-large empty-state" style="display: none;">
+                    <div class="ts-blankslate is-large">
+                        <span class="ts-icon is-file-circle-question-icon"></span>
+                        <div class="header">沒有廢棄物種類資料</div>
+                        <div class="description">請按下上方的「新增廢棄物種類」按鈕加入。</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Right: Department -->
+            <div class="column">
+                <!-- Control Panel -->
+                <div class="ts-grid is-start-aligned-aligned">
+                    <div class="column">
+                        <!-- Display when checkbox ISN'T checked -->
+                        <button class="ts-button is-positive is-start-icon btn-add-department">
+                            <span class="ts-icon is-plus-icon"></span>
+                            新增部門
+                        </button>
+                        <!-- Display when checkbox IS checked -->
+                        <button class="ts-button is-negative is-start-icon btn-delete-departments" style="display: none;">
+                            <span class="ts-icon is-trash-can-icon"></span>
+                            刪除部門
+                        </button>
+                    </div>
+                    <div class="column is-6-wide">
+                        <div class="ts-input is-relaxed is-start-icon">
+                            <span class="ts-icon is-magnifying-glass-icon"></span>
+                            <input type="text" placeholder="搜尋部門...">
+                        </div>
+                    </div>
+                </div>
+                <!-- Department Info -->
+                <div class="ts-box has-shadow has-vertically-spaced-large">
+                    <table class="ts-table is-large is-relaxed is-single-line department-table">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-column">
+                                    <label class="ts-checkbox is-solo is-large">
+                                        <input type="checkbox">
+                                    </label>
+                                </th>
+                                <th>名稱</th>
+                                <th class="action-column">編輯</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamic content will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- For empty departments -->
+                <div class="ts-box is-hollowed has-top-spaced-large empty-departments" style="display: none;">
+                    <div class="ts-blankslate is-large">
+                        <span class="ts-icon is-file-circle-question-icon"></span>
+                        <div class="header">沒有部門資料</div>
+                        <div class="description">請按下上方的「新增部門」按鈕加入。</div>
+                    </div>
+                </div>
+                <!-- For not selecting any waste type -->
+                <div class="ts-box is-hollowed has-top-spaced-large select-waste-type-message" style="display: none;">
+                    <div class="ts-blankslate is-large">
+                        <span class="ts-icon is-xmark-icon"></span>
+                        <div class="header">請先選擇要顯示的廢棄物種類資料</div>
+                        <div class="description">這樣這裡才能顯示部門資訊。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{% static 'js/account/database.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物報表生成(實體){% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/management/color-picker.css' %}">
+    <link rel="stylesheet" href="{% static 'css/management/visualize.css' %}">
+{% endblock %}
+{% block content %}
+    <!-- Chart Select -->
+    <div class="ts-container has-top-padded-large" style="--width: 1650px">
+        <div class="ts-grid is-middle-aligned">
+            <!-- Instruction -->
+            <div class="column is-3-wide ts-procedure is-start-aligned has-top-spaced-large has-bottom-spaced">
+                <div class="item"><div class="content"><div class="indicator">1</div><div class="label">新增圖表<div class="description">
+                    新增與決定各個圖表的排列順序：<br>
+                    拖拉<span class="ts-icon is-bars-icon has-spaced-small"></span>可變更順序</div></div></div>
+                </div>
+            </div>
+
+            <!-- Select & Arrange -->
+            <div class="column is-fluid">
+                <div class="ts-box has-shadow has-padded" id="chartSelectList">
+                    <div id="chartList">
+                        <div class="column is-3-wide has-top-spaced" id="addChartBtnContainer">
+                            <button class="ts-button is-positive is-outlined is-critical is-start-icon has-spaced">
+                                <span class="ts-icon is-plus-icon"></span>
+                                新增圖表
+                            </button>
+                        </div>
+                    </div>
+                    <div class="symbol"><span class="ts-icon is-chart-simple-icon"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export All -->
+        <div class="ts-content is-end-aligned has-top-spaced-small">
+            <button class="ts-button is-primary is-start-icon" id="generateReportBtn">
+                <span class="ts-icon is-file-export-icon"></span>
+                匯出報表
+            </button>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="ts-container" style="--width: 1650px">
+        <div class="ts-divider has-vertically-spaced"></div>
+    </div>
+
+    <!-- Setting Display Area -->
+    <div class="ts-container has-vertically-spaced-large" style="--width: 1650px">
+        <div class="ts-procedure">
+            <div class="item"><div class="content"><div class="indicator">2</div><div class="label">圖表設定<div class="description">決定圖表形式與單位。</div></div></div></div>
+            <div class="item"><div class="content"><div class="indicator">3</div><div class="label">線段選擇<div class="description">選擇資料繪製順序、欄位、資料區間、名稱以及代表顏色：<br>
+                拖拉<span class="ts-icon is-bars-icon has-spaced-small"></span>可變更順序、
+                按下<span class="ts-icon is-clipboard-list-icon has-spaced-small"></span>可複製資料線段設定、
+                按下<span class="ts-icon is-trash-can-icon has-spaced-small"></span>刪除該資料線段。</div></div></div></div>
+            <div class="item"><div class="content"><div class="indicator">4</div><div class="label">詳細設定<div class="description">設定整張圖表的顯示樣式。</div></div></div></div>
+        </div>
+    </div>
+
+    <div class="ts-container" style="--width: 1650px">
+        <div class="ts-grid is-stretched">
+            <!-- Basic Settings Section -->
+            <div class="column is-3-wide">
+                <div class="ts-box has-shadow">
+                    <div class="ts-content">
+                        <div class="ts-control is-stacked">
+                            <!-- Chart Type Selection -->
+                            <div class="label is-bold">圖表類型</div>
+                            <div class="content">
+                                <div class="ts-select is-fluid">
+                                    <select id="chartType">
+                                        <option value="bar">長條圖</option>
+                                        <option value="line">折線圖</option>
+                                        <option value="stacked_bar">堆疊直條圖</option>
+                                        <option value="pie">圓餅圖</option>
+                                        <option value="donut">空心圓餅圖</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Y-Axis Selection -->
+                            <div class="label is-bold">Y軸</div>
+                            <div class="content">
+                                <div class="ts-select is-fluid">
+                                    <select id="yAxis">
+                                        <option value="metric_ton">以重量劃分 - 公噸</option>
+                                        <option value="kilogram">以重量劃分 - 公斤</option>
+                                        <option value="weight_percentage_metric_ton">以重量劃分 - 百分比(公噸)</option>
+                                        <option value="weight_percentage_kilogram">以重量劃分 - 百分比(公斤)</option>
+                                        <option value="new_taiwan_dollar">以金額劃分 - 新台幣</option>
+                                        <option value="cost_percentage_new_taiwan_dollar">以金額劃分 - 百分比(新台幣)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- X-Axis Selection -->
+                            <div class="label is-bold">X軸</div>
+                            <div class="content">
+                                <div class="ts-select is-fluid">
+                                    <select id="xAxis">
+                                        <option value="year_sum">以年份劃分 - 總和</option>
+                                        <option value="year_avg">以年份劃分 - 平均</option>
+                                        <option value="quarter_sum">以季度劃分 - 總和</option>
+                                        <option value="quarter_avg">以季度劃分 - 平均</option>
+                                        <option value="month" selected>以月份劃分</option>
+                                        <option value="only_month">只有月份</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="symbol"><span class="ts-icon is-chart-simple-icon" id="chartTypeIcon"></span></div>
+                </div>
+            </div>
+            <!-- Data Selection Section -->
+            <div class="column is-fluid">
+                <div class="ts-box has-shadow has-top-padded">
+                    <div class="ts-content">
+                        <div class="ts-container" id="dataList"></div>
+                        <button class="ts-button is-positive is-outlined is-critical is-start-icon has-spaced" id="addDataBtn">
+                            <span class="ts-icon is-plus-icon"></span>
+                            新增線段
+                        </button>
+                    </div>
+                    <div class="symbol"><span class="ts-icon is-list-icon"></span></div>
+                </div>
+            </div>
+            <!-- Export Settings Section -->
+            <div class="column is-3-wide">
+                <div class="ts-box has-shadow">
+                    <div class="ts-content">
+                        <div class="ts-control is-stacked">
+                            <!-- Chart Title Input -->
+                            <div class="label is-bold">圖表標題</div>
+                            <div class="content">
+                                <div class="ts-input">
+                                    <input type="text" id="chartTitle" placeholder="自動生成">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ts-divider has-spaced"></div>
+                        <!-- Display Options -->
+                        <label class="ts-switch is-large has-bottom-spaced-small">
+                            <input type="checkbox" id="showValues" /> 顯示圖表數值(Y軸)
+                        </label>
+                        <label class="ts-switch is-large has-bottom-spaced-small">
+                            <input type="checkbox" id="showFullGrid" /> 顯示完整圖表格線
+                        </label>
+                        <label class="ts-switch is-large">
+                            <input type="checkbox" id="includeTable" /> 顯示原始資料表格
+                        </label>
+                        <div class="ts-divider has-spaced"></div>
+                        <!-- Generate Chart Button -->
+                        <button class="ts-button is-primary is-start-icon is-fluid" id="generateChartBtn">
+                            <span class="ts-icon is-wand-magic-sparkles-icon"></span>
+                            生成圖表
+                        </button>
+                    </div>
+                    <div class="symbol"><span class="ts-icon is-gear-icon"></span></div>
+                </div>
+            </div>
+        </div>
+        <!-- Chart Preview Section -->
+        <div class="ts-box has-shadow has-top-spaced-large has-bottom-spaced-huge">
+            <div class="ts-grid is-2-columns is-middle-aligned is-spaced-between has-spaced">
+                <div class="column">
+                    <div class="ts-header is-start-aligned"><span class="ts-text is-bold">圖表預覽</span></div>
+                </div>
+                <div class="column">
+                    <div class="ts-wrap is-end-aligned">
+                        <!-- Light & Dark Settings: Theme switching implementation -->
+                        <div class="ts-selection is-circular" id="switchTheme">
+                            <label class="item">
+                                <input type="radio" name="theme" id="light">
+                                <div class="text">亮色</div>
+                            </label>
+                            <label class="item">
+                                <input type="radio" name="theme" id="dark">
+                                <div class="text">暗色</div>
+                            </label>
+                        </div>
+                        <!-- Export Buttons -->
+                        <button class="ts-button btn-tertiary is-start-icon has-end-spaced-small" id="exportXlsxBtn">
+                            <span class="ts-icon is-file-excel-icon"></span>
+                            匯出成Excel
+                        </button>
+                        <button class="ts-button btn-tertiary is-start-icon has-end-spaced-small" id="exportPngBtn">
+                            <span class="ts-icon is-file-image-icon"></span>
+                            匯出成PNG
+                        </button>
+                        <button class="ts-button btn-tertiary is-start-icon has-end-spaced-small" id="exportPdfBtn">
+                            <span class="ts-icon is-file-pdf-icon"></span>
+                            匯出成PDF
+                        </button>
+                        <button class="ts-button btn-tertiary is-start-icon has-end-spaced-small" id="printChartBtn">
+                            <span class="ts-icon is-print-icon"></span>
+                            列印報表
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <!-- Chart preview display area: Theme-aware background -->
+            <div class="ts-content" id="chartPreviewDisplayArea">
+                <div class="ts-content has-vertically-spaced-large" id="chartPreview"></div>
+                <div class="ts-content has-bottom-spaced-large has-hidden" id="dataTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Preview Modal -->
+    <dialog class="ts-modal" style="--width: 1650px" id="exportPreviewModal">
+        <div class="content">
+            <div class="ts-content">
+                <div class="ts-grid">
+                    <div class="column is-fluid">
+                        <div class="ts-header">報表預覽</div>
+                    </div>
+                    <div class="column">
+                        <button class="ts-close is-large is-secondary close-modal"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <!-- Export preview display area: Theme-aware background -->
+            <div class="ts-content" style="max-height: 47.5em; overflow-y: auto">
+                <!-- Dynamic preview content will be inserted here -->
+            </div>
+            <div class="ts-content is-tertiary">
+                <div class="ts-wrap is-end-aligned">
+                    <!-- Theme Setting: Theme switching implementation -->
+                    <div class="ts-select has-end-spaced-small">
+                        <select id="exportTheme">
+                            <option value="light">亮色</option>
+                            <option value="dark">暗色</option>
+                        </select>
+                    </div>
+
+                    <!-- Export FileType -->
+                    <div class="ts-select has-end-spaced-small">
+                        <select id="exportFileType">
+                            <option value="xlsx">Excel</option>
+                            <option value="png">PNG</option>
+                            <option value="pdf">PDF</option>
+                            <option value="print">直接列印</option>
+                        </select>
+                    </div>
+
+                    <!-- Export Layout Options for Excel -->
+                    <div class="ts-select has-end-spaced-small" id="exportLayoutXlsx">
+                        <select>
+                            <option value="separate">每個表格皆分開</option>
+                            <option value="multiple_sheets">整合成一個檔案並各自存在不同的工作表中</option>
+                            <option value="single_sheet">整合成一個檔案並全部整合在相同的工作表中</option>
+                        </select>
+                    </div>
+
+                    <!-- Export Layout Options for PNG -->
+                    <div class="ts-select has-end-spaced-small" id="exportLayoutPng">
+                        <select>
+                            <option value="separate">每張圖與每個表格皆分開</option>
+                            <option value="chart_with_table">相同圖表的圖與表格整合成一張</option>
+                            <option value="charts_and_tables">圖表整合成一張，表格整合成一張</option>
+                            <option value="all_in_one">全部整合成一張，依照圖表順序不換頁</option>
+                        </select>
+                    </div>
+
+                    <!-- Export Layout Options for PDF/Print -->
+                    <div class="ts-select has-end-spaced-small" id="exportLayoutPdf">
+                        <select>
+                            <option value="page_break">圖表與圖表之間換頁</option>
+                            <option value="no_page_break">圖表與圖表之間不換頁</option>
+                            <option value="charts_tables_separate_break">圖表與表格分開列印/匯出，且表格與表格之間換頁</option>
+                            <option value="charts_tables_separate_no_break">圖表與表格分開列印/匯出，且表格與表格之間不換頁</option>
+                        </select>
+                    </div>
+
+                    <!-- Report Title (PDF/Printing) -->
+                    <div class="ts-input" style="width: 24em" id="reportTitleContainer">
+                        <input type="text" placeholder="報表標題" id="reportTitle">
+                    </div>
+
+                    <!-- Export Button -->
+                    <button class="ts-button is-primary is-start-icon has-end-spaced-small" id="exportReportBtn">
+                        <span class="ts-icon is-file-export-icon"></span>
+                        製作報表
+                    </button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+{% endblock %}
+
+{% block scripts %}
+    <!-- Configuration data passed to JavaScript -->
+    <script>
+        window.visualizeConfig = {
+            fields: {{ fields|safe|default:"{}" }},  // Field data with fallback to empty object
+            tableNames: {{ table_names|safe }}       // Dynamic table
+        };
+    </script>
+
+    <!-- Initialize theme management using VisualizeChartUtils -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme management system
+            if (window.VisualizeChartUtils && typeof window.VisualizeChartUtils.initializeVisualizeTheme === 'function') {
+                window.VisualizeChartUtils.initializeVisualizeTheme();
+            }
+
+            // Export global functions for backward compatibility
+            window.getMainCurrentTheme = () => window.VisualizeChartUtils.getCurrentEffectiveTheme();
+            window.getMainCurrentSwitchTheme = () => window.VisualizeChartUtils.getCurrentSwitchTheme();
+            window.getMainCurrentExportTheme = () => window.VisualizeChartUtils.getCurrentExportTheme();
+            window.getMainSystemTheme = () => window.VisualizeChartUtils.getSystemTheme();
+            window.updatePreviewBackground = () => window.VisualizeChartUtils.updatePreviewBackground();
+            window.updateExportPreviewBackground = () => window.VisualizeChartUtils.updateExportPreviewBackground();
+        });
+    </script>
+    
+    <!-- Load unified chart utilities first -->
+    <script src="{% static 'js/management/visualize-chart-utils.js' %}"></script>
+    
+    <!-- Load external JavaScript files -->
+    <script src="{% static 'js/management/visualize-export.js' %}"></script>
+    <script src="{% static 'js/management/visualize-core.js' %}"></script>
+    <script src="{% static 'js/management/visualize-data.js' %}"></script>
+    <script src="{% static 'js/management/visualize-tabs.js' %}"></script>
+    <script src="{% static 'js/management/visualize-export-report.js' %}"></script>
+{% endblock %}

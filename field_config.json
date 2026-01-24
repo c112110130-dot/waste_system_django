@@ -1,0 +1,112 @@
+{
+  "general_waste_production": {
+    "fields": {
+      "tainan": {
+        "name": "南區一般事業廢棄物產量",
+        "unit": "metric_ton",
+        "visible": true,
+        "order": 1,
+        "editable": true
+      },
+      "renwu": {
+        "name": "仁武一般事業廢棄物產量",
+        "unit": "metric_ton",
+        "visible": true,
+        "order": 2,
+        "editable": true
+      },
+      "field_1": {
+        "name": "岡山焚化廠",
+        "unit": "metric_ton",
+        "visible": true,
+        "order": 3,
+        "editable": true
+      },
+      "field_2": {
+        "name": "路竹掩埋場",
+        "unit": "metric_ton",
+        "visible": true,
+        "order": 4,
+        "editable": true
+      },
+      "field_3": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 5,
+        "editable": true
+      },
+      "field_4": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 6,
+        "editable": true
+      },
+      "field_5": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 7,
+        "editable": true
+      },
+      "field_6": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 8,
+        "editable": true
+      },
+      "field_7": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 9,
+        "editable": true
+      },
+      "field_8": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 10,
+        "editable": true
+      },
+      "field_9": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 11,
+        "editable": true
+      },
+      "field_10": {
+        "name": "",
+        "unit": "metric_ton",
+        "visible": false,
+        "order": 12,
+        "editable": true
+      },
+      "total": {
+        "name": "一般事業廢棄物總產量",
+        "unit": "metric_ton",
+        "visible": true,
+        "order": 100,
+        "editable": false,
+        "auto_calculated": true
+      }
+    },
+    "auto_sum_fields": [
+      "tainan",
+      "renwu",
+      "field_1",
+      "field_2",
+      "field_3",
+      "field_4",
+      "field_5",
+      "field_6",
+      "field_7",
+      "field_8",
+      "field_9",
+      "field_10"
+    ]
+  }
+}

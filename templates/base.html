@@ -1,0 +1,322 @@
+{% load static %}
+{% load custom_filters %}
+{% is_theme "dark" as is_dark_mode %}
+{% is_theme "light" as is_light_mode %}
+{% is_theme "system" as is_system_theme %}
+<!DOCTYPE html>
+<html lang="zh-Hant-TW" class="{% theme_class %}" id="html-root">
+    <head>
+        <!-- Metadata -->
+        <meta charset="UTF-8">
+        <link rel="icon" type="image/png" sizes="128x128" href="{% block icon %}{% static 'icon/trash-128.png' %}{% endblock %}">
+        <title>{% block title %}{% endblock %}</title>
+        <!-- CRITICAL: Theme initialization BEFORE any CSS loads -->
+        <script>
+            // Unified theme management system
+            window.themeManager = (function() {
+                const htmlRoot = document.documentElement;
+
+                function getSystemTheme() {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                function applyThemeClass(theme) {
+                    htmlRoot.classList.remove('is-light', 'is-dark');
+
+                    const actualTheme = (theme === 'system') ? getSystemTheme() : theme;
+                    htmlRoot.classList.add(actualTheme === 'dark' ? 'is-dark' : 'is-light');
+
+                    return actualTheme;
+                }
+
+                function updateUsernameSpan(actualTheme) {
+                    const usernameSpan = document.getElementById('username-span');
+                    if (!usernameSpan) return;
+
+                    usernameSpan.classList.remove('is-mark', 'color-{{ permission_hi }}-inverted', 'color-{{ permission_hi }}');
+
+                    if (actualTheme === 'light') {
+                        usernameSpan.classList.add('is-mark', 'color-{{ permission_hi }}-inverted');
+                    } else {
+                        usernameSpan.classList.add('color-{{ permission_hi }}');
+                    }
+                }
+
+                function applyTheme(theme) {
+                    const actualTheme = applyThemeClass(theme);
+                    updateUsernameSpan(actualTheme);
+                    return actualTheme;
+                }
+
+                // Get initial theme
+                let initialTheme;
+                {% if user.is_authenticated %}
+                    initialTheme = '{% current_theme %}';
+                {% else %}
+                    initialTheme = localStorage.getItem('theme') || 'system';
+                {% endif %}
+
+                // Apply immediately (before CSS loads)
+                const initialActualTheme = applyThemeClass(initialTheme);
+
+                // Export public API
+                return {
+                    getSystemTheme: getSystemTheme,
+                    applyTheme: applyTheme,
+                    updateUsernameSpan: updateUsernameSpan,
+                    initialTheme: initialTheme,
+                    initialActualTheme: initialActualTheme
+                };
+            })();
+        </script>
+        <!-- Core: Tocas UI -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas/5.0.1/tocas.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas/5.0.1/tocas.min.js"></script>
+        <!-- Fonts: Noto Sans TC -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+        <!-- Enable: Responsive -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <!-- Library: jQuery -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <!-- Chart: Apexchart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <!-- Searchable Dropdown: Select2 -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <!-- Draggable List: SortableJS -->
+        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+        <!-- Color Palette: Coloris -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
+        <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
+        <!-- XLSX export: SheetJS -->
+        <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+        <!-- PNG export: html2canvas -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <!-- PDF export & Printing: pdfmake -->
+        <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.18/build/pdfmake.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.18/build/vfs_fonts.js"></script>
+        <!-- File Zipping: JSZip -->
+        <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+        <!-- Default Styles-->
+        <link rel="stylesheet" href="{% static 'css/color-palette.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/styles-button.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/animation.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/common-utils.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/fontface.css' %}" media="print" onload="this.media='all'">
+        <link rel="stylesheet" href="{% static 'css/select2-custom-theme.css' %}" />
+        <!-- Common JavaScript Modules -->
+        <script src="{% static 'js/common/app-config.js' %}"></script>
+        <script src="{% static 'js/common/dom-utils.js' %}"></script>
+        <script src="{% static 'js/common/common-utils.js' %}"></script>
+        <script src="{% static 'js/common/modal-utils.js' %}"></script>
+        <script src="{% static 'js/common/loading-utils.js' %}"></script>
+        <script src="{% static 'js/common/api-utils.js' %}"></script>
+        <script src="{% static 'js/common/security-utils.js' %}"></script>
+        <script src="{% static 'js/common/csv-validator.js' %}"></script>
+        <script src="{% static 'js/common/date-validator.js' %}"></script>
+        <script src="{% static 'js/common/loading-manager.js' %}"></script>
+        <script src="{% static 'js/common/cache-manager.js' %}"></script>
+        <script src="{% static 'js/common/statistics-refresher.js' %}"></script>
+        <script src="{% static 'js/common/global-modal-manager.js' %}"></script>
+        <!-- Addon Styles -->
+        {% block stylesheet %}{% endblock %}
+        <!-- Special schemes -->
+{#        <style>#}
+{#            /* Set full-page watermark background */#}
+{#            .is-baka {#}
+{#                background-image: url('/static/svg/number-circle-nine-bold-svgrepo-com.svg');#}
+{#                background-repeat: repeat;#}
+{#                background-size: 200px 200px;#}
+{#                background-position: center;#}
+{#            }#}
+{#            .is-sus {#}
+{#                background-image: url('/static/svg/among-us-svgrepo-com.svg');#}
+{#                background-repeat: repeat;#}
+{#                background-size: 200px 200px;#}
+{#                background-position: center;#}
+{#            }#}
+{#        </style>#}
+        <!-- Theme Management: DOMContentLoaded handlers -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Update username span now that DOM is ready
+                themeManager.updateUsernameSpan(themeManager.initialActualTheme);
+
+                // Setup system theme change listener if needed
+                if (themeManager.initialTheme === 'system') {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                        themeManager.applyTheme('system');
+                    });
+                }
+            });
+        </script>
+    </head>
+    <body class="
+{#        {% if user.username == "amogus" %}is-sus#}
+{#        {% elif user.username == "funkycirno" %}is-baka#}
+{#        {% endif %}#}
+        background-quaternary
+    " data-theme="{% current_theme %}">
+        <!-- Navigation Bar -->
+        <div class="ts-app-topbar background-secondary is-large is-bold">
+            <!-- Start: Navigation -->
+            <div class="start">
+                {% block navbar-start %}
+                    <div class="ts-tab pretty-scroll" style="max-width: 70vw; overflow-x: auto; flex-wrap: nowrap; white-space: nowrap;">
+                        <a class="item tab-item {% if request.path == '/main/' or request.path == '/' %}is-active{% endif %}" href="{% url 'main' %}">
+                            <span class="ts-icon is-house-icon"></span>
+                            <span class="ts-text is-bold">主頁面</span>
+                        </a>
+                        {% if user_is_over_imp %}
+                            <a class="item tab-item {% if request.path == '/transportation/' %}is-active{% endif %}" href="{% url 'transportation:transportation_index' %}">
+                                <span class="ts-icon is-table-list-icon"></span>
+                                <span class="ts-text is-bold">聯單管理</span>
+                            </a>
+                        {% endif %}
+                        {% if user_is_over_reg %}
+                            <a class="item tab-item {% if request.path == '/management/database/' %}is-active{% endif %}" href="{% url 'management:database_index' %}">
+                                <span class="ts-icon is-table-icon"></span>
+                                <span class="ts-text is-bold">廢棄物管理(院內)</span>
+                            </a>
+                            <a class="item tab-item {% if request.path == '/management/department/' %}is-active{% endif %}" href="{% url 'management:db_department_index' %}">
+                                <span class="ts-icon is-hospital-icon"></span>
+                                <span class="ts-text is-bold">廢棄物管理(部門)</span>
+                            </a>
+                        {% endif %}
+                        <a class="item tab-item {% if request.path == '/management/visualize/' %}is-active{% endif %}" href="{% url 'management:visualize_index' %}">
+                            <span class="ts-icon is-wand-magic-sparkles-icon"></span>
+                            <span class="ts-text is-bold">廢棄物報表管理(院內)</span>
+                        </a>
+                        <a class="item tab-item {% if request.path == '/management/visualize_dept/' %}is-active{% endif %}" href="{% url 'management:visualize_department_index' %}">
+                            <span class="ts-icon is-wand-magic-sparkles-icon"></span>
+                            <span class="ts-text is-bold">廢棄物報表管理(部門)</span>
+                        </a>
+                        <a class="item tab-item {% if request.path == '/prediction/' %}is-active{% endif %}" href="{% url 'prediction:prediction_index' %}">
+                            <span class="ts-icon is-chart-line-icon"></span>
+                            <span class="ts-text is-bold">廢棄物預測</span>
+                        </a>
+                        <a class="item tab-item {% if '/dashboard/settlement/' in request.path %}is-active{% endif %}" href="/dashboard/settlement/">
+                            <span class="ts-icon is-calculator-icon"></span>
+                            <span class="ts-text is-bold">廢棄物結算 (我的)</span>
+                        </a>
+                    </div>
+                {% endblock %}
+            </div>
+            <!-- End space: Submenu -->
+            <div class="end">
+                {% block navbar-end %}
+                    {% if user.is_authenticated %}
+                        <!-- Username Tag-->
+                        <span class="ts-text is-large has-end-spaced">
+                            Hello,&nbsp;<span
+                                id="username-span"
+                                class="ts-text is-large monospace-medium has-vertically-padded-small
+                                {% if not is_system_theme %}
+                                    {% if is_light_mode %}is-mark color-{{ permission_hi }}-inverted{% elif is_dark_mode %}color-{{ permission_hi }}{% endif %}
+                                {% endif %}"
+                            >{{ user.username }}</span> !
+                        </span>
+                        <button class="item" data-dropdown="dropdown">
+                            <span class="ts-icon is-ellipsis-vertical-icon"></span>
+                        </button>
+                        <div class="ts-dropdown is-start-icon is-relaxed" id="dropdown" data-position="bottom-end" style="--min-width: 15rem" >
+                            <!-- Simple user information-->
+                            <div style="padding-left: 1em; padding-top: 0.2em; padding-bottom: 0.2em"> <!-- bruh -->
+                                <!-- Identity: User Permission -->
+                                <span class="ts-text is-small is-start-aligned monospace color-{{ permission_hi }}
+                                {% if not is_system_theme %}
+                                    {% if is_light_mode %}is-mark color-{{ permission_hi }}-inverted{% elif is_dark_mode %}color-{{ permission_hi }}{% endif %}
+                                {% endif %}
+                                ">
+                                    {{ permission_hi|permission_name }}
+                                </span>
+                                <br>
+                                <!-- Full Name -->
+                                <span class="ts-text is-big is-bold is-start-aligned">
+                                    {{ user.get_full_name }}
+                                </span>
+                                <br>
+                                <!-- Username -->
+                                <span class="ts-text monospace is-start-aligned is-disabled">
+                                    {{ user.username }}
+                                </span>
+                            </div>
+                            <div class="divider"></div>
+                            <!-- Account Management Page: Settings -->
+                            <button class="item" data-href="{% url 'account:index_setting' %}">
+                                <span class="ts-icon is-user-icon"></span>
+                                個人帳號設定
+                            </button>
+                            <!-- Database Management Page: For root & mod. -->
+                            {% if user_is_over_mod %}
+                                <button class="item" data-href="{% url 'account:database' %}">
+                                    <span class="ts-icon is-file-lines-icon"></span>
+                                    部門廢棄物資料表管理
+                                </button>
+                            {% endif %}
+                            <!-- Account Management Page: For root & mod. -->
+                            {% if user_is_over_mod %}
+                                <button class="item" data-href="{% url 'account:manage' %}">
+                                    <span class="ts-icon is-users-gear-icon"></span>
+                                    系統帳號管理
+                                </button>
+                            {% endif %}
+                            <!-- Only superuser/staff can access Django Administration page. -->
+                            {% if user.is_staff %}
+                                <button class="item" data-href="{% url 'admin:index' %}">
+                                    <span class="ts-icon is-python-icon"></span>
+                                    Django Administration
+                                </button>
+                            {% endif %}
+                            <!-- Functions -->
+                            <button class="item" data-href="{% url 'account:logout' %}">
+                                <span class="ts-icon is-arrow-right-from-bracket-icon"></span>
+                                登出
+                            </button>
+                        </div>
+                    {% else %}
+                        <span class="ts-text is-large has-end-spaced-large">
+                            您正在以訪客身份使用中，按下右邊的按鈕登入帳號&emsp;<span class="ts-icon is-arrow-right-icon"></span>
+                        </span>
+                        <button class="ts-button is-start-icon is-primary" data-href="{% url 'account:login' %}">
+                            <span class="ts-icon is-arrow-right-to-bracket-icon"></span>
+                            登入
+                        </button>
+                    {% endif %}
+                {% endblock %}
+            </div>
+        </div>
+
+        <!-- Headline -->
+
+        {% block headline %}{% endblock %}
+
+        <!-- App Content -->
+
+        <div style="padding-top: 2em">
+            {% block content %}{% endblock %}
+        </div>
+
+        <!-- Bottom Description -->
+
+        {% block description %}{% endblock %}
+
+        <!-- Navigation Button Handler -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle data-href buttons
+                document.addEventListener('click', function(event) {
+                    const target = event.target.closest('[data-href]');
+                    if (target && target.dataset.href) {
+                        window.location.href = target.dataset.href;
+                    }
+                });
+            });
+        </script>
+
+        <!-- External Scripts -->
+        {% block scripts %}{% endblock %}
+    </body>
+</html>

@@ -1,0 +1,24 @@
+.has-short-label {
+    --label-width: 4em !important;
+}
+
+.has-no-data {
+    color: var(--ts-gray-400);
+}
+
+.month-select:hover {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px #00000040;
+}
+
+/* Conflict table styling */
+.ts-table tr.is-conflicted {
+    background-color: #E74C3C1A;
+    border-left: 3px solid #E74C3C;
+}
+
+.ts-table tr.is-conflicted td {
+    border-color: #E74C3C33;
+}

@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters_pred %}
+{% load humanize %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物預測{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/management/database.css' %}">
+    <link rel="stylesheet" href="{% static 'css/prediction/override-database.css' %}">
+    <link rel="stylesheet" href="{% static 'css/prediction/prediction.css' %}">
+    <link rel="stylesheet" href="{% static 'css/prediction/scatter-charts.css' %}">
+{% endblock %}
+
+{% block headline %}
+    <div class="ts-container has-top-spaced-big" style="--width: 1800px">
+        <div class="ts-tab is-large is-pilled">
+            {% if user_is_over_reg %}
+            <a class="item is-active" data-tab="databaseContainer">資料輸入</a>
+            <a class="item" data-tab="resultContainer">產量預測</a>
+            {% else %}
+            <a class="item is-active" data-tab="resultContainer">產量預測</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="ts-container" style="--width: 1800px">
+        <!-- Database Container - Only show to registrars or higher -->
+        {% if user_is_over_reg %}
+        <div id="databaseContainer" data-tab-content="databaseContainer">
+            <form method="POST" action="{% url 'WastePrediction:prediction_index' %}" id="dataForm">
+                {% csrf_token %}
+                <div class="ts-box has-shadow has-padded" id="optionArea">
+                    <!-- Filter and action buttons -->
+                    <div class="ts-wrap">
+                        <div id="buttonContainer">
+                            <button type="button" class="ts-button is-negative is-start-icon action-btn" id="deleteSelectedBtn" style="display: none;">
+                                <span class="ts-icon is-trash-can-icon"></span>
+                                刪除勾選資料
+                            </button>
+                            <button type="button" class="ts-button is-positive is-start-icon" id="addRowBtn">
+                                <span class="ts-icon is-plus-icon"></span>
+                                新增資料列
+                            </button>
+                        </div>
+                        <button type="button" class="ts-button action-btn is-start-icon is-filter" data-dropdown="filterDropdown">
+                            <span class="ts-icon is-filter-icon"></span>
+                            篩選
+                        </button>
+                        {% if user_is_importer or user_is_over_reg %}
+                        <button type="button" class="ts-button is-primary action-btn is-start-icon" id="importDataBtn">
+                            <span class="ts-icon is-file-import-icon"></span>
+                            匯入檔案
+                        </button>
+                        {% endif %}
+                        <div class="ts-dropdown has-padded" id="filterDropdown">
+                            <div id="filterMenu">
+                                <div class="ts-grid is-middle-aligned has-top-spaced-small">
+                                    <div class="column is-fluid">
+                                        <span class="ts-text is-bold is-start-aligned">日期區間: </span>
+                                    </div>
+                                    <div class="column is-5-wide">
+                                        <div class="ts-input is-solid">
+                                            <input type="month" id="startDate" value="">
+                                        </div>
+                                    </div>
+                                    <div class="column is-1-wide">
+                                        <span class="ts-text">至</span>
+                                    </div>
+                                    <div class="column is-5-wide">
+                                        <div class="ts-input is-solid">
+                                            <input type="month" id="endDate" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="has-top-spaced-small">
+                                    <span class="ts-text is-bold">欄位篩選: </span>
+                                    {% for field, info in field_info.items %}
+                                        <div class="ts-grid is-middle-aligned has-top-spaced-small">
+                                            <div class="column is-fluid">
+                                                <label>{{ info.name }}:</label>
+                                            </div>
+                                            <div class="column is-5-wide">
+                                                <div class="ts-input is-solid">
+                                                    <input type="number" id="min_{{ field }}" step="any" placeholder="最小值">
+                                                </div>
+                                            </div>
+                                            <div class="column is-1-wide">
+                                                <span class="ts-text">至</span>
+                                            </div>
+                                            <div class="column is-5-wide">
+                                                <div class="ts-input is-solid">
+                                                    <input type="number" id="max_{{ field }}" step="any" placeholder="最大值">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="ts-wrap has-top-spaced">
+                                    <label class="ts-radio">
+                                        <input type="radio" name="filterMode" value="all" checked>
+                                        所有條件皆滿足
+                                    </label>
+                                    <label class="ts-radio">
+                                        <input type="radio" name="filterMode" value="any">
+                                        其中一個滿足即可
+                                    </label>
+                                </div>
+                                <button type="button" class="ts-button is-negative is-start-icon has-top-spaced" id="clearFilterBtn">
+                                    <span class="ts-icon is-filter-circle-xmark-icon"></span>
+                                    清空條件
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table and No Data Display -->
+                <div id="tableContainer" class="ts-box has-shadow has-vertically-spaced-large" {% if not data %}style="display: none;"{% endif %}>
+                    <div class="ts-box">
+                        <table class="ts-table is-celled" id="dataTable">
+                            <thead>
+                            <tr id="tableHeader">
+                                <th class="checkbox-column">
+                                    <label class="ts-checkbox is-solo is-large">
+                                        <input type="checkbox" id="selectAll">
+                                    </label>
+                                </th>
+                                <th class="date-column sortable" data-field="date" data-sort="asc">
+                                    <span class="ts-icon is-sort-up-icon is-end-spaced"></span>
+                                    日期
+                                </th>
+                                {% for field, info in field_info.items %}
+                                    <th class="data-column sortable" data-field="{{ field }}" data-sort="">
+                                        <span class="ts-icon is-sort-icon is-end-spaced"></span>
+                                        {{ info.name }}
+                                        {% if info.unit == 'percent' %} (%)
+                                        {% elif info.unit == 'person_count' %} (人數)
+                                        {% elif info.unit == 'person_times' %} (人次)
+                                        {% elif info.unit == 'kilogram' %} (公斤)
+                                        {% endif %}
+                                    </th>
+                                {% endfor %}
+                                <th class="action-column">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                            {% for row in data %}
+                                <tr data-date="{{ row.date }}">
+                                    <td class="checkbox-cell">
+                                        <label class="ts-checkbox is-solo is-large">
+                                            <input type="checkbox" class="delete-checkbox" value="{{ row.date }}">
+                                        </label>
+                                    </td>
+                                    <td class="date-cell{% if not row.date %} is-empty{% endif %}">{{ row.date|default:'' }}</td>
+                                    {% for field in fields %}
+                                        {% with value=row|get_item:field %}
+                                            <td class="data-cell{% if value == None or value == '' %} is-empty{% endif %}" data-field="{{ field }}">
+                                                {% if value != None and value != '' %}
+                                                    {% if field_info|get_item:field|get_item:'unit' == 'percent' %}
+                                                        {{ value|floatformat:2 }}
+                                                    {% elif field_info|get_item:field|get_item:'unit' == 'person_count' or field_info|get_item:field|get_item:'unit' == 'person_times' %}
+                                                        {{ value }}
+                                                    {% else %}
+                                                        {{ value|floatformat:-1 }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    {{ value|default:'' }}
+                                                {% endif %}
+                                            </td>
+                                        {% endwith %}
+                                    {% endfor %}
+                                    <td class="action-cell">
+                                        <button type="button" class="ts-button is-warning is-start-icon edit-btn">
+                                            <span class="ts-icon is-pencil-icon"></span>
+                                            編輯
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="noDataContainer" class="ts-content" {% if data %}style="display: none;"{% endif %}>
+                    <div class="ts-box is-warning has-shadow is-start-indicated">
+                        <div class="ts-blankslate is-large">
+                            <span class="ts-icon is-file-circle-question-icon"></span>
+                            <div class="header">資料表內沒有資料</div>
+                            <div class="description">請按下上方的「新增資料列」按鈕登錄資料，或是按下「匯入資料」上傳CSV資料表檔案至資料庫中。</div>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Result Container - Available to all users -->
+        <div class="ts-container has-bottom-spaced-large" style="--width: 1800px;" id="resultContainer" {% if user_is_over_reg %}data-tab-content="resultContainer"{% endif %}>
+            <!-- Select Date Range -->
+            <div class="ts-box has-shadow has-padded" id="dataRangeArea">
+                <div class="ts-grid has-start-spaced is-middle-aligned">
+                    <span class="column ts-text is-2-wide is-end-aligned">資料訓練集區間</span>
+                    <div class="column is-4-wide">
+                        <div class="ts-input">
+                            <input type="month" id="dataRangeStart">
+                        </div>
+                    </div>
+                    <span class="column ts-text">至</span>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-start-labeled">
+                            <span class="label" style="width: 5em; padding: 0">本月</span>
+                            <input type="month" id="dataRangeEnd">
+                        </div>
+                    </div>
+                    <button class="column ts-button is-primary is-start-icon" id="generateReportBtn">
+                        <span class="ts-icon is-terminal-icon"></span>
+                        開始計算
+                    </button>
+                </div>
+            </div>
+            <div class="ts-divider has-spaced-large" width="1800px"></div>
+            <!-- Display Result, controlled by result.js -->
+            <div class="ts-box has-shadow monospace" id="resultArea"></div>
+            <!-- Scatter Plot Area -->
+            <div class="ts-divider has-spaced-large" width="1800px"></div>
+            <div class="ts-box has-shadow" id="scatterPlotArea">
+                <table class="ts-table is-definition is-celled">
+                    <thead>
+                        <tr>
+                            <th class="is-center-aligned monospace">Y/X</th>
+                            {% for var in variables %}
+                            <th class="is-center-aligned {% if var == '本月廢棄物總量' %}background-tertiary{% elif var == '次月廢棄物總量' %}background-secondary{% endif %}">{{ var }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row_var in variables %}
+                            <tr>
+                                <td class="is-center-aligned is-middle-aligned {% if row_var == '本月廢棄物總量' %}background-tertiary{% elif row_var == '次月廢棄物總量' %}background-secondary{% endif %}" style="width: 3em">{{ row_var }}</td>
+                                {% for col_var in variables %}
+                                <td class="is-center-aligned is-middle-aligned monospace {% if row_var == '本月廢棄物總量' or col_var == '本月廢棄物總量' %}background-tertiary{% elif row_var == '次月廢棄物總量' or col_var == '次月廢棄物總量' %}background-secondary{% endif %}">
+                                    <div class="scatter-cell"
+                                         data-row="{{ row_var }}"
+                                         data-col="{{ col_var }}"
+                                         data-points='{{ correlations|get_item:row_var|get_item:col_var|get_item:'points'|json_dumps }}'
+                                         data-r2="{{ correlations|get_item:row_var|get_item:col_var|get_item:'r2' }}"
+                                         data-slope="{{ correlations|get_item:row_var|get_item:col_var|get_item:'slope' }}"
+                                         data-intercept="{{ correlations|get_item:row_var|get_item:col_var|get_item:'intercept' }}">
+                                    </div>
+                                    <span class="ts-text is-large">R<sup>2</sup> = {{ correlations|get_item:row_var|get_item:col_var|get_item:'r2'|floatformat:4 }}</span>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Import File Modal - Only available to users with proper permissions -->
+        {% if user_is_over_reg %}
+        <dialog class="ts-modal is-big" id="importModal" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">匯入檔案</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" id="importCloseBtn"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-control is-stacked has-bottom-spaced-large">
+                        <div class="label">
+                            <span class="ts-text">在這裡上傳你的CSV檔</span>
+                        </div>
+                        <div class="content">
+                            <div class="ts-file is-solid">
+                                <input type="file" id="importFileInput" />
+                            </div>
+                        </div>
+                    </div>
+                    <details class="ts-accordion" name="requirements">
+                        <summary>檔案上傳格式說明</summary>
+                        <div class="ts-list is-unordered">
+                            <blockquote>
+                                <div class="item">CSV檔案必須包含標題列，且行與行需用半形逗號 <span class="ts-text is-code monospace">,</span> 分隔</div>
+                                <div class="item">日期欄位必須命名為「日期」，格式為 YYYY-MM (例如: 2025-04)</div>
+                                <div class="item">欄位名稱必須與目前選擇的資料表內使用的欄位名稱一致，但不需加上單位</div>
+                                <div class="item is-bold is-negative">數值欄位，除了百分比與重量單位以外，僅接受0以及正整數，同時不要加入任何分位符號</div>
+                                <div class="item is-bold is-negative">除了「本月廢棄物總量」可以留空外，其他欄位都必須有值</div>
+                            </blockquote>
+                        </div>
+                    </details>
+                    <div class="ts-divider is-section"></div>
+                    <details class="ts-accordion" name="example">
+                        <summary>檔案上傳內容範例</summary>
+                        <div class="ts-content is-tertiary has-horizontally-spaced-large">
+                            <span class="ts-text monospace" id="importExample">
+                            </span>
+                        </div>
+                    </details>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-end-aligned">
+                    <button class="ts-button is-primary" id="uploadBtn">上傳</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Loading Modal -->
+        <dialog class="ts-modal is-big" id="loadingModal" data-dismissible="false" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">上傳中</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" id="loadingCloseBtn"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-progress is-processing">
+                        <div class="bar" style="--value: 0">
+                            <div class="text" id="progressText">0% (0/0)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Conflict Modal -->
+        <dialog class="ts-modal is-big" id="overrideModal" data-dismissible="false" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="column is-fluid">
+                        <div class="ts-header" id="overrideHeader"></div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-control is-stacked">
+                        <div class="label"><div class="ts-text is-bold">資料庫內存的資料：</div></div>
+                        <div class="content">
+                            <div class="ts-box">
+                                <table class="ts-table is-celled" id="existingDataTable" style="table-layout: fixed;"></table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ts-control is-stacked has-vertically-spaced">
+                        <div class="label"><div class="ts-text is-bold">你上傳的資料：</div></div>
+                        <div class="content">
+                            <div class="ts-box">
+                                <table class="ts-table is-celled" id="newDataTable" style="table-layout: fixed;"></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-content is-tertiary is-middle-aligned is-end-aligned">
+                    <label class="ts-checkbox has-end-spaced">
+                        <input type="checkbox" id="applyToAll" style="border-color: gray !important;"/>
+                        套用到所有資料
+                    </label>
+                    <button class="ts-button is-warning" id="overrideBtn">覆寫資料內容</button>
+                    <button class="ts-button btn-tertiary" id="skipBtn">略過這筆資料</button>
+                    <button class="ts-button is-negative is-critical" id="cancelBtn">終止上傳內容</button>
+                </div>
+            </div>
+        </dialog>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.databaseConfig = {
+            selectedTable: "{{ selected_table|escapejs }}",
+            fields: {{ fields|safe }},
+            fieldInfo: {{ field_info|safe }},
+            saveUrl: "{% url 'WastePrediction:save_data' %}",
+            deleteUrl: "{% url 'WastePrediction:delete_data' %}"
+        };
+        window.tableNames = {{ table_names|safe }};
+    </script>
+    {% if user_is_over_reg %}
+    <script type="module" src="{% static 'js/prediction/database.js' %}"></script>
+    <script type="module" src="{% static 'js/prediction/import.js' %}"></script>
+    {% endif %}
+    <script src="{% static 'js/prediction/scatter-charts.js' %}"></script>
+    <script src="{% static 'js/prediction/result.js' %}"></script>
+{% endblock %}

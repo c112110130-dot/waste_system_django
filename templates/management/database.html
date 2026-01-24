@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters_get_item %}
+{% load humanize %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物管理(實體){% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/management/database.css' %}">
+{% endblock %}
+{% block content %}
+    <div class="ts-container" style="--width: 1650px">
+        <form method="POST" action="{% url 'WasteManagement:database_index' %}" id="dataForm">
+            {% csrf_token %}
+            <input type="hidden" name="table" value="{{ selected_table }}">
+            <!-- ADDED: id="optionArea" for sticky positioning -->
+            <div class="ts-box has-shadow has-padded" id="optionArea">
+                <div class="ts-grid is-relaxed">
+                    <div class="column is-3-wide">
+                        <div class="ts-select" style="width: 20em">
+                            <select name="table" id="tableSelect" data-action="form-submit">
+                                <option value="general_waste_production" {% if selected_table == "general_waste_production" %}selected{% endif %}>一般事業廢棄物產出表</option>
+                                <option value="biomedical_waste_production" {% if selected_table == "biomedical_waste_production" %}selected{% endif %}>生物醫療廢棄物產出表</option>
+                                <option value="dialysis_bucket_soft_bag_production_and_disposal_costs" {% if selected_table == "dialysis_bucket_soft_bag_production_and_disposal_costs" %}selected{% endif %}>洗腎桶軟袋產出及處理費用表</option>
+                                <option value="pharmaceutical_glass_production_and_disposal_costs" {% if selected_table == "pharmaceutical_glass_production_and_disposal_costs" %}selected{% endif %}>藥用玻璃產出及處理費用表</option>
+                                <option value="paper_iron_aluminum_can_plastic_and_glass_production_and_recycling_revenue" {% if selected_table == "paper_iron_aluminum_can_plastic_and_glass_production_and_recycling_revenue" %}selected{% endif %}>紙鐵鋁罐塑膠玻璃產出及回收收入表</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column has-start-spaced">
+                        <button type="button" class="ts-button is-primary action-btn is-start-icon" id="importDataBtn">
+                            <span class="ts-icon is-file-import-icon"></span>
+                            匯入檔案
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter and action buttons -->
+                <div class="ts-wrap has-top-spaced-large">
+                    <div id="buttonContainer">
+                        <button type="button" class="ts-button is-negative is-start-icon action-btn" id="deleteSelectedBtn" style="display: none;">
+                            <span class="ts-icon is-trash-can-icon"></span>
+                            刪除勾選資料
+                        </button>
+                        <button type="button" class="ts-button is-positive is-start-icon" id="addRowBtn">
+                            <span class="ts-icon is-plus-icon"></span>
+                            新增資料列
+                        </button>
+                    </div>
+                    <button type="button" class="ts-button action-btn is-start-icon is-filter" data-dropdown="filterDropdown">
+                        <span class="ts-icon is-filter-icon"></span>
+                        篩選
+                    </button>
+                    <div class="ts-dropdown has-padded" id="filterDropdown">
+                        <div id="filterMenu">
+                            <div class="ts-grid is-middle-aligned has-top-spaced-small">
+                                <div class="column is-fluid">
+                                    <span class="ts-text is-bold is-start-aligned">日期區間: </span>
+                                </div>
+                                <div class="column is-5-wide">
+                                    <div class="ts-input is-solid">
+                                        <input type="month" id="startDate" value="{{ start_date }}">
+                                    </div>
+                                </div>
+                                <div class="column is-1-wide">
+                                    <span class="ts-text">至</span>
+                                </div>
+                                <div class="column is-5-wide">
+                                    <div class="ts-input is-solid">
+                                        <input type="month" id="endDate" value="{{ end_date }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="has-top-spaced-small">
+                                <span class="ts-text is-bold">廢棄物篩選: </span>
+                                {% for field, info in field_info.items %}
+                                    <div class="ts-grid is-middle-aligned has-top-spaced-small">
+                                        <div class="column is-fluid">
+                                            <label>{{ info.name }}:</label>
+                                        </div>
+                                        <div class="column is-5-wide">
+                                            <div class="ts-input is-solid">
+                                                <input type="number" step='any' id="min_{{ field }}" placeholder="最小值">
+                                            </div>
+                                        </div>
+                                        <div class="column is-1-wide">
+                                            <span class="ts-text">至</span>
+                                        </div>
+                                        <div class="column is-5-wide">
+                                            <div class="ts-input is-solid">
+                                                <input type="number" step='any' id="max_{{ field }}" placeholder="最大值">
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="ts-wrap has-top-spaced">
+                                <label class="ts-radio">
+                                    <input type="radio" name="filterMode" value="all" checked>
+                                    所有條件皆滿足
+                                </label>
+                                <label class="ts-radio">
+                                    <input type="radio" name="filterMode" value="any">
+                                    其中一個滿足即可
+                                </label>
+                            </div>
+                            <button type="button" class="ts-button is-negative is-start-icon has-top-spaced" id="clearFilterBtn">
+                                <span class="ts-icon is-filter-circle-xmark-icon"></span>
+                                清空條件
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table and No Data Display -->
+            <div id="tableContainer" class="ts-box has-shadow has-vertically-spaced-large" {% if not data %}style="display: none;"{% endif %}>
+                <div class="ts-box">
+                    <table class="ts-table is-celled" id="dataTable">
+                        <thead>
+                        <tr id="tableHeader">
+                            <th class="checkbox-column">
+                                <label class="ts-checkbox is-solo is-large">
+                                    <input type="checkbox" id="selectAll">
+                                </label>
+                            </th>
+                            <th class="date-column sortable" data-field="date" data-sort="asc">
+                                <span class="ts-icon is-sort-up-icon is-end-spaced"></span>
+                                日期
+                            </th>
+                            {% for field, info in field_info.items %}
+                                <th class="data-column sortable" data-field="{{ field }}" data-sort="">
+                                    <span class="ts-icon is-sort-icon is-end-spaced"></span>
+                                    {{ info.name }}
+                                    {% if info.unit == 'metric_ton' %}(公噸)
+                                    {% elif info.unit == 'kilogram' %}(公斤)
+                                    {% elif info.unit == 'new_taiwan_dollar' %}(新台幣)
+                                    {% endif %}
+                                </th>
+                            {% endfor %}
+                            <th class="action-column">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        {% for row in data %}
+                            <tr data-date="{{ row.date }}">
+                                <td class="checkbox-cell">
+                                    <label class="ts-checkbox is-solo is-large">
+                                        <input type="checkbox" class="delete-checkbox" value="{{ row.date }}">
+                                    </label>
+                                </td>
+                                <td class="date-cell{% if not row.date %} is-empty{% endif %}">{{ row.date|default:'' }}</td>
+                                {% for field in fields %}
+                                    {% with value=row|get_item:field %}
+                                        <td class="data-cell{% if value == None or value == '' %} is-empty{% endif %}" data-field="{{ field }}">
+                                            {% if value != None and value != '' %}
+                                                {% if field_info|get_item:field|get_item:'unit' == 'new_taiwan_dollar' %}
+                                                    {{ value|intcomma }}
+                                                {% else %}
+                                                    {{ value|floatformat:-2 }}
+                                                {% endif %}
+                                            {% else %}
+                                                {{ value|default:'' }}
+                                            {% endif %}
+                                        </td>
+                                    {% endwith %}
+                                {% endfor %}
+                                <td class="action-cell">
+                                    <button type="button" class="ts-button is-warning is-start-icon edit-btn">
+                                        <span class="ts-icon is-pencil-icon"></span>
+                                        編輯
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="noDataContainer" class="ts-content" {% if data %}style="display: none;"{% endif %}>
+                <div class="ts-box is-warning has-shadow is-start-indicated">
+                    <div class="ts-blankslate is-large">
+                        <span class="ts-icon is-file-circle-question-icon"></span>
+                        <div class="header">資料表內沒有資料</div>
+                        <div class="description">請按下上方的「新增資料列」按鈕登錄資料，或是按下「匯入資料」上傳CSV資料表檔案至資料庫中。</div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+        <!-- Import File Modal -->
+        <dialog class="ts-modal is-big" id="importModal" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">匯入檔案</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" id="importCloseBtn"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-control is-stacked has-bottom-spaced-large">
+                        <div class="label">
+                            <span class="ts-text">在這裡上傳你的CSV檔</span>
+                        </div>
+                        <div class="content">
+                            <div class="ts-file is-solid">
+                                <input type="file" id="importFileInput" />
+                            </div>
+                        </div>
+                    </div>
+                    <details class="ts-accordion" name="requirements">
+                        <summary>檔案上傳格式說明</summary>
+                        <div class="ts-list is-unordered">
+                            <blockquote>
+                                <div class="item">CSV檔案必須包含標題列，且行與行需用半形逗號 <span class="ts-text is-code monospace">,</span> 分隔</div>
+                                <div class="item">日期欄位必須命名為「日期」，格式為 YYYY-MM (例如: 2025-04)</div>
+                                <div class="item">欄位名稱必須與目前選擇的資料表內使用的欄位名稱一致，但不需加上單位</div>
+                                <div class="item">數值欄位請使用數字(重量單位可包含小數)，不要加入任何分位符號，如果是空值則不需輸入</div>
+                            </blockquote>
+                        </div>
+                    </details>
+                    <div class="ts-divider is-section"></div>
+                    <details class="ts-accordion" name="example">
+                        <summary>檔案上傳內容範例</summary>
+                        <div class="ts-content is-tertiary has-horizontally-spaced-large">
+                            <span class="ts-text monospace" id="importExample"></span>
+                        </div>
+                    </details>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-end-aligned">
+                    <button class="ts-button is-primary" id="uploadBtn">上傳</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Loading Modal -->
+        <dialog class="ts-modal is-big" id="loadingModal" data-dismissible="false" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">上傳中</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" id="loadingCloseBtn"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-progress is-processing">
+                        <div class="bar" style="--value: 0">
+                            <div class="text" id="progressText">0% (0/0)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Conflict Modal -->
+        <dialog class="ts-modal is-big" id="overrideModal" data-dismissible="false" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="column is-fluid">
+                        <div class="ts-header" id="overrideHeader"></div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-control is-stacked">
+                        <div class="label"><div class="ts-text is-bold">資料庫內存的資料：</div></div>
+                        <div class="content">
+                            <div class="ts-box">
+                                <table class="ts-table is-celled" id="existingDataTable" style="table-layout: fixed;"></table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ts-control is-stacked has-vertically-spaced">
+                        <div class="label"><div class="ts-text is-bold">你上傳的資料：</div></div>
+                        <div class="content">
+                            <div class="ts-box">
+                                <table class="ts-table is-celled" id="newDataTable" style="table-layout: fixed;"></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-content is-tertiary is-middle-aligned is-end-aligned">
+                    <label class="ts-checkbox has-end-spaced">
+                        <input type="checkbox" id="applyToAll" style="border-color: gray !important;"/>
+                        套用到所有資料
+                    </label>
+                    <button class="ts-button is-warning" id="overrideBtn">覆寫資料內容</button>
+                    <button class="ts-button btn-tertiary" id="skipBtn">略過這筆資料</button>
+                    <button class="ts-button is-negative is-critical" id="cancelBtn">終止上傳內容</button>
+                </div>
+            </div>
+        </dialog>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.databaseConfig = {
+            selectedTable: "{{ selected_table|escapejs }}",
+            fields: {{ fields_json|safe }},
+            fieldInfo: {{ field_info_json|safe }},
+            saveUrl: "{% url 'WasteManagement:save_data' %}",
+            deleteUrl: "{% url 'WasteManagement:delete_data' %}"
+        };
+        window.tableNames = {
+            "general_waste_production": "一般事業廢棄物產出表",
+            "biomedical_waste_production": "生物醫療廢棄物產出表",
+            "dialysis_bucket_soft_bag_production_and_disposal_costs": "洗腎桶軟袋產出及處理費用表",
+            "pharmaceutical_glass_production_and_disposal_costs": "藥用玻璃產出及處理費用表",
+            "paper_iron_aluminum_can_plastic_and_glass_production_and_recycling_revenue": "紙鐵鋁罐塑膠玻璃產出及回收收入表"
+        };
+    </script>
+    <script src="{% static 'js/management/config.js' %}"></script>
+    <script src="{% static 'js/management/database.js' %}"></script>
+    <script src="{% static 'js/management/import.js' %}"></script>
+{% endblock %}

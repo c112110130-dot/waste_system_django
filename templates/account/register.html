@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}新增帳號{% endblock %}
+{% block navbar-start %}
+    <div class="ts-tab" style="">
+        <div class="item tab-item" data-action="back">
+            <span class="ts-icon is-huge is-arrow-left-icon"></span>
+        </div>
+        <div class="item is-text">新增帳號</div>
+    </div>
+{% endblock %}
+{% block headline %}
+    <div class="ts-content is-tertiary is-vertically-padded" style="background-color: var(--ts-gray-200)">
+        <div class="ts-container has-vertically-spaced" style="--width: 1650px">
+            <div class="ts-header is-big is-heavy">新增帳號</div>
+            <div class="ts-text is-secondary">在這裡新增帳號。</div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="ts-container has-vertically-padded-big" style="--width: 1650px">
+        <form id="data-register" action="/account/register/" method="POST">
+            {% csrf_token %}
+            <!-- Personal Information -->
+            <div class="ts-grid is-relaxed is-4-columns has-bottom-padded-big">
+                <div class="column">
+                    <div class="ts-text is-label is-required">使用者帳號</div>
+                    <div class="ts-input is-underlined has-top-spaced input-required monospace">
+                        <input type="text" name="username" required>
+                    </div>
+                    <div class="ts-text is-description has-top-spaced-small">
+                        <span class="ts-text color-negative">必填項目</span>，最多150字元，<br>
+                        僅限英數字與符號「@」、「.」、「+」、「-」和「_」。
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="ts-text is-label">E-mail</div>
+                    <div class="ts-input is-underlined has-top-spaced">
+                        <input type="email" name="email">
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="ts-text is-label">姓 (First Name)</div>
+                    <div class="ts-input is-underlined has-top-spaced">
+                        <input type="text" name="first_name">
+                    </div>
+                    <div class="ts-text is-description has-top-spaced-small">
+                        顯示第一順位，所以也有可能是名。
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="ts-text is-label">名 (Last Name)</div>
+                    <div class="ts-input is-underlined has-top-spaced">
+                        <input type="text" name="last_name">
+                    </div>
+                    <div class="ts-text is-description has-top-spaced-small">
+                        顯示第二順位，所以也有可能是姓。
+                    </div>
+                </div>
+            </div>
+            <!-- Password & Permission -->
+            <div class="ts-grid is-relaxed is-2-columns has-bottom-padded-big">
+                <div class="column">
+                    <div class="ts-text is-label is-required">密碼</div>
+                    <div class="ts-input is-underlined has-top-spaced input-required monospace">
+                        <input type="password" name="password" required>
+                    </div>
+                    <div class="ts-text is-description has-top-spaced-small">
+                        <span class="ts-text color-negative">必填項目</span><br>
+                        <div class="ts-list is-unordered">
+                            <div class="item"><b style="color: orangered">至少</b>需要8個字元</div>
+                            <div class="item"><b>建議不要</b>與帳號名稱高度相似</div>
+                            <div class="item"><b>建議至少</b>需要一個非數字字元</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="ts-text is-label is-required">權限等級</div>
+                    <div class="ts-select is-fluid is-underlined has-top-spaced input-required">
+                        <select name="permission">
+                            {% for permission in permission_options %}
+                                <option value="{{ permission }}">{{ permission|permission_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="ts-text is-description has-top-spaced-small">
+                        <span class="ts-text color-negative">必填項目</span><br>
+                    </div>
+                </div>
+            </div>
+            <!-- Submit -->
+            <button id="send" class="ts-button is-positive is-fluid" type="submit">確定註冊</button>
+        </form>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{% static 'js/account/register.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,264 @@
+/*
+    Font Family: Sarasa Mono 1.0.30 (https://github.com/be5invis/Sarasa-Gothic)
+    Regional Preferences:
+        TC - Traditional Chinese - MoE, Taiwan (ROC)
+        CL - Classical Orthography - Before 20th century?
+        J - Japanese Kanji - JIS X 0208 standard
+    Font Weight:
+        100 - Thin
+        200 - Extra Light
+        300 - Light
+        400 - Normal
+        500 - Medium
+        600 - Semi Bold
+        700 - Bold
+        800 - Extra Bold
+        900 - Black
+*/
+
+/* TC - Normal */
+
+@font-face {
+    font-family: "Sarasa Mono TC ExtraLight";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-ExtraLight.woff2") format("woff2");
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC Light";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Light.woff2") format("woff2");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC Regular";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC SemiBold";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC Bold";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* TC - Italic */
+
+@font-face {
+    font-family: "Sarasa Mono TC ExtraLight";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-ExtraLightItalic.woff2") format("woff2");
+    font-weight: 200;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC Light";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-LightItalic.woff2") format("woff2");
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC Regular";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC SemiBold";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-SemiBoldItalic.woff2") format("woff2");
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC Bold";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-BoldItalic.woff2") format("woff2");
+    font-weight: 700;
+    font-style: italic;
+}
+
+/* CL - Normal */
+
+@font-face {
+    font-family: "Sarasa Mono CL ExtraLight";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-ExtraLight.woff2") format("woff2");
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL Light";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-Light.woff2") format("woff2");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL Regular";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL SemiBold";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL Bold";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* CL - Italic */
+
+@font-face {
+    font-family: "Sarasa Mono CL ExtraLight";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-ExtraLightItalic.woff2") format("woff2");
+    font-weight: 200;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL Light";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-LightItalic.woff2") format("woff2");
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL Regular";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-Italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL SemiBold";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-SemiBoldItalic.woff2") format("woff2");
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono CL Bold";
+    src: url("/static/fonts/SarasaMonoCL-WOFF2-1.0.30/SarasaMonoCL-BoldItalic.woff2") format("woff2");
+    font-weight: 700;
+    font-style: italic;
+}
+
+/* J - Normal */
+
+@font-face {
+    font-family: "Sarasa Mono J ExtraLight";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-ExtraLight.woff2") format("woff2");
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J Light";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-Light.woff2") format("woff2");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J Regular";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J SemiBold";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J Bold";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* J - Italic */
+
+@font-face {
+    font-family: "Sarasa Mono J ExtraLight";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-ExtraLightItalic.woff2") format("woff2");
+    font-weight: 200;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J Light";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-LightItalic.woff2") format("woff2");
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J Regular";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-Italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J SemiBold";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-SemiBoldItalic.woff2") format("woff2");
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Sarasa Mono J Bold";
+    src: url("/static/fonts/SarasaMonoJ-WOFF2-1.0.30/SarasaMonoJ-BoldItalic.woff2") format("woff2");
+    font-weight: 700;
+    font-style: italic;
+}
+
+/* Set Font Family */
+
+.monospace {
+    font-family: "Sarasa Mono TC Regular", "Sarasa Mono CL Regular", "Sarasa Mono J Regular", monospace;
+}
+
+.monospace-medium {
+    font-family: "Sarasa Mono TC SemiBold", "Sarasa Mono CL SemiBold", "Sarasa Mono J SemiBold", monospace;
+}
+
+b .monospace {
+    font-family: 'Sarasa Mono TC', 'Sarasa Mono CL', 'Sarasa Mono J', monospace;
+    font-weight: bold;
+}
+
+.monospace .ts-statistic .value {
+    font-family: 'Sarasa Mono TC', 'Sarasa Mono CL', 'Sarasa Mono J', monospace;
+    font-weight: bold;
+}
+
+.ts-header .monospace {
+    font-family: 'Sarasa Mono TC', 'Sarasa Mono CL', 'Sarasa Mono J', monospace;
+    font-weight: bold;
+}

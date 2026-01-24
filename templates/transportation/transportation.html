@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters_get_item %}
+{% load humanize %}
+{% block title %}醫療廢棄物暨資源管理系統 - 聯單管理{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/transportation/transportation.css' %}">
+    <link rel="stylesheet" href="{% static 'css/management/database.css' %}">
+{% endblock %}
+{% block content %}
+    <!-- Select Category -->
+    <div class="ts-container" style="--width: 1750px">
+        <div class="ts-grid is-3-columns">
+            <div class="column">
+                <div class="ts-box has-shadow category-box overall-category current-display" id="overallCategory">
+                    <div class="ts-content">
+                        <div class="ts-statistic monospace-medium">
+                            <div class="value" id="totalCount">{{ total_count }}</div>
+                        </div>
+                        總聯單數
+                    </div>
+                    <div class="symbol">
+                        <span class="ts-icon is-table-list-icon"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="ts-box has-shadow category-box disposal-category" id="disposalCategory">
+                    <div class="ts-content">
+                        <div class="ts-statistic monospace-medium">
+                            <div class="value" id="disposalCount">{{ disposal_count }}</div>
+                        </div>
+                        清除單
+                    </div>
+                    <div class="symbol">
+                        <span class="ts-icon is-fire-icon"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="ts-box has-shadow category-box reuse-category" id="reuseCategory">
+                    <div class="ts-content">
+                        <div class="ts-statistic monospace-medium">
+                            <div class="value" id="reuseCount">{{ reuse_count }}</div>
+                        </div>
+                        再利用單
+                    </div>
+                    <div class="symbol">
+                        <span class="ts-icon is-recycle-icon"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ts-container has-vertically-spaced" style="--width: 1750px">
+        <div class="ts-divider"></div>
+    </div>
+    <!-- Control Area -->
+    <div class="ts-container" style="--width: 1750px">
+        <div class="ts-grid is-stretched is-relaxed">
+            <div class="column is-4-wide">
+                <div class="ts-grid is-2-columns is-middle-aligned">
+                    <div class="column">
+                        <div class="ts-wrap is-vertical">
+                            <!-- Display when checkbox ISN'T checked -->
+                            <button class="ts-button is-start-icon is-primary" id="importBtn">
+                                <span class="ts-icon is-file-import-icon"></span>
+                                匯入聯單
+                            </button>
+                            <!-- Display when checkbox IS checked -->
+                            <button class="ts-button is-start-icon is-negative has-hidden" id="deleteBtn">
+                                <span class="ts-icon is-trash-can-icon"></span>
+                                刪除聯單
+                            </button>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="ts-wrap is-vertical">
+                            <button type="button" class="ts-button is-start-icon is-filter" data-dropdown="filterDropdown">
+                                <span class="ts-icon is-filter-icon"></span>
+                                新增篩選內容
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="column is-fluid">
+                <!-- Display current filter setting -->
+                <div class="ts-box is-fluid has-shadow has-applied-condition-display-padding" id="currentFilters">
+                    <div class="ts-content is-start-aligned is-fitted">
+                        <div id="filterChips" class="filter-chips-container">
+                            <!-- Filter chips will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="symbol"><span class="ts-icon is-magnifying-glass-icon"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Filter Dropdown Contents -->
+    <div class="ts-dropdown has-shadow" id="filterDropdown">
+        <div class="ts-content is-dense">
+            <!-- Select category and content -->
+            <div class="ts-control has-short-label">
+                <div class="label">類別</div>
+                <div class="content is-fluid">
+                    <div class="ts-wrap">
+                        <div class="ts-select is-solid is-fluid">
+                            <select id="filterCategory">
+                                <option value="manifest_overview">聯單總覽</option>
+                                <option value="declaration_info">申報資訊</option>
+                                <option value="waste_info">廢棄物資訊</option>
+                                <option value="substance_info">物質資訊</option>
+                                <option value="transportation_info">清運資訊</option>
+                                <option value="treatment_info">處理資訊</option>
+                                <option value="recovery_info">回收資訊</option>
+                            </select>
+                        </div>
+                        <div class="ts-select is-solid is-fluid">
+                            <select id="filterSubCategory">
+                                <!-- Options will be populated by JavaScript based on category selection -->
+                                <option value="">請先選擇類別</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Data input -->
+            <div class="ts-control has-short-label has-top-spaced">
+                <div class="label">查詢條件</div>
+                <!-- For string searching - will be converted to Select2 -->
+                <select class="ts-select has-hidden" id="stringFilter">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+                <!-- For datetime range searching -->
+                <div class="content is-fluid has-hidden" id="datetimeFilter">
+                    <div class="ts-grid is-middle-aligned">
+                        <div class="column is-7-wide">
+                            <div class="ts-input is-solid">
+                                <input type="datetime-local" id="startDatetime">
+                            </div>
+                        </div>
+                        <div class="column is-fluid">
+                            <div class="ts-content is-dense is-middle-aligned"><span class="ts-text">至</span></div>
+                        </div>
+                        <div class="column is-7-wide">
+                            <div class="ts-input is-solid">
+                                <input type="datetime-local" id="endDatetime">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- For value range searching -->
+                <div class="content is-fluid has-hidden" id="valueFilter">
+                    <div class="ts-grid is-middle-aligned">
+                        <div class="column is-7-wide">
+                            <div class="ts-input is-solid">
+                                <input type="number" id="minValue" placeholder="最小值">
+                            </div>
+                        </div>
+                        <div class="column is-fluid">
+                            <div class="ts-content is-dense is-middle-aligned"><span class="ts-text">至</span></div>
+                        </div>
+                        <div class="column is-7-wide">
+                            <div class="ts-input is-solid">
+                                <input type="number" id="maxValue" placeholder="最大值">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ts-divider has-vertically-spaced"></div>
+            <div class="ts-wrap is-end-aligned">
+                <button type="button" class="ts-button is-negative is-start-icon" id="clearFiltersBtn">
+                    <span class="ts-icon is-filter-circle-xmark-icon"></span>
+                    清空所有條件
+                </button>
+                <button type="button" class="ts-button is-positive is-start-icon" id="addFilterBtn">
+                    <span class="ts-icon is-circle-plus-icon"></span>
+                    新增篩選條件
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Display Area: Stretch the height till the bottom of the screen, but need to leave gap at the bottom -->
+    <div class="ts-container" style="--width: 1750px;">
+        <div class="ts-grid is-stretched is-relaxed">
+            <!-- Left: Select information with fixed scrolling -->
+            <div class="column is-4-wide">
+                <div class="ts-box has-shadow has-padded manifest-selection-container">
+                    <!-- Select All -->
+                    <label class="ts-checkbox is-large">
+                        <input type="checkbox" id="selectAllManifests">
+                        全部勾選
+                    </label>
+                    <div class="ts-divider has-vertically-spaced"></div>
+                    <!-- Fixed height scrolling area -->
+                    <div id="selectManifest" class="manifest-scroll-container has-vertically-padded-small">
+                        <!-- Content will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <!-- Right: Display information -->
+            <div class="column is-fluid">
+                <div class="ts-box has-shadow" style="height: 100%;">
+                    <!-- data-tab is provided by Tocas UI, no need to write code manually. -->
+                    <div class="ts-tab is-fluid is-tall">
+                        <button class="item is-active" data-tab="tabOverview">
+                            聯單總覽
+                        </button>
+                        <button class="item" data-tab="tabDeclarationInfo">
+                            申報資訊
+                        </button>
+                        <!-- Disposal Only -->
+                        <button class="item" data-tab="tabWasteInfo" style="display: none;">
+                            廢棄物資訊
+                        </button>
+                        <!-- Reuse Only -->
+                        <button class="item" data-tab="tabSubstanceInfo" style="display: none;">
+                            物質資訊
+                        </button>
+                        <button class="item" data-tab="tabTransportationInfo">
+                            清運資訊
+                        </button>
+                        <!-- Disposal Only -->
+                        <button class="item" data-tab="tabTreatmentInfo" style="display: none;">
+                            處理資訊
+                        </button>
+                        <!-- Reuse Only -->
+                        <button class="item" data-tab="tabRecycleInfo" style="display: none;">
+                            回收資訊
+                        </button>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="ts-content" id="tabOverview"></div>
+                    <div class="ts-content" id="tabDeclarationInfo"></div>
+                    <div class="ts-content" id="tabWasteInfo"></div>
+                    <div class="ts-content" id="tabSubstanceInfo"></div>
+                    <div class="ts-content" id="tabTransportationInfo"></div>
+                    <div class="ts-content" id="tabTreatmentInfo"></div>
+                    <div class="ts-content" id="tabRecycleInfo"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <dialog class="ts-modal is-big" id="importModal" hidden>
+        <div class="content">
+            <div class="ts-content">
+                <div class="ts-grid">
+                    <div class="column is-fluid">
+                        <div class="ts-header">匯入檔案</div>
+                    </div>
+                    <div class="column">
+                        <button class="ts-close is-large is-secondary" id="importCloseBtn"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content">
+                <div class="ts-grid is-2-columns">
+                    <div class="column">
+                        <div class="ts-control is-stacked has-bottom-spaced-large">
+                            <div class="label">
+                                <span class="ts-text">選擇聯單類型</span>
+                            </div>
+                            <div class="content">
+                                <div class="ts-select is-solid is-fluid">
+                                    <select id="manifestTypeSelect">
+                                        <option value="disposal">清除單</option>
+                                        <option value="reuse">再利用單</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="ts-control is-stacked has-bottom-spaced-large">
+                            <div class="label">
+                                <span class="ts-text">上傳CSV檔</span>
+                            </div>
+                            <div class="content">
+                                <div class="ts-file is-solid">
+                                    <input type="file" id="manifestFileInput" accept=".csv" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <details class="ts-accordion" name="requirements">
+                    <summary>檔案上傳格式說明</summary>
+                    <div class="ts-list is-unordered">
+                        <blockquote>
+                            <div class="item">直接將環保署廢棄物管理平台的原始聯單直接上傳即可，不需進行任何更動。</div>
+                            <div class="item">系統自動支援UTF-8及Big5編碼。</div>
+                            <div class="item">請確認檔案包含必要欄位：聯單編號、事業機構代碼、申報重量等。</div>
+                        </blockquote>
+                    </div>
+                </details>
+                <div class="ts-divider is-section"></div>
+                <details class="ts-accordion" name="example">
+                    <summary>檔案上傳內容範例</summary>
+                    <div class="ts-content is-tertiary has-horizontally-spaced-large">
+                        <span class="ts-text monospace" id="importExample">
+                            <!-- Content dynamically generated by JavaScript -->
+                        </span>
+                    </div>
+                </details>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content is-tertiary is-end-aligned">
+                <button class="ts-button is-primary" id="uploadManifestBtn">上傳</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Loading Modal -->
+    <dialog class="ts-modal is-big" id="loadingModal" data-dismissible="false" hidden>
+        <div class="content">
+            <div class="ts-content">
+                <div class="ts-grid">
+                    <div class="column is-fluid">
+                        <div class="ts-header">上傳中</div>
+                    </div>
+                    <div class="column">
+                        <button class="ts-close is-large is-secondary" id="loadingCloseBtn"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content">
+                <div class="ts-progress is-processing">
+                    <div class="bar" style="--value: 0">
+                        <div class="text" id="progressText">0% (0/0)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Override Modal -->
+    <dialog class="ts-modal" data-dismissible="false" style="--width: 1100px" id="overrideModal" hidden>
+        <div class="content">
+            <div class="ts-content">
+                <div class="column is-fluid">
+                    <div class="ts-header" id="overrideHeader">「???」已存在於資料庫中</div>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content">
+                <div class="ts-control is-stacked">
+                    <div class="label"><div class="ts-text is-bold">你上傳的資料與資料庫內的原先資料產生衝突，衝突的資料欄如下所示：</div></div>
+                    <div class="ts-content" style="max-height: 40em; overflow-y: auto">
+                        <div class="ts-box">
+                            <table class="ts-table is-celled" id="conflictTable">
+                                <thead>
+                                    <tr>
+                                        <td style="width: 10em">資料欄名稱</td>
+                                        <td style="">資料庫內資料</td>
+                                        <td style="">你上傳的資料</td>
+                                    </tr>
+                                </thead>
+                                <tbody id="conflictTableBody">
+                                    <!-- Conflict data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ts-content is-tertiary is-middle-aligned is-end-aligned">
+                <label class="ts-checkbox has-end-spaced">
+                    <input type="checkbox" id="applyToAllConflicts" style="border-color: gray !important;"/>
+                    套用到所有資料
+                </label>
+                <button class="ts-button is-warning" id="overrideDataBtn">覆寫資料內容</button>
+                <button class="ts-button btn-tertiary" id="skipDataBtn">略過這筆資料</button>
+                <button class="ts-button is-negative is-critical" id="cancelUploadBtn">終止上傳內容</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- CSRF Token for AJAX requests -->
+    {% csrf_token %}
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        // Global configuration for transportation module
+        window.transportationConfig = {};
+    </script>
+    <script src="{% static 'js/transportation/transportation-ui.js' %}"></script>
+    <script src="{% static 'js/transportation/transportation-import.js' %}"></script>
+    <script src="{% static 'js/transportation/transportation.js' %}"></script>
+{% endblock %}

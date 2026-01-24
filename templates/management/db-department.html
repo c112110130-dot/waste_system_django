@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物管理(部門){% endblock %}
+
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/management/db-department.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="ts-container" style="--width: 1800px">
+        <!-- Global Action -->
+        <div class="ts-box has-shadow has-padded">
+            <!-- Add & Import data -->
+            <div class="ts-wrap">
+                <div class="ts-select">
+                    <select id="wasteTypeSelect">
+                        <!-- Options will be populated dynamically by JavaScript -->
+                    </select>
+                </div>
+                <!-- Reserved for future use, DO NOT REMOVE! -->
+                <!-- <button type="button" class="ts-button is-positive is-start-icon" id="addRowBtn" data-dialog="addDataModal">
+                    <span class="ts-icon is-plus-icon"></span>
+                    新增資料
+                </button> -->
+                <button type="button" class="ts-button is-primary action-btn is-start-icon" id="importDataBtn" data-dialog="importModal">
+                    <span class="ts-icon is-file-import-icon"></span>
+                    匯入檔案
+                </button>
+                <button type="button" class="ts-button is-negative action-btn is-start-icon" id="deleteDataBtn" data-dialog="deleteModal">
+                    <span class="ts-icon is-trash-can-icon"></span>
+                    刪除多組資料
+                </button>
+            </div>
+            <!-- Date Selection -->
+            <div class="ts-divider has-vertically-spaced"></div>
+            <div class="ts-grid is-middle-aligned monospace-medium">
+                <div class="column is-3-wide">
+                    <!-- Year navigation: angles for ±10 years, chevron for ±1 year -->
+                    <div class="ts-wrap is-middle-aligned">
+                        <button class="ts-button btn-tertiary is-icon is-small" id="yearMinus10">
+                            <span class="ts-icon is-angles-left-icon"></span>
+                        </button>
+                        <button class="ts-button btn-tertiary is-icon is-small" id="yearMinus1">
+                            <span class="ts-icon is-chevron-left-icon"></span>
+                        </button>
+                        <div class="ts-statistic">
+                            <div class="value" id="currentYear">2025</div>
+                            <div class="unit">年</div>
+                        </div>
+                        <button class="ts-button btn-tertiary is-icon is-small" id="yearPlus1">
+                            <span class="ts-icon is-chevron-right-icon"></span>
+                        </button>
+                        <button class="ts-button btn-tertiary is-icon is-small" id="yearPlus10">
+                            <span class="ts-icon is-angles-right-icon"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="column is-fluid">
+                    <div class="ts-grid is-evenly-divided">
+                        <!-- Generate month selector from January(1月) to December(12月) -->
+                        <!-- Month cards: add "background-tertiary" for selected, "has-no-data is-hollowed" for empty -->
+                        {% for month in "123456789abc" %}
+                            <div class="column">
+                                <div class="ts-box is-fluid is-raised month-select is-middle-aligned" data-month="{{ forloop.counter }}">
+                                    <div class="ts-grid is-fluid is-3-wide is-center-aligned is-middle-aligned">
+                                        <div class="column">
+                                            <div class="ts-text is-massive">{{ forloop.counter }}</div>
+                                        </div>
+                                        <div class="column">
+                                            <div class="ts-text">月</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="has-spaced-large"></div>
+        <div class="ts-divider has-spaced-large"></div>
+
+        <!-- Data Sort & Search -->
+        <div class="ts-grid is-dense">
+            <div class="column is-3-wide">
+                <div class="ts-wrap">
+                    <button class="ts-button is-filter is-start-icon" id="sortAscBtn">
+                        <span class="ts-icon is-arrow-up-wide-short-icon"></span>
+                        升序
+                    </button>
+                    <button class="ts-button is-filter is-start-icon" id="sortDescBtn">
+                        <span class="ts-icon is-arrow-down-wide-short-icon"></span>
+                        降序
+                    </button>
+                    <button class="ts-button is-filter is-start-icon" data-dropdown="filterDropdown">
+                        <span class="ts-icon is-filter-icon"></span>
+                        篩選
+                    </button>
+                    <!-- Filter Dropdown -->
+                    <div class="ts-dropdown has-padded" id="filterDropdown">
+                        <div id="filterMenu">
+                            <div class="ts-grid is-middle-aligned has-top-spaced-small">
+                                <div class="column is-fluid">
+                                    <span class="ts-text is-bold is-start-aligned">顯示範圍: </span>
+                                </div>
+                                <div class="column is-6-wide">
+                                    <div class="ts-input is-solid">
+                                        <input type="number" step='any' placeholder="最小值" id="minRange">
+                                    </div>
+                                </div>
+                                <div class="column is-1-wide">
+                                    <span class="ts-text">至</span>
+                                </div>
+                                <div class="column is-6-wide">
+                                    <div class="ts-input is-solid">
+                                        <input type="number" step='any' placeholder="最大值" id="maxRange">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ts-divider has-vertically-spaced"></div>
+                            <div class="ts-wrap is-end-aligned">
+                                <button type="button" class="ts-button is-negative is-start-icon" id="clearFiltersBtn">
+                                    <span class="ts-icon is-filter-circle-xmark-icon"></span>
+                                    清空條件
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="column is-2-wide">
+                <label class="ts-switch is-large">
+                    <input type="checkbox" checked id="showEmptyDataToggle">
+                    顯示無資料部門
+                </label>
+            </div>
+            <div class="column is-5-wide">
+                <div class="ts-input is-relaxed is-start-icon">
+                    <span class="ts-icon is-magnifying-glass-icon"></span>
+                    <input type="text" placeholder="搜尋部門..." id="searchInput">
+                </div>
+            </div>
+            <div class="column is-fluid">
+                <div class="ts-wrap">
+                    <button class="ts-button is-primary is-start-icon" data-dropdown="exportCurrentDateDropdown">
+                        <span class="ts-icon is-file-export-icon"></span>
+                        匯出資料
+                    </button>
+                </div>
+                <!-- Export Current Date Dropdown -->
+                <div class="ts-dropdown has-padded" id="exportCurrentDateDropdown">
+                    <div id="exportCurrentDate">
+                        <!-- Range / Content -->
+                         <div class="ts-control has-short-label">
+                            <div class="label">匯出內容</div>
+                            <div class="content is-fluid">
+                                <div class="ts-select is-solid is-fluid">
+                                    <select class="export-type-select">
+                                        <option value="前10筆">前10筆</option>
+                                        <option value="全部資料">全部資料</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="has-spaced-small"></div>
+                        <!-- File format -->
+                        <div class="ts-control has-short-label">
+                            <div class="label">檔案格式</div>
+                            <div class="content is-fluid">
+                                <div class="ts-select is-solid is-fluid">
+                                    <select class="export-format-select">
+                                        <option value="Excel">Excel</option>
+                                        <option value="PDF">PDF</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ts-divider has-vertically-spaced"></div>
+                        <div class="ts-wrap is-end-aligned">
+                            <button type="button" class="ts-button is-primary is-start-icon" id="exportBtn">
+                                <span class="ts-icon is-file-export-icon"></span>
+                                匯出
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="has-spaced-large"></div>
+
+        <!-- Data Display: 6 columns in a row -->
+        <div class="ts-grid is-6-columns" id="departmentGrid">
+            <!-- Department cards will be dynamically generated here -->
+        </div>
+        <div class="has-spaced-big"></div>
+
+        <!-- Add Data Modal -->
+        <dialog class="ts-modal is-big" id="addDataModal" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header" id="addModalTitle">新增單筆資料</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" data-dialog="addDataModal"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-wrap is-vertical has-padded" style="max-height: 40em; overflow-y: auto">
+                    <div class="ts-control is-wide" style="--label-width: 7.5em">
+                        <div class="label" id="addModalDeptName">部門名稱</div>
+                        <div class="content">
+                            <div class="ts-input">
+                                <input type="number" step="any" placeholder="公噸" id="addAmountInput">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-end-aligned">
+                    <button class="ts-button is-positive" id="confirmAddBtn">新增</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Edit Data Modal -->
+        <dialog class="ts-modal is-big" id="editDataModal" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header" id="editModalTitle">編輯單筆資料</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" data-dialog="editDataModal"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-wrap is-vertical has-padded" style="max-height: 40em; overflow-y: auto">
+                    <div class="ts-control is-wide">
+                        <div class="label" id="editModalDeptName">部門名稱</div>
+                        <div class="content">
+                            <div class="ts-input">
+                                <input type="number" step="any" placeholder="公噸" id="editAmountInput">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-end-aligned">
+                    <button class="ts-button is-warning" id="confirmEditBtn">編輯</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Import File Modal -->
+        <dialog class="ts-modal is-big" id="importModal" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">匯入檔案</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" data-dialog="importModal"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-control is-stacked has-bottom-spaced-large">
+                        <div class="label">
+                            <span class="ts-text">在這裡上傳你的CSV檔</span>
+                        </div>
+                        <div class="content">
+                            <div class="ts-file is-solid">
+                                <input type="file" id="importFileInput" accept=".csv" />
+                            </div>
+                        </div>
+                    </div>
+                    <details class="ts-accordion" name="requirements">
+                        <summary>檔案上傳格式說明</summary>
+                        <div class="ts-list is-unordered">
+                            <blockquote>
+                                <div class="item">CSV檔案必須包含標題列，且行與行需用半形逗號 <span class="ts-text is-code monospace">,</span> 分隔</div>
+                                <div class="item">日期欄位必須命名為「日期」，格式為 YYYY-MM (例如: 2025-04)</div>
+                                <div class="item">欄位名稱必須與目前選擇的資料表內使用的欄位名稱一致，但不需加上單位</div>
+                                <div class="item">數值欄位請使用數字(重量單位可包含小數)，不要加入任何分位符號，如果是空值則不需輸入</div>
+                            </blockquote>
+                        </div>
+                    </details>
+                    <div class="ts-divider is-section"></div>
+                    <details class="ts-accordion" name="example">
+                        <summary><span class="ts-text is-negative is-bold">檔案上傳內容範例 （請先閱讀！）</span></summary>
+                        <div class="ts-content is-tertiary has-horizontally-spaced-large">
+                            <span class="ts-text monospace" id="importExample">
+                                <span style="color: green">// 範例：以下為「部門感染性廢棄物產出表」的上傳格式</span><br>
+                                <span class="ts-text is-negative is-bold" style="color: red">// 由於部門重疊性較高，因此請確認目前的資料表與要上傳的檔案是否正確，防止資料遭到覆蓋！</span><br>
+                                日期,部門001,部門002,部門003<br>
+                                2025-01,1.5,2.3,1.7 <span style="color: green">// 完整資料</span><br>
+                                2025-02,,4.0,9.0 <span style="color: green">// 部分欄位留空</span><br>
+                                2025-03,2.99,4.2,4 <span style="color: green">// 小數點任意位數</span><br>
+                            </span>
+                        </div>
+                    </details>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-end-aligned">
+                    <button class="ts-button is-primary" id="uploadBtn">上傳</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Delete Multiple Data Modal -->
+        <dialog class="ts-modal is-big" id="deleteModal" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">刪除多組資料</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" data-dialog="deleteModal"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-grid is-middle-aligned has-bottom-spaced">
+                        <div class="column is-fluid">
+                            <span class="ts-text is-bold is-start-aligned">刪除日期區間: </span>
+                        </div>
+                        <div class="column is-6-wide">
+                            <div class="ts-input is-solid">
+                                <input type="month" id="deleteStartDate">
+                            </div>
+                        </div>
+                        <div class="column">
+                            至
+                        </div>
+                        <div class="column is-6-wide">
+                            <div class="ts-input is-solid">
+                                <input type="month" id="deleteEndDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ts-box is-raised is-negative is-start-indicated">
+                        <div class="ts-content">
+                            <div class="ts-header is-negative is-start-icon">
+                                <span class="ts-icon is-skull-icon"></span>
+                                您正在刪除大量資料
+                            </div>
+                            <p>由於安全性問題，請輸入以下粗體文字後按下確認鍵方可刪除：<br>
+                            <strong>我很清楚我目前正在做的事情，而我也願意承擔任何後果。</strong>
+                            <div class="ts-input">
+                                <input type="text" id="bulkDeleteConfirmInput" placeholder="請輸入上方粗體文字">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-end-aligned">
+                    <button class="ts-button is-negative" id="confirmDeleteBtn">刪除</button>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Loading Modal - Fix: Proper structure with progress bar -->
+        <dialog class="ts-modal is-big" id="loadingModal" data-dismissible="false" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header">上傳中</div>
+                        </div>
+                        <div class="column">
+                            <button class="ts-close is-large is-secondary" id="loadingCloseBtn"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content">
+                    <div class="ts-progress is-processing">
+                        <div class="bar" style="--value: 0">
+                            <div class="text" id="progressText">0% (0/0)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </dialog>
+
+        <!-- Conflict Modal - Fix: Proper structure for conflict display -->
+        <dialog class="ts-modal is-big" id="conflictModal" data-dismissible="false" hidden>
+            <div class="content">
+                <div class="ts-content">
+                    <div class="ts-grid">
+                        <div class="column is-fluid">
+                            <div class="ts-header" id="conflictHeader">資料衝突</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content" id="conflictContent" style="max-height: 45.5em; overflow-y: auto">
+                    <!-- Conflict details will be populated by JavaScript -->
+                    <div class="ts-box">
+                        <div class="ts-content">
+                            <p>偵測到資料衝突，請選擇處理方式。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="ts-content is-tertiary is-middle-aligned is-end-aligned">
+                    <label class="ts-checkbox has-end-spaced">
+                        <input type="checkbox" id="applyToAllConflicts" style="border-color: gray !important;"/>
+                        套用到所有資料
+                    </label>
+                    <button class="ts-button is-warning" id="overrideConflictBtn">覆寫資料內容</button>
+                    <button class="ts-button btn-tertiary" id="skipConflictBtn">略過這筆資料</button>
+                    <button class="ts-button is-negative is-critical" id="cancelImportBtn">終止上傳內容</button>
+                </div>
+            </div>
+        </dialog>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        // Configuration data from Django backend
+        window.departmentConfig = {
+            departments: {{ departments|safe }},
+            wasteTypes: {{ waste_types|safe }},
+            unitTranslations: {{ unit_translations|safe }},
+            departmentMapping: {{ department_mapping|safe }}
+        };
+    </script>
+    <script src="{% static 'js/management/db-department.js' %}"></script>
+    <script src="{% static 'js/management/db-department-import.js' %}"></script>
+{% endblock %}
