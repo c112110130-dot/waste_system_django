@@ -34,5 +34,5 @@ urlpatterns = [
     path('transportation/', include('WasteTransportation.urls', namespace='transportation'), name='transportation'),
     path('management/', include('WasteManagement.urls', namespace='management'), name='management'),
     path('prediction/', include('WastePrediction.urls', namespace='prediction'), name='prediction'),
-    path('dashboard/', include('dashboard_extension.urls', namespace='dashboard'), name='dashboard'),
+    path('dashboard/', include('dashboard_extension.urls', namespace='dashboard'), name='dashboard'), # Our new dashboard extension
 ]
