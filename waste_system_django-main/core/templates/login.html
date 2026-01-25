@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登入 - 醫療廢棄物管理系統</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="body">
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <i data-lucide="shield-check" style="width: 48px; height: 48px; color: #007bff; margin-bottom: 10px;"></i>
+                <h2>醫療廢棄物管理系統</h2>
+                <p>請輸入帳號密碼登入</p>
+            </div>
+
+            <form action="" method="post">
+                {% csrf_token %} <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <label for="account" style="display: block; margin-bottom: 0.5rem;">帳號</label>
+                    <input type="text" name="account" id="account" class="form-input" placeholder="admin" required autofocus style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                
+                <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <label for="password" style="display: block; margin-bottom: 0.5rem;">密碼</label>
+                    <input type="password" name="password" id="password" class="form-input" placeholder="123456" required style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-full" style="width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">登入系統</button>
+                </div>
+                
+                <div style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="/" style="color: #666; text-decoration: none;">(開發測試：直接進入主頁)</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>醫療廢棄物管理系統</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="body"> 
+
+    <header class="app-header">
+        <div class="header-container">
+            <h1 class="app-title">醫療廢棄物管理系統</h1>
+            <div class="nav-user">
+                <span>Hello, <strong>Admin</strong></span>
+                <a href="/login/" class="btn-nav" id="logout-btn" title="登出">
+                    <i data-lucide="log-out"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <main class="main-content">
+            
+            <nav class="tab-nav-container">
+                <div class="tab-nav-scroll">
+                    <button class="tab-btn active" data-content="dashboard"><i data-lucide="home"></i> 主頁面</button>
+                    <button class="tab-btn" data-content="report-link"><i data-lucide="file-text"></i> 聯單管理</button>
+                    <button class="tab-btn" data-content="waste-internal"><i data-lucide="archive"></i> 廢棄物管理(院內)</button>
+                    <button class="tab-btn" data-content="waste-dept"><i data-lucide="layout-grid"></i> 廢棄物管理(部門)</button>
+                    <button class="tab-btn" data-content="report-internal"><i data-lucide="file-spreadsheet"></i> 廢棄物報表管理(院內)</button>
+                    <button class="tab-btn" data-content="report-dept"><i data-lucide="file-bar-chart"></i> 廢棄物報表管理(部門)</button>
+                    <button class="tab-btn" data-content="forecast"><i data-lucide="trending-up"></i> 廢棄物預測</button>
+                    
+                    <button class="tab-btn" data-content="user"><i data-lucide="users"></i> 使用者管理</button>
+                    <button class="tab-btn" data-content="role"><i data-lucide="user-check"></i> 角色管理</button>
+                    <button class="tab-btn" data-content="permission"><i data-lucide="shield"></i> 權限管理</button>
+                </div>
+            </nav>
+
+            <div id="content" class="content-panel">
+                
+            </div>
+        </main>
+    </div>
+
+    <template id="dashboard-template">
+        <div class="dashboard-container">
+            <div class="content-card dashboard-summary-card">
+                <div class="summary-header">
+                    <h2>2025 年 12 月 <span class="subtitle">摘要</span></h2>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-column">
+                        <h3>一般事業廢棄物</h3>
+                        <div class="summary-row"><span>各區</span><span class="value">187.21 <small>公噸</small></span></div>
+                        <div class="summary-row"><span>仁武</span><span class="value">50.72 <small>公噸</small></span></div>
+                    </div>
+                    <div class="summary-column">
+                        <h3>醫療事業廢棄物</h3>
+                        <div class="summary-row"><span>紅袋</span><span class="value">34.67 <small>公噸</small></span></div>
+                        <div class="summary-row"><span>黃袋</span><span class="value">51.69 <small>公噸</small></span></div>
+                    </div>
+                    <div class="summary-column">
+                        <h3>處理費用</h3>
+                        <div class="summary-row"><span>洗腎</span><span class="value">41,686 <small>新台幣</small></span></div>
+                        <div class="summary-row"><span>醫療垃圾</span><span class="value">71,989 <small>新台幣</small></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visual-flow-section">
+                <div class="flow-side left">
+                    <button class="flow-btn active" onclick="updateDashboardCharts('recyclable', this)">回收物質</button>
+                    <button class="flow-btn" onclick="updateDashboardCharts('general', this)">一般事業<br>廢棄物</button>
+                </div>
+                <div class="flow-center">
+                    <div class="hospital-icon-wrapper">
+                        <i data-lucide="hospital" class="hospital-icon"></i>
+                        <div class="cross-icon"><i data-lucide="plus"></i></div>
+                    </div>
+                </div>
+                <div class="flow-side right">
+                    <button class="flow-btn" onclick="updateDashboardCharts('medical', this)">生物醫療<br>廢棄物</button>
+                    <button class="flow-btn" onclick="updateDashboardCharts('glass', this)">藥用玻璃</button>
+                </div>
+            </div>
+
+            <div id="dynamic-charts-grid" class="charts-grid"></div>
+        </div>
+    </template>
+
+    <div id="chartModal" class="modal-overlay">
+        <div class="modal chart-modal-large">
+            <div class="modal-header">
+                <h3 id="chartModalTitle">詳細圖表</h3>
+                <button class="modal-close" onclick="closeChartModal()">×</button> 
+            </div>
+            <div class="modal-content chart-modal-content">
+                <div class="chart-wrapper-large">
+                    <canvas id="largeChartCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="report-link-template">
+        <div class="report-dashboard">
+            <div class="report-stats-row">
+                <div class="report-stat-card blue">
+                    <div class="stat-content"><div class="stat-value">128</div><div class="stat-label">總聯單數</div></div>
+                    <div class="stat-icon-bg"><i data-lucide="list"></i></div>
+                </div>
+                <div class="report-stat-card red">
+                    <div class="stat-content"><div class="stat-value">45</div><div class="stat-label">清除單</div></div>
+                    <div class="stat-icon-bg"><i data-lucide="flame"></i></div>
+                </div>
+                <div class="report-stat-card green">
+                    <div class="stat-content"><div class="stat-value">83</div><div class="stat-label">再利用單</div></div>
+                    <div class="stat-icon-bg"><i data-lucide="recycle"></i></div>
+                </div>
+            </div>
+            <div class="report-controls-bar">
+                <div class="control-left">
+                    <button class="btn btn-primary"><i data-lucide="upload-cloud"></i> 匯入聯單</button>
+                    <button class="btn btn-outline"><i data-lucide="filter"></i> 新增篩選內容</button>
+                </div>
+                <div class="control-right filter-placeholder">尚未設定篩選條件</div>
+            </div>
+            <div class="report-workspace">
+                <div class="report-sidebar">
+                    <div class="sidebar-header"><label><input type="checkbox"> 全部勾選</label></div>
+                    <div class="sidebar-list">
+                        <div class="sidebar-item active">
+                            <div class="item-title">112-A01-001</div>
+                            <div class="item-subtitle">感染性廢棄物 (C-01)</div>
+                            <div class="item-date">2025/10/25</div>
+                        </div>
+                        <div class="sidebar-item">
+                            <div class="item-title">112-A01-002</div>
+                            <div class="item-subtitle">一般事業廢棄物 (D-01)</div>
+                            <div class="item-date">2025/10/24</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="report-main-view">
+                    <div class="report-tabs">
+                        <button class="tab-item active" data-target="tab-overview">聯單總覽</button>
+                        <button class="tab-item" data-target="tab-declare">申報資訊</button>
+                        <button class="tab-item" data-target="tab-transport">清運資訊</button>
+                    </div>
+                    <div class="report-content-body">
+                        <div id="tab-overview" class="report-tab-pane active">
+                            <div class="info-grid">
+                                <div class="info-group"><label>聯單編號</label><div class="info-value">112-A01-001</div></div>
+                                <div class="info-group"><label>狀態</label><div class="info-value"><span class="badge badge-success">已申報</span></div></div>
+                                <div class="info-group full-width"><label>備註</label><div class="info-value">例行性清運，無異常狀況。</div></div>
+                            </div>
+                        </div>
+                        <div id="tab-declare" class="report-tab-pane">
+                            <div class="info-grid"><div class="info-group"><label>申報日期</label><div class="info-value">2025/10/25 09:30</div></div></div>
+                        </div>
+                        <div id="tab-transport" class="report-tab-pane">
+                            <div class="info-grid"><div class="info-group"><label>清運公司</label><div class="info-value">潔淨環保有限公司</div></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="dept-grid-template"><div class="page-controls-group"><div class="page-controls"><div class="form-group" style="min-width: 200px;"><select class="form-input"><option>感染性廢棄物</option><option>非感染性廢棄物</option></select></div><div><button class="btn btn-outline"><i data-lucide="upload"></i> 匯入桶數</button><button class="btn btn-destructive"><i data-lucide="trash-2"></i> 刪除多餘資料</button></div></div><div class="page-controls date-nav"><div class="year-selector"><button class="btn btn-ghost" id="btn-year-prev-10"><i data-lucide="chevrons-left"></i></button><button class="btn btn-ghost" id="btn-year-prev"><i data-lucide="chevron-left"></i></button><span class="year-display" id="year-display">2025 年</span><button class="btn btn-ghost" id="btn-year-next"><i data-lucide="chevron-right"></i></button><button class="btn btn-ghost" id="btn-year-next-10"><i data-lucide="chevrons-right"></i></button></div></div><div class="page-controls filter-bar"><div class="filter-left"><button class="btn btn-outline" id="sort-dept-btn">排序</button><div class="search-with-icon"><i data-lucide="search"></i><input type="text" id="dept-search-input" class="search-input" placeholder="搜尋部門..."></div></div></div></div><div id="department-grid" class="card-grid"></div></template>
+    
+    <template id="user-table-template"><div class="content-card table-card"><div class="card-content"><div class="management-controls"><div class="search-controls"><div class="search-item"><label>使用者名稱：</label><input type="text" id="query1" class="search-input"></div><button id="searchUserBtn" class="btn btn-outline">查詢</button></div><button id="showAddUserFormBtn" class="btn btn-primary">新增資料</button></div><div id="result" class="search-results"></div><div class="table-container"><table class="table" id="userTable"><thead><tr><th>序號</th><th>使用者名稱</th><th>單位</th><th>E-MAIL</th><th>角色</th><th>建立日期</th><th>功能</th></tr></thead><tbody></tbody></table></div></div></div></template>
+    <template id="role-table-template"><div class="content-card table-card"><div class="card-content"><div class="management-controls"><button id="showAddRoleFormBtn" class="btn btn-primary">新增資料</button></div><div class="table-container"><table class="table" id="roleTable"><thead><tr><th>序號</th><th>代碼</th><th>名稱</th><th>建立日期</th><th>功能</th></tr></thead><tbody></tbody></table></div></div></div></template>
+    <template id="permission-table-template"><div class="content-card table-card"><div class="card-content"><div class="management-controls"><button id="showAddPermissionFormBtn" class="btn btn-primary">新增資料</button></div><div class="table-container"><table class="table" id="PermissionTable"><thead><tr><th>序號</th><th>角色名稱</th><th>建立日期</th><th>詳細</th></tr></thead><tbody></tbody></table></div></div></div></template>
+    <template id="generic-page-template"><div class="content-card"><div class="card-header"><h2 id="generic-page-title"></h2></div><div class="card-content"><p id="generic-page-text"></p></div></div></template>
+    
+    <div id="modalOverlay" class="modal-overlay">
+        <div id="universalModal" class="modal">
+            <div class="modal-header"><h3 id="universalModalTitle"></h3><button class="modal-close">×</button></div>
+            <div id="universalModalContent" class="modal-content"></div>
+        </div>
+    </div> 
+
+    <script src="{% static 'opp.js' %}"></script>
+    <script>
+        setTimeout(() => {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }, 100); 
+    </script>
+</body>
+</html>
