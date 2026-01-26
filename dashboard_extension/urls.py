@@ -6,4 +6,6 @@ app_name = 'dashboard'
 urlpatterns = [
     # 這就是你的結算頁面網址
     path('settlement/', views.settlement_view, name='settlement_page'),
+    path('delete_records/', views.delete_records, name='delete_records'),
+    path('settlement_process/', views.settlement_process, name='settlement_process'),
 ]

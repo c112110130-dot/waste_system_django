@@ -182,7 +182,7 @@
                 </div>
                 <div class="column">
                     <label>過磅人員</label>
-                    <select name="weigher" class="ts-select is-fluid"><option value="">全部人員</option>{% for user in weighers %}<option value="{{ user.id }}" {% if selected_weigher == user.id|stringformat:"i" %}selected{% endif %}>{{ user.name }}</option>{% endfor %}</select>
+                    <select name="weigher" class="ts-select is-fluid"><option value="">全部人員</option>{% for user in weighers %}<option value="{{ user.id }}" {% if selected_weigher == user.id|stringformat:"i" %}selected{% endif %}>{{ user.user }}</option>{% endfor %}</select>
                 </div>
                 <div class="column" style="display: flex; align-items: flex-end;">
                     <button type="submit" class="ts-button is-primary is-fluid" style="margin-right: 10px;">
@@ -263,8 +263,8 @@
                         </td>
                         <td>{{ record.department.name }}</td>
                         <td>{{ record.location.name }}</td>
-                        <td>{{ record.creator.name }}</td>
-                        <td>{{ record.updater.name|default:"-" }}</td>
+                        <td>{{ record.creator.username }}</td>
+                        <td>{{ record.updater.username|default:"-" }}</td>
                         <td>
                             {% if record.can_delete %}
                                 <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})"><span class="ts-icon is-trash-can-icon"></span></button>
@@ -311,7 +311,7 @@
     </div>
 </div>
 
-<dialog id="settlementModal" style="padding:0;border:none;background:transparent;margin:auto;"><div style="width:500px;max-width:95vw;background:#2b2b2b;color:#e0e0e0;border-radius:5px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.5);"><div style="padding:15px 20px;border-bottom:1px solid #3f3f3f;font-weight:bold;color:#fff;">確認結算</div><div style="padding:20px;"><div style="background:#333;padding:15px;border-radius:5px;margin-bottom:20px;border:1px solid #3f3f3f;"><div style="margin-bottom:8px;color:#ccc;">目前時間：<span id="modalCurrentTime" style="color:#fff;"></span></div><div style="color:#ccc;">您已選取：<strong id="modalSelectedCount" style="color:#4db8ff;">0</strong> 筆資料</div></div><form id="settlementForm" method="post" class="ts-form">{% csrf_token %}<input type="hidden" name="selected_ids" id="hiddenSelectedIds"><div class="field"><label style="color:#ccc;">處理公司</label><select name="process_agency" class="ts-basic is-fluid" style="background:#3f3f3f;color:#fff;border-color:#555;">{% for agency in process_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}</select></div><div class="field"><label style="color:#ccc;">清理公司</label><select name="clear_agency" class="ts-basic is-fluid" style="background:#3f3f3f;color:#fff;border-color:#555;">{% for agency in clear_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}</select></div></form></div><div style="padding:15px 20px;border-top:1px solid #3f3f3f;text-align:right;background:#2b2b2b;"><button onclick="document.getElementById('settlementModal').close()" style="background:transparent;border:1px solid #555;color:#ddd;padding:8px 20px;margin-right:10px; cursor: pointer;">取消</button><button onclick="document.getElementById('settlementForm').submit()" style="background:#2185d0;border:none;color:#fff;padding:8px 25px; cursor: pointer;">確認</button></div></div></dialog>
+<dialog id="settlementModal" ><div style="width:500px;max-width:95vw;background:#2b2b2b;color:#e0e0e0;border-radius:5px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.5);"><div style="padding:15px 20px;border-bottom:1px solid #3f3f3f;font-weight:bold;color:#fff;">確認結算</div><div style="padding:20px;"><div style="background:#333;padding:15px;border-radius:5px;margin-bottom:20px;border:1px solid #3f3f3f;"><div style="margin-bottom:8px;color:#ccc;">目前時間：<span id="modalCurrentTime" style="color:#fff;"></span></div><div style="color:#ccc;">您已選取：<strong id="modalSelectedCount" style="color:#4db8ff;">0</strong> 筆資料</div></div><form id="settlementForm" action="{% url 'dashboard:settlement_process' %}" method="post" class="ts-form">{% csrf_token %}<input type="hidden" name="selected_ids" id="hiddenSelectedIds"><div class="field"><label style="color:#ccc;">處理公司</label><select name="process_agency" class="ts-basic is-fluid" style="background:#3f3f3f;color:#fff;border-color:#555;">{% for agency in process_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}</select></div><div class="field"><label style="color:#ccc;">清理公司</label><select name="clear_agency" class="ts-basic is-fluid" style="background:#3f3f3f;color:#fff;border-color:#555;">{% for agency in clear_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}</select></div></form></div><div style="padding:15px 20px;border-top:1px solid #3f3f3f;text-align:right;background:#2b2b2b;"><button onclick="document.getElementById('settlementModal').close()" style="background:transparent;border:1px solid #555;color:#ddd;padding:8px 20px;margin-right:10px; cursor: pointer;">取消</button><button onclick="document.getElementById('settlementForm').submit()" style="background:#2185d0;border:none;color:#fff;padding:8px 25px; cursor: pointer;">確認</button></div></dialog>
 <dialog id="deleteModal" style="padding:0;border:none;background:transparent;margin:auto;"><div style="width:450px;max-width:90vw;background:#222;color:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.5);text-align:center;"><div style="padding:40px 30px 20px;"><div style="display:inline-flex;align-items:center;justify-content:center;width:70px;height:70px;background:#fff;color:#000;border-radius:50%;font-size:35px;margin-bottom:20px;"><span class="ts-icon is-question-icon"></span></div><div style="font-size:1.5rem;font-weight:bold;margin-bottom:15px;">確認刪除</div><p style="color:#aaa;background:rgba(255,255,255,0.05);padding:10px;border-radius:5px;">確定要刪除這些資料嗎？<br>此動作無法復原。</p></div><div style="padding:20px 30px 30px;display:flex;gap:15px;"><button onclick="closeDeleteModal()" style="flex:1;padding:12px;background:#e0e0e0;color:#333;border:none; font-weight:bold; cursor: pointer;">取消</button><button onclick="confirmDelete()" style="flex:1;padding:12px;background:#db2828;color:#fff;border:none; font-weight:bold; cursor: pointer;">確定</button></div></div></dialog>
 
 <script>
@@ -334,7 +334,63 @@
     window.openBatchDelete = function(){let ids=getSelectedIds();if(ids.length===0)return alert('請至少選取一筆資料');window.pendingDeleteIds=ids;document.getElementById('deleteModal').showModal();}
     window.deleteRecord = function(id){window.pendingDeleteIds=[id];document.getElementById('deleteModal').showModal();}
     window.closeDeleteModal = function(){window.pendingDeleteIds=null;document.getElementById('deleteModal').close();}
-    window.confirmDelete = function(){if(window.pendingDeleteIds&&window.pendingDeleteIds.length>0){window.pendingDeleteIds.forEach(id=>{let row=document.getElementById('row_'+id);if(row){row.style.transition="opacity 0.3s";row.style.opacity="0";setTimeout(()=>row.remove(),300);}});setTimeout(()=>{window.updateUI();},300);}window.closeDeleteModal();}
+    // window.confirmDelete = function(){if(window.pendingDeleteIds&&window.pendingDeleteIds.length>0){window.pendingDeleteIds.forEach(id=>{let row=document.getElementById('row_'+id);if(row){row.style.transition="opacity 0.3s";row.style.opacity="0";setTimeout(()=>row.remove(),300);}});setTimeout(()=>{window.updateUI();},300);}window.closeDeleteModal();}
+    window.confirmDelete = function() {
+    if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
+
+    // 1. 準備要傳給後端的資料
+    const formData = new FormData();
+    // 將陣列轉成字串傳送 (例如 "1,2,5")
+    formData.append('ids', window.pendingDeleteIds.join(','));
+
+    // 2. 使用 fetch 發送 POST 請求
+    // 注意：請確認你的 urls.py 有設定這個路徑
+    fetch('/dashboard/delete_records/', { 
+        method: 'POST',
+        headers: {
+            // Django 需要 CSRF Token 才能接受 POST
+            'X-CSRFToken': getCookie('csrftoken'), 
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // 3. 後端刪除成功後，才執行前端移除畫面
+            window.pendingDeleteIds.forEach(id => {
+                let row = document.getElementById('row_' + id);
+                if (row) {
+                    row.style.transition = "opacity 0.3s";
+                    row.style.opacity = "0";
+                    setTimeout(() => row.remove(), 300);
+                }
+            });
+            setTimeout(() => { window.updateUI(); }, 300);
+            window.closeDeleteModal();
+        } else {
+            alert('刪除失敗，請稍後再試。');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('發生錯誤');
+    });
+}
+
+// 輔助函式：取得 CSRF Token (Django 必備)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     window.changePageSize = function(size){const urlParams=new URLSearchParams(window.location.search);urlParams.set('page_size',size);urlParams.set('page',1);window.location.search=urlParams.toString();}
 </script>
