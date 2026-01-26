@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<style>
+    /* 全螢幕佈局設定 (橫式) */
+    .station-container {
+        display: flex;
+        flex-direction: row; /* 橫向排列 */
+        height: calc(100vh - 80px); /* 扣掉導航列高度 */
+        gap: 20px;
+        padding: 20px;
+        background-color: var(--my-bg-base);
+        box-sizing: border-box;
+        overflow: hidden; /* 防止捲動 */
+    }
+
+    /* 左側面板：掃描區 */
+    .left-panel {
+        flex: 1; /* 佔 50% */
+        display: flex;
+        flex-direction: column;
+        background: #000; /* 鏡頭背景黑底 */
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    /* 鏡頭畫面 */
+    #reader {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* 掃描狀態覆蓋層 */
+    .scan-overlay {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.6);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        z-index: 10;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* 右側面板：操作區 */
+    .right-panel {
+        flex: 1; /* 佔 50% */
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        padding-left: 10px;
+        overflow-y: auto; /* 內容多時可捲動 */
+    }
+
+    /* 資訊卡片 */
+    .info-card {
+        background-color: var(--my-bg-panel);
+        border: 1px solid var(--my-border);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    /* 標題與標籤 */
+    .card-header {
+        font-size: 0.85rem;
+        font-weight: bold;
+        color: var(--my-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid var(--my-border);
+        padding-bottom: 8px;
+    }
+
+    .field-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        align-items: center;
+    }
+    
+    .field-label { color: var(--my-text-sub); font-size: 0.9rem; }
+    .field-value { color: var(--my-text-main); font-size: 1.1rem; font-weight: 500; }
+
+    /* 重量輸入框 (超大) */
+    .weight-display {
+        background: var(--my-bg-input);
+        border: 2px solid var(--my-border);
+        border-radius: 12px;
+        padding: 10px;
+        text-align: center;
+        position: relative;
+    }
+    
+    .big-input {
+        width: 100%;
+        height: 80px;
+        font-size: 3.5rem;
+        text-align: center;
+        background: transparent;
+        color: #fbbd08;
+        border: none;
+        font-weight: bold;
+        outline: none;
+    }
+    
+    .unit-tag {
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--my-text-sub);
+    }
+
+    /* 按鈕 */
+    .btn-large {
+        width: 100%;
+        height: 60px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.1s;
+    }
+    .btn-large:active { transform: scale(0.98); }
+    .btn-submit { background: linear-gradient(135deg, #21ba45, #19a53a); }
+    .btn-reset { background: #555; height: 40px; font-size: 1rem; margin-top: 10px; }
+
+    .btn-submit:disabled {
+        background: #444;
+        color: #888;
+        cursor: not-allowed;
+    }
+
+    /* 藍牙狀態 */
+    .bt-status {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 0.9rem; color: var(--my-text-sub);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+    .dot.active { background: #00d1b2; box-shadow: 0 0 8px #00d1b2; }
+
+    /* RWD: 如果螢幕真的很窄 (例如手機直拿)，自動變回直式 */
+    @media (max-width: 768px) {
+        .station-container { flex-direction: column; height: auto; overflow-y: auto; }
+        .left-panel { height: 300px; flex: none; }
+        .right-panel { flex: none; }
+    }
+</style>
+
+<div class="station-container">
+    
+    <div class="left-panel">
+        <div id="reader"></div>
+        <div class="scan-overlay" id="scan-status-text">
+            <span class="ts-loading is-small"></span>等待鏡頭啟動...
+        </div>
+    </div>
+
+    <div class="right-panel">
+        
+        <div class="info-card">
+            <div class="card-header">SCRAP INFORMATION</div>
+            
+            <div class="field-row">
+                <span class="field-label">部門 Dept.</span>
+                <span class="field-value" id="disp_dept">---</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">定點 Loc.</span>
+                <span class="field-value" id="disp_loc">---</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">人員 User</span>
+                <span class="field-value" id="disp_user">---</span>
+            </div>
+            
+            <input type="hidden" id="hidden_loc_id">
+        </div>
+
+        <div class="info-card">
+            <div class="card-header" style="display:flex; justify-content:space-between; border:none; padding-bottom:0;">
+                <span>WEIGHT SCALE</span>
+                <div class="bt-status">
+                    <div class="dot" id="bt-dot"></div> BT Connected
+                </div>
+            </div>
+            
+            <div class="weight-display">
+                <input type="number" class="big-input" id="weight_input" placeholder="0.00" step="0.01">
+                <span class="unit-tag">KG</span>
+            </div>
+        </div>
+
+        <div style="margin-top: auto;">
+            <button class="btn-large btn-submit" id="btn_submit" onclick="submitData()" disabled>
+                <span class="ts-icon is-cloud-arrow-up-icon" style="margin-right: 10px;"></span>
+                確認上傳
+            </button>
+            
+            <button class="btn-large btn-reset" onclick="resetScanner()">
+                <span class="ts-icon is-rotate-right-icon" style="margin-right: 8px;"></span>
+                重新掃描
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let html5QrcodeScanner = null;
+    let isScanning = true;
+
+    // 模擬資料庫 (對應後端 ID)
+    const mockLocations = [
+        { id: 0, dept: "病理檢驗部", loc: "B1 汙物室", user: "王小明" },
+        { id: 1, dept: "急診室", loc: "一樓大廳", user: "李大華" },
+        { id: 2, dept: "放射科", loc: "二樓護理站", user: "張阿姨" }
+    ];
+
+    // 初始化掃描器
+    function startScanner() {
+        const statusText = document.getElementById('scan-status-text');
+        statusText.innerHTML = '<span class="ts-loading is-small"></span> 正在開啟鏡頭...';
+
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        // 優先使用後鏡頭 (environment)，若失敗則用前鏡頭 (user)
+        html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+        .then(() => {
+            statusText.innerHTML = '<span class="ts-icon is-camera-icon"></span> 請將 QR Code 對準框框';
+        })
+        .catch(err => {
+            console.error(err);
+            statusText.innerHTML = '<span class="ts-icon is-circle-exclamation-icon"></span> 無法啟動鏡頭 (請允許權限)';
+            
+            // 如果是在電腦無鏡頭環境，提供一個 "點擊模擬掃描" 的後門
+            document.getElementById('reader').onclick = () => onScanSuccess("Simulated_QR_Code");
+        });
+    }
+
+    // 掃描成功回呼函式
+    function onScanSuccess(decodedText, decodedResult) {
+        if (!isScanning) return;
+        
+        // 停止掃描
+        isScanning = false;
+        html5QrcodeScanner.pause(); 
+        
+        // 播放音效 (可選)
+        // const audio = new Audio('/static/beep.mp3'); audio.play();
+
+        // 🟢 演示用邏輯：不管掃到什麼，都隨機挑一筆資料填入 (確保演示一定成功)
+        // 實務上這裡應該是解析 decodedText (例如 JSON)
+        const randomData = mockLocations[Math.floor(Math.random() * mockLocations.length)];
+        
+        updateUI(randomData, decodedText);
+    }
+
+    function onScanFailure(error) {
+        // 掃描中...不需處理錯誤
+    }
+
+    // 更新畫面資料
+    function updateUI(data, rawText) {
+        document.getElementById('disp_dept').innerText = data.dept;
+        document.getElementById('disp_loc').innerText = data.loc;
+        document.getElementById('disp_user').innerText = data.user;
+        document.getElementById('hidden_loc_id').value = data.id;
+
+        // 更新狀態文字
+        const statusText = document.getElementById('scan-status-text');
+        statusText.style.background = "rgba(33, 186, 69, 0.8)"; // 綠色
+        statusText.innerHTML = `<span class="ts-icon is-check-icon"></span> 掃描成功: ${data.loc}`;
+
+        // 啟用輸入與按鈕
+        document.getElementById('btn_submit').disabled = false;
+        document.getElementById('weight_input').focus();
+    }
+
+    // 重置掃描
+    function resetScanner() {
+        isScanning = true;
+        document.getElementById('disp_dept').innerText = "---";
+        document.getElementById('disp_loc').innerText = "---";
+        document.getElementById('disp_user').innerText = "---";
+        document.getElementById('hidden_loc_id').value = "";
+        document.getElementById('weight_input').value = "";
+        document.getElementById('btn_submit').disabled = true;
+
+        const statusText = document.getElementById('scan-status-text');
+        statusText.style.background = "rgba(0,0,0,0.6)";
+        statusText.innerHTML = '<span class="ts-icon is-camera-icon"></span> 請將 QR Code 對準框框';
+
+        try { html5QrcodeScanner.resume(); } catch(e) { startScanner(); }
+    }
+
+    // 上傳資料
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function submitData() {
+        const locId = document.getElementById('hidden_loc_id').value;
+        const weight = document.getElementById('weight_input').value;
+        
+        if (!locId) return alert('請先掃描！');
+        if (!weight) return alert('請輸入重量！');
+
+        const btn = document.getElementById('btn_submit');
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="ts-loading"></span> 上傳中...';
+
+        fetch("{% url 'dashboard:api_record_waste' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                location_id: locId,
+                weight: weight
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(`✅ 資料已上傳！\n地點: ${document.getElementById('disp_loc').innerText}\n重量: ${weight} KG`);
+                resetScanner(); // 上傳完自動重置，準備下一筆
+            } else {
+                alert('❌ 失敗: ' + data.message);
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        })
+        .catch(err => {
+            alert('❌ 錯誤: ' + err);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        });
+    }
+
+    // 啟動流程
+    window.onload = function() {
+        startScanner();
+        // 模擬藍牙連線
+        setTimeout(() => document.getElementById('bt-dot').classList.add('active'), 1500);
+    };
+</script>
+{% endblock %}

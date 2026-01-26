@@ -16,7 +16,6 @@ loc_names = ['B1 汙物室', '一樓大廳', '二樓護理站', '實驗室', '�
 user_names = ['王小明', '李大華', '張阿姨', 'Admin']
 agency_names = ['大安環保公司', '綠色清運科技', '永續處理中心']
 
-# 轉換成前端需要的格式
 departments_list = [{'id': i, 'name': n} for i, n in enumerate(dept_names)]
 locations_list = [{'id': i, 'name': n} for i, n in enumerate(loc_names)]
 weighers_list = [{'id': i, 'name': n} for i, n in enumerate(user_names)]
@@ -26,32 +25,26 @@ clear_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names)]
 all_records = []
 
 def generate_data():
-    """產生假資料 (只執行一次)"""
-    # 強制清空舊資料，避免格式衝突
     global all_records
-    all_records = [] 
+    if all_records: return
     
     random.seed(42)
+    all_records = [] 
     
     for i in range(100):
-        # 1. 隨機產生時間
         hours_ago = random.randint(1, 240) 
         create_time = datetime.now() - timedelta(hours=hours_ago)
         
-        # 2. 這裡只為了產生假資料的合理性，不儲存判斷結果
-        # (例如：很久以前的資料，通常已經載運了)
         temp_is_expired = (datetime.now() - create_time).days > 3
         if temp_is_expired:
             is_transported = random.choices([True, False], weights=[0.9, 0.1])[0]
         else:
             is_transported = random.choice([True, False])
 
-        # 3. 隨機分配 ID
         dept_id = random.randint(0, len(dept_names)-1)
         loc_id = random.randint(0, len(loc_names)-1)
         user_id = random.randint(0, len(user_names)-1)
 
-        # 4. 建立單筆資料字典 (注意：不存 is_expired 和 can_delete)
         fake_record = {
             'id': i + 1,
             'create_time': create_time,
@@ -65,20 +58,17 @@ def generate_data():
         }
         all_records.append(fake_record)
 
-# 啟動時產生資料
-generate_data()
+generate_data() 
 
 
 # =========================================================
-# 🟢 2. 結算頁面 View (動態計算核心)
+# 🟢 2. 結算頁面 View
 # =========================================================
-# @login_required
+@login_required
 def settlement_view(request):
     
-    # 重新產生資料以防萬一 (開發階段用)
     if not all_records: generate_data()
 
-    # STEP 3: 接收篩選參數
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_location = request.GET.get('location', '')
@@ -86,28 +76,18 @@ def settlement_view(request):
     f_weigher = request.GET.get('weigher', '')
     sort_by = request.GET.get('sort_by', 'newest')
 
-    # STEP 4: 執行篩選
     filtered_records = []
-    
     for r in all_records:
         match = True
-        
-        # 防呆：確保 r 是字典
-        if not isinstance(r, dict): continue
-
-        # 1. 日期區間篩選
         if f_start_date:
             try:
-                sd = datetime.strptime(f_start_date, '%Y-%m-%d')
-                if r['create_time'] < sd: match = False
-            except ValueError: pass
+                if r['create_time'] < datetime.strptime(f_start_date, '%Y-%m-%d'): match = False
+            except: pass
         if f_end_date:
             try:
-                ed = datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1)
-                if r['create_time'] >= ed: match = False
-            except ValueError: pass
+                if r['create_time'] >= datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1): match = False
+            except: pass
 
-        # 2. 定點/部門/人員篩選
         if f_location and str(r['location']['id']) != str(f_location): match = False
         if f_dept and str(r['department']['id']) != str(f_dept): match = False
         if f_weigher and str(r['creator']['id']) != str(f_weigher): match = False
@@ -115,7 +95,6 @@ def settlement_view(request):
         if match:
             filtered_records.append(r)
 
-    # STEP 5: 執行排序
     if sort_by == 'newest':
         filtered_records.sort(key=lambda x: x['create_time'], reverse=True)
     elif sort_by == 'oldest':
@@ -125,7 +104,6 @@ def settlement_view(request):
     elif sort_by == 'weight_asc':
         filtered_records.sort(key=lambda x: x['weight'], reverse=False)
 
-    # STEP 6: 分頁處理
     page_size_param = request.GET.get('page_size', '10')
     try:
         page_size = int(page_size_param)
@@ -140,71 +118,79 @@ def settlement_view(request):
     except (PageNotAnInteger, EmptyPage):
         page_obj = paginator.page(1)
 
-    # =========================================================
-    # 🟢 STEP 6.5: 動態計算區 (Dynamic Calculation)
-    # =========================================================
     now = datetime.now()
-    
     for record in page_obj:
-        # 1. 算出是否過期 (超過 3 天)
-        # 注意：這裡使用字典 key 存取
-        delta = now - record['create_time']
-        is_expired = delta.days > 3
-        
-        # 2. 寫入暫存屬性
+        is_expired = (now - record['create_time']).days > 3
         record['is_expired'] = is_expired
-        
-        # 3. 算出是否可刪除 (新要求：用算的)
-        # 邏輯：只有「未過期」且「未載運」的才能刪除
         record['can_delete'] = (not is_expired) and (not record['is_transported'])
 
-
-    # STEP 7: 打包 Context
     context = {
         'page_obj': page_obj,
-        'current_page_size': page_size,
+        'departments': departments_list,
+        'locations': locations_list,
+        'weighers': weighers_list,
+        'process_agencies': process_agencies,
+        'clear_agencies': clear_agencies,
         'start_date': f_start_date,
         'end_date': f_end_date,
         'selected_location': f_location,
         'selected_dept': f_dept,
         'selected_weigher': f_weigher,
         'current_sort': sort_by,
-        'departments': departments_list,
-        'locations': locations_list,
-        'weighers': weighers_list,
-        'process_agencies': process_agencies,
-        'clear_agencies': clear_agencies,
+        'current_page_size': page_size,
     }
     
     return render(request, 'dashboard_extension/settlement_fragment.html', context)
 
 
 # =========================================================
-# 3. 刪除 API
+# 🆕 3. 行動工作站 & API (已修復 Global 錯誤)
 # =========================================================
+
+@login_required
+def mobile_station_view(request):
+    # 這裡將 locations_list 傳給前端，解決下拉選單沒資料的問題
+    context = { 'locations': locations_list }
+    return render(request, 'dashboard_extension/mobile/station.html', context)
+
 @require_POST
 @login_required
 def delete_records_api(request):
+    # 🔴 修正：global 必須放在第一行
+    global all_records 
     try:
         data = json.loads(request.body)
         record_ids = list(map(str, data.get('ids', [])))
         
-        global all_records
         before_len = len(all_records)
         all_records = [r for r in all_records if str(r['id']) not in record_ids]
-        
         return JsonResponse({'status': 'success', 'deleted_count': before_len - len(all_records)})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-
-# =========================================================
-# 4. 手機端佔位符
-# =========================================================
-@login_required
-def mobile_input_view(request):
-    return render(request, 'dashboard_extension/mobile_input.html', {'locations': []})
-
 @require_POST
 def record_waste_api(request):
-    return JsonResponse({'status': 'ok'})
+    # 🔴 修正：global 必須放在第一行
+    global all_records
+    try:
+        data = json.loads(request.body)
+        loc_id = int(data.get('location_id', 0))
+        weight = float(data.get('weight', 0))
+        loc_name = next((loc['name'] for loc in locations_list if loc['id'] == loc_id), "未知地點")
+        
+        new_record = {
+            'id': len(all_records) + 1000,
+            'create_time': datetime.now(),
+            'update_time': datetime.now(),
+            'weight': weight,
+            'is_transported': False,
+            'department': departments_list[0],
+            'location': {'id': loc_id, 'name': loc_name},
+            'creator': weighers_list[0],
+            'updater': {'name': None},
+        }
+        
+        all_records.insert(0, new_record)
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
