@@ -1,0 +1,26 @@
+/* Result Display */
+.header-column, .date-cell {
+    max-width: 2em;
+    width: 3% !important;
+}
+.single-line {
+    white-space: nowrap !important;
+    display: inline-block !important;
+}
+
+/* Equal width columns for result table */
+#resultArea .ts-table th:not(.header-column),
+#resultArea .ts-table td:not(:first-child) {
+    width: 9.5% !important;
+    max-width: 9.5% !important;
+    min-width: 9.5% !important;
+    text-align: center;
+}
+
+/* Prevent text wrapping for consistent column widths */
+#resultArea .ts-table th,
+#resultArea .ts-table td {
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

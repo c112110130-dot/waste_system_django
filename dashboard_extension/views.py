@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 import random
 import json
@@ -176,6 +176,9 @@ def record_waste_api(request):
         data = json.loads(request.body)
         loc_id = int(data.get('location_id', 0))
         weight = float(data.get('weight', 0))
+        dept = data.get('dept', '未知部門')
+        waste_type = data.get('waste_type', '未分類')
+        
         loc_name = next((loc['name'] for loc in locations_list if loc['id'] == loc_id), "未知地點")
         
         new_record = {
@@ -184,7 +187,8 @@ def record_waste_api(request):
             'update_time': datetime.now(),
             'weight': weight,
             'is_transported': False,
-            'department': departments_list[0],
+            'department': {'name': dept, 'id': 0},  # dept from QR code
+            'waste_type': waste_type,  # waste_type from QR code
             'location': {'id': loc_id, 'name': loc_name},
             'creator': weighers_list[0],
             'updater': {'name': None},
@@ -192,5 +196,14 @@ def record_waste_api(request):
         
         all_records.insert(0, new_record)
         return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_GET
+@login_required
+def locations_api(request):
+    try:
+        return JsonResponse({'locations': locations_list})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

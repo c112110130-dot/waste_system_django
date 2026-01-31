@@ -1,0 +1,106 @@
+ /* Color Palette: Global */
+.background-primary {
+    background-color: #9AA6B2;
+    color: black;
+}
+
+.background-secondary {
+    background-color: #BCCCDC;
+    color: black;
+}
+
+.background-tertiary {
+    background-color: #D9EAFD;
+    color: black;
+}
+
+.background-quaternary {
+    background-color: #F8FAFC;
+    color: black;
+}
+
+.color-negative {
+    color: var(--ts-negative-500) !important;
+}
+
+.color-negative-inverted {
+    background-color: var(--ts-negative-500) !important;
+    color: var(--ts-white) !important;
+}
+
+/* Color Palette: Permission Sets */
+.color-root {
+    color: hotpink !important;
+}
+
+.color-moderator {
+    color: darkorange !important;
+}
+
+.color-staff {
+    color: deepskyblue !important;
+}
+
+.color-registrar {
+    color: darkturquoise !important;
+}
+
+.color-importer {
+    color: skyblue !important;
+}
+
+.color-not-defined {
+    color: gray !important;
+}
+
+.color-root-inverted {
+    background-color: hotpink !important;
+    color: white !important;
+}
+
+.color-moderator-inverted {
+    background-color: darkorange !important;
+    color: white !important;
+}
+
+.color-staff-inverted {
+    background-color: deepskyblue !important;
+    color: white !important;
+}
+
+.color-registrar-inverted {
+    background-color: darkturquoise !important;
+    color: white !important;
+}
+
+.color-importer-inverted {
+    background-color: skyblue !important;
+    color: black !important;
+}
+
+.color-not-defined-inverted {
+    background-color: gray !important;
+    color: white !important;
+}
+
+.is-dark {
+    .background-primary {
+    background-color: #5A6B7A;
+    color: white;
+    }
+
+    .background-secondary {
+        background-color: #3A4A5A;
+        color: white;
+    }
+
+    .background-tertiary {
+        background-color: #242D39;
+        color: white;
+    }
+
+    .background-quaternary {
+        background-color: #1E252E;
+        color: white;
+    }
+}

@@ -11,4 +11,5 @@ urlpatterns = [
     # 2. 功能類 (負責刪除、存檔，看不到畫面但很重要)
     path('api/delete_records/', views.delete_records_api, name='api_delete_records'),
     path('api/record_waste/', views.record_waste_api, name='api_record_waste'),
+    path('api/locations/', views.locations_api, name='locations_api'),
 ]

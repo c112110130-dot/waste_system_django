@@ -5,6 +5,29 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <style>
+    /* === Tocas UI Message 動畫 === */
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+    }
+
     /* === 全螢幕佈局 (橫式) === */
     .station-container {
         display: flex;
@@ -144,73 +167,20 @@
     }
     .btn-large:active { transform: scale(0.98); }
     .btn-submit { background: linear-gradient(135deg, #21ba45, #19a53a); }
-    .btn-submit:disabled { background: #444; color: #888; cursor: not-allowed; }
     
     /* 藍牙按鈕 */
     .btn-bluetooth {
-        background: #2b2b2b; border: 1px solid var(--my-border); color: var(--my-text-main);
+        background: #8a8bc1; border: 1px solid var(--my-border); color: var(--my-text-main);
         font-size: 0.9rem; height: 36px; padding: 0 15px; border-radius: 18px;
         cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;
     }
-    .btn-bluetooth:hover { background: #333; }
+    .btn-bluetooth:hover { background: #4b5a8f; }
     .btn-bluetooth.connected { background: rgba(33, 186, 69, 0.1); color: #21ba45; border-color: #21ba45; }
-
-    /* === 🟢 藍牙掃描視窗 (Modal) === */
-    .modal-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        z-index: 1000;
-        display: none; /* 預設隱藏 */
-        justify-content: center; align-items: center;
-    }
     
-    .modal-content {
-        background: var(--my-bg-panel);
-        width: 90%; max-width: 400px;
-        border-radius: 16px;
-        border: 1px solid var(--my-border);
-        padding: 20px;
-        display: flex; flex-direction: column;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .modal-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: var(--my-text-main); text-align: center; }
-    
-    .device-list {
-        list-style: none; padding: 0; margin: 0;
-        max-height: 200px; overflow-y: auto;
-        border: 1px solid var(--my-border); border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    
-    .device-item {
-        padding: 12px 15px;
-        border-bottom: 1px solid var(--my-border);
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: space-between;
-        color: var(--my-text-sub);
-    }
-    .device-item:last-child { border-bottom: none; }
-    .device-item:hover { background: rgba(255,255,255,0.05); }
-    
-    .device-item.selected {
-        background: rgba(33, 133, 208, 0.1);
-        color: #2185d0;
-        font-weight: bold;
-    }
-    .device-item.selected::after {
-        content: '✓'; color: #2185d0;
-    }
 
     .scanning-animation {
         text-align: center; padding: 20px; color: var(--my-text-sub);
     }
-
-    .modal-actions { display: flex; gap: 10px; }
-    .btn-modal { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-    .btn-cancel { background: #555; color: white; }
-    .btn-confirm { background: #2185d0; color: white; }
-    .btn-confirm:disabled { background: #333; color: #666; cursor: not-allowed; }
 
     /* RWD: 手機直立時自動變回直式 */
     @media (max-width: 768px) {
@@ -227,9 +197,9 @@
         </button>
         <div id="reader"></div>
         <div class="camera-placeholder" id="cam-placeholder">
-            <button class="btn-camera-start" onclick="startScanner()">
+            <button class="btn-camera-start" id="btn-scan-qr" onclick="startScanner()">
                 <span class="ts-icon is-camera-icon" style="font-size: 2.5rem; margin-bottom: 5px;"></span>
-                開啟鏡頭
+                掃描 QR code
             </button>
             <div style="margin-top: 15px;">點擊開啟以掃描 QR Code</div>
         </div>
@@ -242,264 +212,67 @@
                 <span id="scan-status-badge" class="ts-badge is-small is-disabled">等待掃描</span>
             </div>
             <div class="field-row"><span class="field-label">部門 Dept.</span><span class="field-value" id="disp_dept">---</span></div>
-            <div class="field-row"><span class="field-label">定點 Loc.</span><span class="field-value" id="disp_loc">---</span></div>
-            <div class="field-row"><span class="field-label">人員 User</span><span class="field-value" id="disp_user">---</span></div>
-            <input type="hidden" id="hidden_loc_id">
+            <div class="field-row"><span class="field-label">廢棄物 Type</span><span class="field-value" id="disp_waste_type">---</span></div>
+            <div class="field-row">
+                <span class="field-label">定點 Loc.</span>
+                <select id="select_loc_id" class="field-value">
+                    <option value="">-- 請選擇定點 --</option>
+                </select>
+            </div>
         </div>
 
         <div class="info-card">
             <div class="card-header" style="border:none; padding-bottom:0;">
                 <span class="header-title">WEIGHT SCALE</span>
-                <button class="btn-bluetooth" id="btn-bt-connect" onclick="openBluetoothModal()">
+                <button class="btn-bluetooth" id="btn-bt-connect" onclick="bluetoothConnect()">
                     <span class="ts-icon is-bluetooth-icon"></span>
                     <span id="bt-text">搜尋磅秤</span>
                 </button>
             </div>
             <div class="weight-display-container">
                 <input type="number" class="big-input" id="weight_input" placeholder="0.00" readonly>
-                <span class="unit-tag">KG</span>
+                <span class="unit-tag">G</span>
             </div>
             <div style="text-align: center; color: var(--my-text-sub); font-size: 0.85rem; margin-top: 5px;">
-                <span id="bt-msg">請先連接藍牙磅秤</span>
+                <span id="bt-status">請先連接藍牙磅秤</span>
             </div>
+            <button class="btn-large" style="background: #8a8bc1; margin-top: 10px; color: white;" id="btn-record-weight">
+                <span class="ts-icon is-weight-scale-icon"></span>
+                記錄重量
+            </button>
+            <button class="btn-large btn-reset-factor" style="background: #8a8bc1; margin-top: 10px; color: white;" id="btn-reset-factor">
+                    <span class="ts-icon is-reload-icon"></span>
+                    重新校正 (100g)
+            </button>
         </div>
-
+        
         <div style="margin-top: auto;">
-            <button class="btn-large btn-submit" id="btn_submit" onclick="submitData()" disabled>
+            <button class="btn-large btn-submit" id="btn-submit-record" onclick="submitRecord()">
                 <span class="ts-icon is-cloud-arrow-up-icon"></span>
                 確認上傳 (Upload)
             </button>
         </div>
+
+        <!-- Toast Container -->
+        <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; opacity: 1; pointer-events: auto;"></div>
     </div>
 </div>
 
-<div class="modal-overlay" id="bt-modal">
-    <div class="modal-content">
-        <div class="modal-title">藍牙裝置掃描</div>
-        
-        <div id="bt-searching" class="scanning-animation">
-            <span class="ts-loading is-large"></span>
-            <div style="margin-top:10px">正在搜尋附近的裝置...</div>
-        </div>
-
-        <ul class="device-list" id="bt-list" style="display:none;">
-            </ul>
-
-        <div class="modal-actions">
-            <button class="btn-modal btn-cancel" onclick="closeBluetoothModal()">取消</button>
-            <button class="btn-modal btn-confirm" id="btn-bt-confirm" onclick="confirmBluetoothDevice()" disabled>連線</button>
-        </div>
-    </div>
-</div>
+{{ locations|json_script:"locations-data" }}
 
 <script>
-    let html5QrcodeScanner = null;
-    let isScanning = false;
-    let selectedDeviceName = null;
-
-    // 假資料
-    const mockLocations = [
-        { id: 0, dept: "病理檢驗部", loc: "B1 汙物室", user: "王小明" },
-        { id: 1, dept: "急診室", loc: "一樓大廳", user: "李大華" },
-        { id: 2, dept: "放射科", loc: "二樓護理站", user: "張阿姨" }
-    ];
-
-    // ==========================================
-    // 1. 鏡頭控制 (節能模式)
-    // ==========================================
-    function startScanner() {
-        document.getElementById('cam-placeholder').style.display = 'none';
-        document.getElementById('reader').style.display = 'block';
-        document.getElementById('btn-stop-cam').style.display = 'block';
-
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        
-        // 嘗試使用後鏡頭
-        html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
-        .catch(err => {
-            alert('無法啟動鏡頭 (請允許瀏覽器存取相機)');
-            stopScanner();
-        });
-        isScanning = true;
-    }
-
-    function stopScanner() {
-        if (html5QrcodeScanner && isScanning) {
-            html5QrcodeScanner.stop().then(() => {
-                html5QrcodeScanner.clear();
-                isScanning = false;
-                document.getElementById('reader').style.display = 'none';
-                document.getElementById('btn-stop-cam').style.display = 'none';
-                document.getElementById('cam-placeholder').style.display = 'flex';
-            }).catch(err => console.log("Stop failed", err));
-        }
-    }
-
-    function onScanSuccess(decodedText, decodedResult) {
-        // 掃到後自動關閉鏡頭 (省電)
-        stopScanner();
-        
-        // 隨機帶入一筆資料
-        const randomData = mockLocations[Math.floor(Math.random() * mockLocations.length)];
-        
-        document.getElementById('disp_dept').innerText = randomData.dept;
-        document.getElementById('disp_loc').innerText = randomData.loc;
-        document.getElementById('disp_user').innerText = randomData.user;
-        document.getElementById('hidden_loc_id').value = randomData.id;
-
-        const badge = document.getElementById('scan-status-badge');
-        badge.className = 'ts-badge is-positive';
-        badge.innerHTML = '<span class="ts-icon is-check-icon"></span> 掃描成功';
-
-        // 檢查是否可以上傳
-        checkSubmitReady();
-    }
-
-    // ==========================================
-    // 2. 藍牙連接 (含真實檢查 + 模擬搜尋)
-    // ==========================================
-    async function openBluetoothModal() {
-        // 步驟 A: 嘗試檢查真實藍牙狀態
-        if (navigator.bluetooth) {
-            try {
-                const isAvailable = await navigator.bluetooth.getAvailability();
-                if (!isAvailable) {
-                    alert("⚠️ 偵測到您的藍牙未開啟！\n請先開啟藍牙功能以連接磅秤。");
-                    return; // 阻止後續流程
-                }
-            } catch (error) {
-                console.log("藍牙檢查失敗，略過檢查:", error);
-            }
-        }
-
-        // 步驟 B: 開啟模擬搜尋視窗
-        document.getElementById('bt-modal').style.display = 'flex';
-        document.getElementById('bt-searching').style.display = 'block';
-        document.getElementById('bt-list').style.display = 'none';
-        document.getElementById('bt-list').innerHTML = '';
-        document.getElementById('btn-bt-confirm').disabled = true;
-        selectedDeviceName = null;
-
-        // 模擬搜尋時間 (1.5秒)
-        setTimeout(() => {
-            document.getElementById('bt-searching').style.display = 'none';
-            document.getElementById('bt-list').style.display = 'block';
-            
-            const devices = [
-                "Medical Waste Scale #01",
-                "Mi Smart Scale 2",
-                "Unknown Device (CC:21:44)"
-            ];
-            
-            const listEl = document.getElementById('bt-list');
-            devices.forEach(dev => {
-                const li = document.createElement('li');
-                li.className = 'device-item';
-                li.innerText = dev;
-                li.onclick = () => selectDevice(li, dev);
-                listEl.appendChild(li);
-            });
-        }, 1500);
-    }
-
-    function closeBluetoothModal() {
-        document.getElementById('bt-modal').style.display = 'none';
-    }
-
-    function selectDevice(element, devName) {
-        document.querySelectorAll('.device-item').forEach(el => el.classList.remove('selected'));
-        element.classList.add('selected');
-        selectedDeviceName = devName;
-        document.getElementById('btn-bt-confirm').disabled = false;
-    }
-
-    function confirmBluetoothDevice() {
-        closeBluetoothModal();
-
-        const btn = document.getElementById('btn-bt-connect');
-        const msg = document.getElementById('bt-msg');
-        const weightInput = document.getElementById('weight_input');
-
-        btn.className = "btn-bluetooth connected";
-        btn.innerHTML = `<span class="ts-icon is-link-icon"></span> ${selectedDeviceName}`;
-        
-        msg.innerText = "正在讀取數據...";
-        msg.style.color = "#21ba45";
-
-        // 模擬讀取延遲
-        setTimeout(() => {
-            const randomWeight = (Math.random() * 10 + 5).toFixed(2);
-            weightInput.value = randomWeight;
-            msg.innerText = "穩定讀數 (Stable)";
-            checkSubmitReady();
-        }, 800);
-    }
-
-    // 檢查是否滿足上傳條件
-    function checkSubmitReady() {
-        const locId = document.getElementById('hidden_loc_id').value;
-        const weight = document.getElementById('weight_input').value;
-        
-        if (locId && weight && parseFloat(weight) > 0) {
-            document.getElementById('btn_submit').disabled = false;
-        }
-    }
-
-    // ==========================================
-    // 3. 上傳資料
-    // ==========================================
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    function submitData() {
-        const locId = document.getElementById('hidden_loc_id').value;
-        const weight = document.getElementById('weight_input').value;
-        
-        const btn = document.getElementById('btn_submit');
-        const originalHTML = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="ts-loading"></span> 上傳中...';
-
-        fetch("{% url 'dashboard:api_record_waste' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                location_id: locId,
-                weight: weight
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert(`✅ 上傳成功！\n地點: ${document.getElementById('disp_loc').innerText}\n重量: ${weight} KG`);
-                window.location.reload(); 
-            } else {
-                alert('❌ 失敗: ' + data.message);
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            }
-        })
-        .catch(err => {
-            alert('❌ 錯誤: ' + err);
-            btn.disabled = false;
-            btn.innerHTML = originalHTML;
-        });
-    }
+  (function(){
+    const locations = JSON.parse(document.getElementById('locations-data').textContent || '[]');
+    // Set global API URLs for the module
+    window.locationsApiUrl = "{% url 'dashboard:locations_api' %}";
+    window.recordApiUrl = "{% url 'dashboard:api_record_waste' %}";
+    
+    StationMobile.init({
+      locations: locations,
+      api: {
+        recordUrl: "{% url 'dashboard:api_record_waste' %}"
+      }
+    });
+  })();
 </script>
 {% endblock %}

@@ -1,0 +1,42 @@
+/* Add these styles to your existing CSS file */
+
+/* Initially hide the maximized overview */
+#maximizedOverview {
+    display: none;
+}
+
+#maximizedOverview.has-hidden {
+    display: none;
+}
+
+#maximizedOverview:not(.has-hidden) {
+    display: block;
+}
+
+/* Make the chart container take up more space */
+#maximizedChart {
+    min-height: 650px;
+    width: 100%;
+    padding: 20px;
+}
+
+/* Style for maximize buttons */
+[id$="-maximize-btn"] {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+[id$="-maximize-btn"]:hover {
+    color: var(--ts-primary-500);
+}
+
+/* Style for close button */
+#maximizedOverview .ts-close {
+    cursor: pointer;
+}
+
+/* Ensure proper spacing */
+.has-padded-small.is-chart {
+    padding: 15px;
+    min-height: 300px;
+}
