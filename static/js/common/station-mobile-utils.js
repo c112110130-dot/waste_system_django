@@ -5,10 +5,8 @@ const StationMobile = (function(){
   let cfg = { locations: [] };
   let html5QrcodeScanner = null;
   let isScanning = false;
-  let selectedDeviceName = null;
 
   // API URLs
-  let locationsApiUrl = '';
   let recordApiUrl = '';
 
   // Bluetooth variables
@@ -41,7 +39,7 @@ const StationMobile = (function(){
     renderLocations(cfg.locations);
   }
 
-  // Initialize DOM elements (from app.js)
+  // Initialize DOM elements
   function initializeDOMElements(){
     // Get DOM elements
     inputUnit = document.getElementById('disp_dept');
@@ -391,22 +389,6 @@ const StationMobile = (function(){
         btnResetFactor.disabled = true;
         btnResetFactor.innerText = "校正中...";
       }
-      return;
-    }
-
-    if (receivedString.startsWith("CALI:")) {
-      const step = parseInt(receivedString.split(':')[1]);
-      const percent = Math.round(((step + 1) / 9) * 100);
-      if (caliProgressBar) {
-        caliProgressBar.style.width = percent + '%';
-        caliProgressBar.innerText = `採樣中 ${percent}%`;
-      }
-      return;
-    }
-
-    if (receivedString === "NEXT_ROUND") {
-      displayMessage("🔄 誤差尚大，進行下一輪微調...", "info", 1000);
-      if (caliProgressBar) caliProgressBar.style.width = '10%';
       return;
     }
 
