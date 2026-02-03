@@ -217,7 +217,7 @@
                 <span class="field-label">定點 Loc.</span>
                 <select id="select_loc_id" class="field-value">
                     <option value="">-- 請選擇定點 --</option>
-                    {% for loc in locations %}<option value="{{ loc.id }}" {% if selected_location == loc.id|stringformat:"i" %}selected{% endif %}>{{ loc.name }}</option>{% endfor %}
+                    <option value="{{ loc.id }}" {% if selected_location == loc.id|stringformat:"i" %}selected{% endif %}>{{ loc.name }}</option>
                 </select>
             </div>
         </div>
@@ -259,8 +259,20 @@
     </div>
 </div>
 
+{{ locations|json_script:"locations-data" }}
 <script>
-    
-    
+    document.addEventListener('DOMContentLoaded', function() {
+        // 讀取 Django 傳過來的 JSON 資料
+        const locationsDataElement = document.getElementById('locations-data');
+        const locations = locationsDataElement ? JSON.parse(locationsDataElement.textContent) : [];
+
+        // 初始化模組
+        StationMobile.init({
+            locations: locations,
+            api: {
+                recordUrl: "{% url 'dashboard:api_record_waste' %}"
+            }
+        });
+    });
 </script>
 {% endblock %}

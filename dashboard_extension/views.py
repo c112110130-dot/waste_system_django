@@ -240,8 +240,11 @@ def transportation_view(request):
 
 @login_required
 def mobile_station_view(request):
-    global locations_list
-    context = { 'locations': locations_list }
+    locations_list = list(LocationPoint.objects.values('id', 'name'))
+    context = {
+        # 這裡傳 list 給模板
+        'locations': locations_list,
+    }
     return render(request, 'dashboard_extension/mobile/station.html', context)
 
 @require_POST
