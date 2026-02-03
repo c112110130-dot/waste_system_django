@@ -20,4 +20,5 @@ urlpatterns = [
     path('api/record_waste/', views.record_waste_api, name='api_record_waste'),
     # 刪除載運單
     path('api/delete_batches/', views.delete_batches_api, name='api_delete_batches'),
+    path('api/locations/', views.locations_api, name='locations_api'),
 ]

@@ -434,6 +434,7 @@
 {% endfor %}
 
 <script>
+    
     document.addEventListener("DOMContentLoaded", function() {
         flatpickr("#start_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
         flatpickr("#end_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
@@ -469,7 +470,6 @@
     
     window.confirmDelete = function() {
         if (!window.pendingDeleteIds) return;
-
         console.log("準備刪除 IDs:", window.pendingDeleteIds); // 1. 確認 ID 有沒有抓到
 
         fetch("{% url 'dashboard:api_delete_batches' %}", {
@@ -491,13 +491,11 @@
             if (data.status === 'success') {
                 window.location.reload();
             } else {
-                
                 console.error("後端回傳錯誤:", data);
                 alert('刪除失敗，原因：' + (data.message || '未知錯誤'));
             }
         })
         .catch(error => {
-            
             console.error("Fetch 發生錯誤:", error);
             alert('系統發生錯誤，請按 F12看 Console。原因：\n' + error.message);
         });

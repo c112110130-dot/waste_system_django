@@ -1,30 +1,28 @@
-from urllib import request
 from django.shortcuts import render,redirect
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST,require_GET
 from django.contrib.auth.decorators import login_required
 import json
 from django.db.models import Sum, Count, Q
 from Main.models import UserProfile
 
-from .models import WasteRecord, Department, LocationPoint, clearAgency, processAgency, TransportRecord
+from .models import WasteRecord, Department, LocationPoint, clearAgency, processAgency, TransportRecord,WasteType
 
 departments_list = Department.objects.all()
 locations_list = LocationPoint.objects.all()
 weighers_list = UserProfile.objects.all()
 process_agencies = processAgency.objects.all()
 clear_agencies = clearAgency.objects.all()
-all_records =  WasteRecord.objects.all().order_by('-create_time')
-transport_batches = TransportRecord.objects.all().order_by('-settle_time')
+
+transport_batches = TransportRecord.objects.filter().order_by('-settle_time')
 
 @require_POST
 @login_required
 def delete_records(request):
-    global all_records
     try:
         # 從 POST 資料中取得 IDs
         ids_str = request.POST.get('ids', '')
@@ -37,12 +35,11 @@ def delete_records(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+
 @require_POST
 @login_required
 def settlement_process(request):
-    global all_records
-    # 1. 取得表單資料
-    print("=== 1. 進入 settlement_process ===") # 確認有沒有進來
+    print("=== 1. 進入 settlement_process ===") 
     ids_str = request.POST.get('selected_ids')
     process_agency_id = request.POST.get('process_agency')
     clear_agency_id = request.POST.get('clear_agency')
@@ -50,15 +47,12 @@ def settlement_process(request):
     if ids_str and process_agency_id and clear_agency_id:
         try:
             print("=== 3. 準備建立 TransportRecord ===")
-            # 2. 先建立一筆新的「清運紀錄 (TransportRecord)」
-            # 假設你的 TransportRecord 模型有這些欄位，請根據實際情況調整
             new_transport = TransportRecord.objects.create(
                 settler_id=request.user.id,
                 process_agency_id=process_agency_id,
                 clear_agency_id=clear_agency_id,  
             )
             print(f"=== 4. TransportRecord 建立成功 ID: {new_transport.id} ===")
-            # 3. 處理廢棄物紀錄
             id_list = ids_str.split(',')
             
             updated_count = WasteRecord.objects.filter(id__in=id_list).update(
@@ -76,9 +70,10 @@ def settlement_process(request):
         
     return redirect('dashboard:settlement_page') 
 
+
 @login_required
 def settlement_view(request):
-    global all_records
+    all_records =  WasteRecord.objects.filter().order_by('-create_time')
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_location = request.GET.get('location', '')
@@ -143,7 +138,6 @@ def settlement_view(request):
         'page_obj': page_obj,
         'current_page_size': page_size,
         
-        # 回傳篩選狀態 (讓前端記住使用者的選擇)
         'start_date': f_start_date,
         'end_date': f_end_date,
         'selected_location': f_location,
@@ -151,7 +145,6 @@ def settlement_view(request):
         'selected_weigher': f_weigher,
         'current_sort': sort_by,
 
-        # 下拉選單資料 (目前為空，或為假資料)
         'departments': departments_list,
         'locations': locations_list,
         'weighers': weighers_list,
@@ -160,6 +153,7 @@ def settlement_view(request):
     }
 
     return render(request, 'dashboard_extension/settlement_fragment.html', context)
+
 
 @login_required
 def transportation_view(request):
@@ -180,6 +174,7 @@ def transportation_view(request):
         db_total_weight=Sum('wasterecord__weight'),  
         db_item_count=Count('wasterecord')
     ).prefetch_related('wasterecord_set')
+    
     if f_start_date:
         try:
             start_dt = timezone.make_aware(datetime.strptime(f_start_date, '%Y-%m-%d'))
@@ -205,8 +200,8 @@ def transportation_view(request):
             pass
 
     weight_data = batches.aggregate(weight_sum=Sum('db_total_weight'))
-    total_weight_sum = weight_data['weight_sum'] or 0
-
+    raw_weight = weight_data['weight_sum'] or 0
+    total_weight_sum = round(raw_weight, 2)
     if sort_by == 'newest':
         batches = batches.order_by('-settle_time')
     elif sort_by == 'oldest':
@@ -245,6 +240,7 @@ def transportation_view(request):
 
 @login_required
 def mobile_station_view(request):
+    global locations_list
     context = { 'locations': locations_list }
     return render(request, 'dashboard_extension/mobile/station.html', context)
 
@@ -287,7 +283,6 @@ def delete_records_api(request):
 @require_POST
 @login_required
 def delete_batches_api(request):
-    global transport_batches
     try:
         # 1. 解析前端傳來的 JSON 資料
         # 因為前端 fetch header 是 'application/json'，資料不在 POST 裡，而在 body 裡
@@ -321,13 +316,15 @@ def delete_batches_api(request):
         print(f"刪除失敗: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-@login_required
+
 @require_POST
+@login_required
 def record_waste_api(request):
     try:
         # 解析 JSON 資料
         data = json.loads(request.body)
         dept = data.get('dept')
+        waste_type = data.get('waste_type')
         loc_id = data.get('location_id')
         weight = data.get('weight')
 
@@ -341,10 +338,11 @@ def record_waste_api(request):
             location=loc_id,
             department=dept_id,
             weight=weight,
+            waste_type=waste_type,
             creator=request.user,
             updater=request.user
         )
-
+        
         return JsonResponse({'status': 'success'})
 
     except LocationPoint.DoesNotExist:
@@ -353,3 +351,11 @@ def record_waste_api(request):
         return JsonResponse({'status': 'error', 'message': '部門不存在'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+    
+@require_GET
+@login_required
+def locations_api(request):
+    try:
+        return JsonResponse({'locations': locations_list})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

@@ -1,7 +1,7 @@
+from datetime import datetime, timedelta
+from django.utils import timezone
 from django.db import models
-from django.db.models import Sum  # 記得引入 Sum
-# 👇【重要】這裡要改成學長放 User/Department 的那個 APP 名稱
-# 假設學長的 APP 叫 'core'，如果叫別的請修改，或者先用字串 'core.User' 參照
+from django.db.models import Sum  
 from django.conf import settings 
 
 
@@ -60,7 +60,7 @@ class TransportRecord(models.Model):
     @property
     def total_weight(self):
         result = self.wasterecord_set.aggregate(total=Sum('weight'))
-        return result['total'] or 0
+        return round(result['total'], 2) if result['total'] is not None else 0
     @property
     def items(self):
         return self.wasterecord_set.all()
@@ -74,10 +74,21 @@ class TransportRecord(models.Model):
 class WasteRecord(models.Model):
     id = models.AutoField(primary_key=True)
     is_transported = models.BooleanField(default=False)
-    is_expired = models.BooleanField(default=False)
+    @property
+    def is_expired(self):
+        if hasattr(self, 'TransportRecord_id') and self.TransportRecord_id:
+            return False
+        if self.is_transported:
+            return False
+        if not self.create_time:
+            return False
+        if timezone.now() > self.create_time + timedelta(days=3):
+            return True
+        return False
+    @property
     def can_delete(self):
         return not self.is_transported and not self.is_expired
-    weight = models.DecimalField(max_digits=10,decimal_places=2)
+    weight = models.DecimalField(max_digits=5,decimal_places=2)
     department = models.ForeignKey(
         Department,
         on_delete=models.CASCADE
@@ -91,6 +102,7 @@ class WasteRecord(models.Model):
         null=True, blank=True,
         on_delete=models.SET_NULL
     )
+    waste_type = models.CharField(max_length=100, verbose_name="廢棄物種類")
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
         on_delete=models.CASCADE,
