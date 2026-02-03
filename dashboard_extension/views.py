@@ -331,12 +331,13 @@ def record_waste_api(request):
         loc_id = data.get('location_id')
         weight = data.get('weight')
 
-        if not loc_id or not weight:
+        if not loc_id or not weight or not dept or not waste_type:
             return JsonResponse({'status': 'error', 'message': '資料不完整'})
 
         # 寫入資料庫邏輯
         loc_id = LocationPoint.objects.get(id=loc_id)
         dept_id = Department.objects.get(name=dept)
+        waste_type = WasteType.objects.get(name=waste_type)
         WasteRecord.objects.create(
             location=loc_id,
             department=dept_id,
