@@ -102,7 +102,11 @@ class WasteRecord(models.Model):
         null=True, blank=True,
         on_delete=models.SET_NULL
     )
-    waste_type = models.CharField(max_length=100, verbose_name="廢棄物種類")
+    waste_type = models.ForeignKey(
+        'WasteType',
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )  # 廢棄物種類（外來鍵）
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
         on_delete=models.CASCADE,
@@ -128,10 +132,6 @@ class WasteType(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     measurement = models.CharField(max_length=20)
-    wasteRecord_id = models.ForeignKey(
-        WasteRecord,
-        on_delete=models.CASCADE
-    )
     created_time = models.DateTimeField(auto_now_add=True, verbose_name="建立時間")
     class Meta:
         db_table = 'waste_type' # 資料庫裡的表格名稱
