@@ -12,11 +12,7 @@ from Main.models import UserProfile
 
 from .models import WasteRecord, Department, LocationPoint, clearAgency, processAgency, TransportRecord,WasteType
 
-departments_list = Department.objects.all()
-locations_list = LocationPoint.objects.all()
-weighers_list = UserProfile.objects.all()
-process_agencies = processAgency.objects.all()
-clear_agencies = clearAgency.objects.all()
+
 
 transport_batches = TransportRecord.objects.filter().order_by('-settle_time')
 
@@ -73,6 +69,11 @@ def settlement_process(request):
 
 @login_required
 def settlement_view(request):
+    departments_list = Department.objects.all()
+    locations_list = LocationPoint.objects.all()
+    weighers_list = UserProfile.objects.all()
+    process_agencies = processAgency.objects.all()
+    clear_agencies = clearAgency.objects.all()
     all_records =  WasteRecord.objects.filter().order_by('-create_time')
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')

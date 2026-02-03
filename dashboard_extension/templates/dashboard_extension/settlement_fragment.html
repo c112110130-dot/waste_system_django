@@ -306,7 +306,7 @@
                 <div style="margin-bottom:8px;">目前時間：<span id="modalCurrentTime" style="color:var(--my-text-main);"></span></div>
                 <div>您已選取：<strong id="modalSelectedCount" style="color:#4db8ff;">0</strong> 筆資料</div>
             </div>
-            <form id="settlementForm" method="post" class="ts-form">
+            <form id="settlementForm" method="post" class="ts-form" action="{% url 'dashboard:settlement_process' %}">
                 {% csrf_token %}
                 <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
                 <div class="field">
