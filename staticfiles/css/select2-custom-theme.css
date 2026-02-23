@@ -1,0 +1,198 @@
+/* Select2 Dark Theme with TocasUI Color System */
+
+/* Main selection container */
+.select2-container--default .select2-selection--single {
+    background-color: var(--ts-gray-75);
+    border: 1px solid var(--ts-gray-300);
+    color: var(--ts-gray-800);
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+.select2-container--default .select2-selection--multiple {
+    background-color: var(--ts-gray-75);
+    border: 1px solid var(--ts-gray-300);
+    color: var(--ts-gray-800);
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+/* Selected value display */
+.select2-container--default .select2-selection--single .select2-selection__rendered,
+.select2-container--default .select2-selection--multiple .select2-selection__rendered,
+.select2-selection__rendered {
+    color: var(--ts-gray-800) !important;
+}
+
+/* Focus state for selection box */
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border: 1px solid var(--ts-primary-500);
+    outline: 0;
+    box-shadow: 0 0 0 1px var(--ts-primary-500);
+}
+
+/* Focus state text color */
+.select2-container--default.select2-container--focus .select2-selection--single .select2-selection__rendered,
+.select2-container--default.select2-container--focus .select2-selection--multiple .select2-selection__rendered,
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__rendered,
+.select2-container--default.select2-container--open .select2-selection--multiple .select2-selection__rendered {
+    color: var(--ts-gray-800) !important;
+}
+
+/* Dropdown arrow icon */
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--ts-gray-600) transparent transparent transparent;
+}
+
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent var(--ts-gray-600) transparent;
+}
+
+/* Dropdown container */
+.select2-dropdown {
+    background-color: var(--ts-gray-50);
+    border: 1px solid var(--ts-gray-300);
+    border-top: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Search input field */
+.select2-search--dropdown .select2-search__field {
+    background-color: var(--ts-gray-75);
+    border: 1px solid var(--ts-gray-300);
+    color: var(--ts-gray-800);
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+    font-size: 16px;
+}
+
+.select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--ts-primary-500);
+    outline: 0;
+    background-color: var(--ts-gray-100);
+}
+
+/* Results list container */
+.select2-results {
+    background-color: var(--ts-gray-50);
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+.select2-results__option {
+    color: var(--ts-gray-800);
+    background-color: var(--ts-gray-50);
+    padding: 8px 12px;
+}
+
+/* Highlighted option (hover effect) */
+.select2-results__option--highlighted[aria-selected] {
+    background-color: var(--ts-gray-200);
+    color: var(--ts-gray-900);
+}
+
+/* Highlighted selected option */
+.select2-results__option--highlighted[aria-selected="true"],
+.select2-results__option--highlighted.select2-results__option--selected {
+    background-color: var(--ts-gray-400) !important;
+    color: var(--ts-gray-900) !important;
+}
+
+/* Selected option */
+/*.select2-results__option[aria-selected="true"],*/
+/*.select2-results__option--selected,*/
+.select2-results__option.select2-results__option--selected {
+    background-color: var(--ts-primary-600) !important;
+    color: var(--ts-static-gray-75) !important;
+}
+
+/* Multiple selection tags */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: var(--ts-gray-200);
+    border: 1px solid var(--ts-gray-400);
+    color: var(--ts-gray-800);
+    border-radius: 3px;
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+/* Remove button for multiple selection tags */
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: var(--ts-gray-600);
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: var(--ts-negative-500);
+    background-color: var(--ts-gray-300);
+}
+
+/* Placeholder text */
+.select2-container--default .select2-selection--single .select2-selection__placeholder,
+.select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+    color: var(--ts-gray-700);
+}
+
+/* Clear button */
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    color: var(--ts-gray-600);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear:hover {
+    color: var(--ts-negative-500);
+    background-color: var(--ts-gray-200);
+    border-radius: 2px;
+}
+
+/* Disabled state */
+.select2-container--default.select2-container--disabled .select2-selection--single,
+.select2-container--default.select2-container--disabled .select2-selection--multiple {
+    background-color: var(--ts-gray-50);
+    color: var(--ts-gray-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Loading and disabled options */
+.select2-results__option--loading,
+.select2-results__option--disabled {
+    color: var(--ts-gray-400);
+    background-color: var(--ts-gray-75);
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+/* Option group headers */
+.select2-results__group {
+    color: var(--ts-gray-600);
+    background-color: var(--ts-gray-75);
+    font-weight: bold;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ts-gray-200);
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+/* No results message */
+.select2-results__option--selectable {
+    cursor: pointer;
+}
+
+.select2-results__message {
+    color: var(--ts-gray-500);
+    background-color: var(--ts-gray-75);
+    padding: 12px;
+    text-align: center;
+    font-family: "Noto Sans TC", "Sarasa Mono TC", sans-serif;
+}
+
+/* Scrollbar styling (WebKit browsers) */
+.select2-results__options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.select2-results__options::-webkit-scrollbar-track {
+    background: var(--ts-gray-75);
+}
+
+.select2-results__options::-webkit-scrollbar-thumb {
+    background: var(--ts-gray-300);
+    border-radius: 4px;
+}
+
+.select2-results__options::-webkit-scrollbar-thumb:hover {
+    background: var(--ts-gray-400);
+}
