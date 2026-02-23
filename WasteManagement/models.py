@@ -192,6 +192,7 @@ class WasteType(models.Model):
     UNIT_CHOICES = [
         ('metric_ton', '公噸'),
         ('kilogram', '公斤'),
+        ('gram', '公克'),
     ]
     
     id = models.AutoField(primary_key=True)
@@ -256,7 +257,8 @@ class DepartmentWasteConfiguration:
     # Unit translation mapping
     UNIT_TRANSLATION = {
         'metric_ton': {'display': '公噸', 'symbol': 'T'},
-        'kilogram': {'display': '公斤', 'symbol': 'kg'}
+        'kilogram': {'display': '公斤', 'symbol': 'kg'},
+        'gram': {'display': '公克', 'symbol': 'g'}
     }
 
     # Default department list

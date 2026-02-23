@@ -68,8 +68,12 @@ else:
     DEBUG = config('DEBUG', default=True, cast=bool)
     print(f"[Config] DEBUG={DEBUG} (Development mode)")
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
-
+ALLOWED_HOSTS = ['*']  # In production, set specific allowed hosts via environment variable
+# config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app',  # 允許所有 ngrok 免費網域
+    'https://*.ngrok.io',        # 舊版 ngrok 網域 (備用)
+]
 # Security settings for production
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
@@ -109,6 +113,7 @@ MIDDLEWARE = [
     'MedicalWasteManagementSystem.shared_middleware.DatabaseOptimizationMiddleware',
     'MedicalWasteManagementSystem.exception_middleware.UnifiedExceptionHandlingMiddleware',
     'MedicalWasteManagementSystem.audit_middleware.AuditMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = 'MedicalWasteManagementSystem.urls'
@@ -322,16 +327,38 @@ CSP_DEFAULT_SRC = ("'self'",)
 
 # Script sources: Allow self and inline scripts (required for current architecture)
 # 'unsafe-inline' allows XSS if user input is not properly escaped
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'")
+CSP_SCRIPT_SRC = [
+    "'self'", 
+    "'unsafe-inline'",
+    "https://cdnjs.cloudflare.com",
+    "https://cdn.jsdelivr.net",
+    # 如果有用到 Google Fonts 的 JS 或其他 JS CDN 也要加
+]
 
 # Style sources: Allow self and inline styles (required for TocasUI)
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+CSP_STYLE_SRC = [
+    "'self'", 
+    "'unsafe-inline'",
+    "https://cdnjs.cloudflare.com",
+    "https://fonts.googleapis.com",
+    "https://cdn.jsdelivr.net",
+    "https://cdn.jsdelivr.net", # 重複沒關係，主要是網域要對
+    
+]
 
 # Image sources: Allow self, data URIs (for charts), and blob (for generated images)
 CSP_IMG_SRC = ("'self'", "data:", "blob:")
 
 # Font sources: Only allow from same origin
-CSP_FONT_SRC = ("'self'",)
+CSP_FONT_SRC = [
+    "'self'",
+    "https://fonts.gstatic.com",      # Google Fonts 的字型檔來源
+    "https://cdnjs.cloudflare.com",   # 如果你有用 CDN 的 FontAwesome
+    "https://cdn.jsdelivr.net",       # 其他常見 CDN
+    "data:",
+    
+    
+]
 
 # Connect sources: Only allow AJAX/fetch to same origin
 CSP_CONNECT_SRC = ("'self'",)

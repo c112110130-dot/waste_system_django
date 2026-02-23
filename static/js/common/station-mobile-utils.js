@@ -613,11 +613,7 @@ const StationMobile = (function(){
     const weight = weightEl ? weightEl.value : '';
     const dept = deptEl ? deptEl.innerText : '---';
     const type = typeEl ? typeEl.innerText : '---';
-    if (locId && weight && parseFloat(weight) > 0 && dept !== '---' && type !== '---'){ 
-      if (btn) btn.disabled = false; 
-    } else {
-      if (btn) btn.disabled = true;
-    }
+    
   }
 
   function getCookie(name) {
@@ -643,10 +639,10 @@ const StationMobile = (function(){
     const locId = locSel ? locSel.value : '';
 
     if (!dept || dept === '---' || !wasteType || wasteType === '---' || weight <= 0 || !locId || locId === '-- 請選擇定點 --'){
-      displayMessage('請確保所有欄位都已填寫正確', 'danger');
-      return;
+       displayMessage('請確保所有欄位都已填寫正確', 'danger');
+       return;
     }
-
+    
     fetch(recordApiUrl, {
       method: 'POST',
       headers: {

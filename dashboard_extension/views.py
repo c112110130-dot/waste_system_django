@@ -10,7 +10,7 @@ import json
 from django.db.models import Sum, Count, Q
 from Main.models import UserProfile
 
-from .models import WasteRecord, Department, LocationPoint, clearAgency, processAgency, TransportRecord,WasteType
+from .models import WasteRecord,  LocationPoint,Department, clearAgency, processAgency, TransportRecord,WasteType
 
 
 
@@ -360,6 +360,7 @@ def record_waste_api(request):
 @require_GET
 @login_required
 def locations_api(request):
+    locations_list = LocationPoint.objects.all()
     try:
         return JsonResponse({'locations': locations_list})
     except Exception as e:

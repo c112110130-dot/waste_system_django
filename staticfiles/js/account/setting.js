@@ -124,8 +124,6 @@ function createAccountTable(contentBox, data, perm, fullName, nameClass) {
 // Function to fetch account data
 function fetchAccountData(currentAccount, contentBox) {
     const url = `/account/manage/${currentAccount}/`; // API endpoint for current user data
-    
-
     fetch(url, {
         method: 'GET',
         headers: {
@@ -252,8 +250,7 @@ function changeTheme(theme) {
                     window.themeManager.applyTheme(theme);
                 }
             } else {
-                
-                
+                               
             }
         })
         .catch(error => {

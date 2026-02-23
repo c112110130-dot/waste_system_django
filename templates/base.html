@@ -120,6 +120,7 @@
         <script src="{% static 'js/common/cache-manager.js' %}"></script>
         <script src="{% static 'js/common/statistics-refresher.js' %}"></script>
         <script src="{% static 'js/common/global-modal-manager.js' %}"></script>
+        <script src="{% static 'js/common/station-mobile-utils.js' %}"></script>
         <!-- Addon Styles -->
         {% block stylesheet %}{% endblock %}
         <!-- Special schemes -->
@@ -197,10 +198,20 @@
                             <span class="ts-icon is-chart-line-icon"></span>
                             <span class="ts-text is-bold">廢棄物預測</span>
                         </a>
+                        {% if user.is_authenticated %}
                         <a class="item tab-item {% if '/dashboard/settlement/' in request.path %}is-active{% endif %}" href="/dashboard/settlement/">
                             <span class="ts-icon is-calculator-icon"></span>
                             <span class="ts-text is-bold">廢棄物結算 (我的)</span>
                         </a>
+                        <a class="item tab-item {% if '/dashboard/mobile/' in request.path %}is-active{% endif %}" href="/dashboard/mobile/">
+                            <span class="ts-icon is-mobile-screen-icon"></span>
+                            <span class="ts-text is-bold">行動工作站 (我們的)</span>
+                        </a>
+                        <a class="item tab-item {% if '/dashboard/transportation/' in request.path %}is-active{% endif %}" href="{% url 'dashboard:transportation_view' %}">
+                            <span class="ts-icon is-truck-icon"></span>
+                            <span class="ts-text is-bold">廢棄物載運紀錄 (我們的)</span>
+                        </a>
+                        {% endif %}
                     </div>
                 {% endblock %}
             </div>

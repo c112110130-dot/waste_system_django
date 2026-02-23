@@ -33,4 +33,5 @@ urlpatterns = [
 
     # Database setting router (static/template URLs)
     path('database/', views.view_database, name='database'),
+   
 ]

@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Sum  
 from django.conf import settings 
-
+from WasteManagement.models import Department
 
 class Department(models.Model):
     id = models.AutoField(primary_key=True)                  # 部門ID

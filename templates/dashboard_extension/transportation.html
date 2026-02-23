@@ -1,0 +1,512 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}廢棄物載運管理紀錄{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
+
+<style>
+    /* ========================================= */
+    /* 1. 變數設定                                */
+    /* ========================================= */
+    :root {
+        --tp-bg-panel: #363636;
+        --tp-bg-input: #222222;
+        --tp-text-main: #ffffff;
+        --tp-text-sub: #cccccc;
+        --tp-border: #555555;
+        --tp-hover: rgba(255, 255, 255, 0.05);
+        --tp-modal-bg: #2b2b2b;
+        --del-icon-bg: #ffffff; --del-icon-fg: #000000;
+        --del-cancel-bg: #e0e0e0; --del-cancel-fg: #333333;
+    }
+
+    html.is-light {
+        --tp-bg-panel: #f7f7f7; --tp-bg-input: #ffffff;
+        --tp-text-main: #333333; --tp-text-sub: #555555;
+        --tp-border: #dddddd; --tp-hover: rgba(0, 0, 0, 0.05);
+        --tp-modal-bg: #ffffff;
+        --del-icon-bg: #000000; --del-icon-fg: #ffffff;
+        --del-cancel-bg: #333333; --del-cancel-fg: #ffffff;
+    }
+
+    /* ========================================= */
+    /* 2. 嚴格隔離樣式 (Scoped CSS)              */
+    /* ========================================= */
+
+    /* 輸入框與選擇單 */
+    .transport-page .ts-select, 
+    .transport-page .ts-input input, 
+    .transport-page .flatpickr-input { 
+        height: 38px !important;
+        background-color: var(--tp-bg-input) !important;
+        border: 1px solid var(--tp-border) !important;
+        color: var(--tp-text-main) !important;
+        border-radius: 4px !important;
+        box-sizing: border-box !important;
+        font-size: 1rem !important;
+        width: 100% !important; 
+        display: block;
+    }
+
+    /* 🟢 修正：日曆顏色 (跟單筆紀錄頁面一致) */
+    html.is-dark .flatpickr-calendar { filter: invert(1) hue-rotate(180deg); }
+
+    /* 🟢 修正：排序選單寬度 (縮短，不要填滿) */
+    .transport-page .sort-select {
+        width: auto !important;
+        min-width: 140px;
+        max-width: 200px;
+    }
+
+    /* 🟢 修正：列印按鈕樣式 (防止擠壓) */
+    .btn-print-custom {
+        height: 38px !important;
+        background-color: var(--tp-bg-input) !important;
+        border: 1px solid var(--tp-border) !important;
+        color: var(--tp-text-main) !important;
+        border-radius: 4px !important;
+        padding: 0 15px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer;
+        font-size: 0.95rem !important;
+        font-weight: bold;
+        white-space: nowrap !important; /* 禁止換行 */
+        flex-shrink: 0 !important; /* 禁止被壓縮 */
+        transition: background-color 0.2s;
+    }
+    .btn-print-custom:hover { background-color: var(--tp-hover) !important; }
+
+    /* 🟢 修正：刪除按鈕樣式 (紅色實心) */
+    .btn-delete-main {
+        height: 38px !important;
+        background-color: #db2828 !important;
+        border: none !important;
+        color: #ffffff !important;
+        border-radius: 4px !important;
+        padding: 0 15px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer;
+        font-size: 0.95rem !important;
+        font-weight: bold;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        transition: background-color 0.2s;
+    }
+    .btn-delete-main:hover { background-color: #a81010 !important; }
+    
+    /* 表格內的單筆刪除按鈕 (紅色) */
+    .btn-row-delete {
+        background-color: #db2828 !important;
+        color: white !important;
+        border: none !important;
+        width: 30px !important;
+        height: 30px !important;
+        border-radius: 4px !important;
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+    }
+    .btn-row-delete:hover { background-color: #a81010 !important; }
+
+    /* 面板按鈕 (通用) */
+    .transport-page .dashboard-panel .ts-button {
+        height: 38px !important;
+        border-radius: 4px !important;
+    }
+
+    /* 日曆圖示 */
+    .transport-page .date-picker-wrapper { position: relative; width: 100% !important; display: block; }
+    .transport-page .calendar-icon {
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        pointer-events: none; opacity: 0.6; width: 16px; height: 16px; stroke: var(--tp-text-main); z-index: 2;
+    }
+
+    /* 面板佈局 */
+    .transport-page .dashboard-panel {
+        background-color: var(--tp-bg-panel);
+        border: 1px solid var(--tp-border);
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    .transport-page .control-panel { padding: 20px; }
+    .transport-page .data-panel { padding: 0; border-left: 4px solid #2185d0; min-height: 400px; }
+    
+    .transport-page label {
+        color: var(--tp-text-sub); margin-bottom: 6px; display: block; font-weight: bold; font-size: 0.95rem;
+    }
+
+    /* 表格樣式 */
+    .transport-page .ts-table { background: transparent !important; color: var(--tp-text-main) !important; }
+    .transport-page .ts-table thead th {
+        background-color: var(--tp-bg-panel) !important;
+        border-bottom: 1px solid var(--tp-border) !important;
+        color: var(--tp-text-main) !important;
+        font-size: 0.95rem;
+    }
+    .transport-page .ts-table tbody td {
+        border-bottom: 1px solid var(--tp-border) !important;
+        vertical-align: middle !important;
+        font-size: 0.95rem;
+    }
+    .transport-page .ts-table tbody tr:hover { background-color: var(--tp-hover) !important; }
+
+    /* Modal 樣式 */
+    .custom-modal-content {
+        background: var(--tp-modal-bg) !important; color: var(--tp-text-main) !important; border: 1px solid var(--tp-border);
+    }
+    #deleteModal > div {
+        width: 400px; max-width: 90vw; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.2); text-align: center;
+    }
+    .delete-icon-circle {
+        display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px;
+        border-radius: 50%; margin-bottom: 15px; background: var(--tp-text-main); color: var(--tp-bg-panel);
+    }
+    #detailModal > div {
+        width: 800px; max-width: 95vw; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 85vh;
+    }
+    .sub-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .sub-table th, .sub-table td { padding: 8px; border-bottom: 1px solid var(--tp-border); color: var(--tp-text-main); }
+    
+    /* 總重顯示區 */
+    .total-weight-box {
+        padding: 15px 25px;
+        border-bottom: 1px solid var(--tp-border);
+        background: var(--tp-bg-panel);
+        color: var(--tp-text-sub);
+        text-align: right;
+        font-size: 1rem;
+    }
+    .total-weight-value {
+        color: #db2828;
+        font-weight: bold;
+        font-size: 1.3rem;
+        margin-left: 8px;
+    }
+</style>
+
+<div class="ts-container is-fluid transport-page" style="padding: 20px;">
+    
+    <div class="dashboard-panel control-panel">
+        <form method="get" id="searchForm">
+            <input type="hidden" name="page_size" value="{{ current_page_size }}">
+            <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
+
+            <div class="ts-grid is-relaxed">
+                <div class="column is-6-wide">
+                    <label>結算日期 (起)</label>
+                    <div class="date-picker-wrapper">
+                        <input type="text" id="start_date" name="start_date" value="{{ start_date|default:'' }}" placeholder="YYYY-MM-DD">
+                        <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                </div>
+                <div class="column is-6-wide">
+                    <label>結算日期 (迄)</label>
+                    <div class="date-picker-wrapper">
+                        <input type="text" id="end_date" name="end_date" value="{{ end_date|default:'' }}" placeholder="YYYY-MM-DD">
+                        <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                </div>
+                
+                <div class="column is-12-wide">
+                    <div class="ts-grid is-relaxed">
+                        <div class="column is-8-wide">
+                            <label>機構名稱 (清理/處理)</label>
+                            <select name="agency" class="ts-select is-fluid">
+                                <option value="" {% if not selected_agency %}selected{% endif %}>全部機構</option>
+                                <optgroup label="清理機構">
+                                    {% for agency in clear_agencies %}
+                                        <option value="clear_{{ agency.id }}" 
+                                            {% if selected_agency == "clear_" %}selected{% endif %}>
+                                            {{ agency.name }}
+                                        </option>
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="處理機構">
+                                    {% for agency in process_agencies %}
+                                        <option value="process_{{ agency.id }}" 
+                                            {% if selected_agency == "process_" %}selected{% endif %}>
+                                            {{ agency.name }}
+                                        </option>
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="column is-4-wide" style="display: flex; align-items: flex-end;">
+                            <button type="submit" class="ts-button is-primary is-fluid" style="margin-right: 8px;">
+                                <span class="ts-icon is-magnifying-glass-icon"></span> 查詢
+                            </button>
+                            <button type="button" class="ts-button is-secondary" onclick="window.location.href=window.location.pathname" style="width: 50px;" title="重置">
+                                <span class="ts-icon is-rotate-left-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="dashboard-panel data-panel">
+        <div class="ts-content is-secondary is-fitted" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--tp-border); background-color: var(--tp-bg-panel); border-radius: 6px 6px 0 0;">
+            <div style="display: flex; align-items: center; flex-shrink: 1; margin-right: 15px;">
+                <div style="font-weight: bold; font-size: 1.05rem; margin-right: 12px; color: var(--tp-text-main); white-space: nowrap;">查詢結果</div>
+                <span style="font-size: 0.9rem; color: var(--tp-text-sub); white-space: nowrap;">(共 {{ page_obj.paginator.count|default:"0" }} 筆)</span>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
+                
+                <span style="font-size: 0.9rem; color: var(--tp-text-sub); white-space: nowrap;">排序：</span>
+                <select class="sort-select ts-select" onchange="submitWithSort(this.value)">
+                    <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊)</option>
+                    <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新)</option>
+                    <option value="weight_desc" {% if current_sort == 'weight_desc' %}selected{% endif %}>重量 (重 → 輕)</option>
+                    <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重)</option>
+                </select>
+                
+                <div style="width: 1px; height: 20px; background: var(--tp-border); margin: 0 5px;"></div>
+                
+                <button class="btn-print-custom" onclick="window.print()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    列印報表
+                </button>
+
+                <button type="button" id="btnBatchDelete" class="btn-delete-main" onclick="openBatchDelete()">
+                    <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> 
+                    <span id="btnBatchDeleteText">刪除</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="ts-content is-fitted" style="overflow-x: auto;">
+            <table class="ts-table is-celled is-striped is-fullwidth">
+                <thead>
+                    <tr>
+                        <th class="collapsing"><label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label></th>
+                        <th>結算時間</th>
+                        <th>總重量 (G)</th>
+                        <th>清理機構</th>
+                        <th>處理機構</th>
+                        <th>結算人員</th>
+                        <th class="is-center-aligned" style="width: 130px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in page_obj %}
+                    <tr>
+                        <td class="collapsing">
+                            <label class="ts-checkbox">
+                                <input type="checkbox" name="batch_ids" value="{{ batch.id }}" class="record-checkbox" onchange="updateUI()">
+                            </label>
+                        </td>
+                        <td>{{ batch.settle_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <span style="color: #db2828; font-weight: bold;">{{ batch.total_weight }}</span>
+                        </td>
+                        <td>{{ batch.clear_agency.name }}</td>
+                        <td>{{ batch.process_agency.name }}</td>
+                        <td>{{ batch.settler.username }}</td>
+                        <td class="is-center-aligned">
+                            <div style="display: flex; gap: 5px; justify-content: center;">
+                                <button class="ts-button is-info is-small is-outlined" style="height: 30px !important;" onclick="openDetailModal('{{ batch.id }}')">
+                                    <span class="ts-icon is-eye-icon"></span> 查看
+                                </button>
+                                <button class="btn-row-delete" onclick="deleteSingleBatch('{{ batch.id }}')" title="刪除此紀錄">
+                                    <span class="ts-icon is-trash-can-icon"></span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center !important; padding: 50px 0;">
+                            <div class="ts-icon is-box-open-icon" style="font-size: 2.5rem; margin-bottom: 10px; opacity: 0.5; color: var(--tp-text-sub);"></div>
+                            <div style="font-size: 1rem; color: var(--tp-text-sub);">目前沒有符合條件的載運紀錄</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="total-weight-box">
+            <span>本查詢結果總重量：</span>
+            <span class="total-weight-value">{{ total_weight_sum }}</span>
+            <span style="font-size: 0.9rem;">G</span>
+        </div>
+
+        <div class="ts-content is-secondary" style="background-color: var(--tp-bg-panel); border-top: 1px solid var(--tp-border); padding: 12px 20px; border-radius: 0 0 6px 6px;">
+            <div class="ts-grid is-middle-aligned is-between">
+                <div class="column">
+                    <div class="ts-wrap is-middle-aligned">
+                        <span style="color: var(--tp-text-sub); margin-right: 10px; font-size: 0.95rem;">每頁顯示：</span>
+                        <select class="ts-select is-small" style="width: auto; height: 32px !important;" onchange="changePageSize(this.value)">
+                            <option value="10" {% if page_obj.paginator.per_page == 10 %}selected{% endif %}>10</option>
+                            <option value="20" {% if page_obj.paginator.per_page == 20 %}selected{% endif %}>20</option>
+                            <option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="ts-pagination is-small is-secondary">
+                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&agency="|add:selected_agency|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
+                            {% if page_obj.has_previous %}
+                                <a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>
+                            {% else %}
+                                <span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>
+                            {% endif %}
+                            <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
+                            {% if page_obj.has_next %}
+                                <a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>
+                            {% else %}
+                                <span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<dialog id="deleteModal" style="padding:0;border:none;background:transparent;margin:auto;">
+    <div class="custom-modal-content">
+        <div style="padding:30px 20px 20px;">
+            <div class="delete-icon-circle"><span class="ts-icon is-question-icon" style="font-size: 30px;"></span></div>
+            <div style="font-size:1.3rem;font-weight:bold;margin-bottom:10px;">確認刪除</div>
+            <p style="font-size:0.95rem; opacity:0.8;">確定要刪除選取的載運單嗎？<br>此動作無法復原。</p>
+        </div>
+        <div style="padding:15px 25px 25px;display:flex;gap:15px;">
+            <button class="ts-button" onclick="document.getElementById('deleteModal').close()" style="flex:1; background:var(--del-cancel-bg); color:var(--del-cancel-fg);">取消</button>
+            <button class="ts-button" onclick="confirmDelete()" style="flex:1; background:#db2828; color:#fff;">確定</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog id="detailModal" style="padding:0; border:none; background:transparent; margin:auto;">
+    <div class="custom-modal-content">
+        <div style="padding: 15px 25px; border-bottom: 1px solid var(--tp-border); font-weight: bold; display: flex; justify-content: space-between;">
+            <span id="modalTitle">明細</span>
+            </div>
+        <div style="padding: 20px; overflow-y: auto;" id="modalBody"></div>
+        <div style="padding: 15px 25px; border-top: 1px solid var(--tp-border); text-align: right;">
+            <button onclick="document.getElementById('detailModal').close()" class="ts-button is-secondary is-small">關閉</button>
+        </div>
+    </div>
+</dialog>
+
+{% for batch in page_obj %}
+<template id="tmpl-{{ batch.id }}">
+    <div style="margin-bottom: 10px; color: var(--tp-text-sub); font-size:0.95rem;">
+        單號：<span style="font-family:monospace;">{{ batch.id }}</span> <br>
+        本批次包含 <strong>{{ batch.item_count }}</strong> 筆廢棄物紀錄：
+    </div>
+    <table class="sub-table">
+        <thead>
+            <tr><th>單筆 ID</th><th>產出部門</th><th>產出定點</th><th>產出時間</th><th>重量 (G)</th><th>過磅人員</th></tr>
+        </thead>
+        <tbody>
+            {% for item in batch.items %}
+            <tr>
+                <td style="font-family: monospace;">#{{ item.id }}</td>
+                <td>{{ item.department.name }}</td><td>{{ item.location.name }}</td>
+                <td>{{ item.create_time|date:"Y-m-d H:i" }}</td>
+                <td style="text-align: right; font-weight: bold;">{{ item.weight }}</td>
+                <td>{{ item.creator.username }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed var(--tp-border); text-align: right; font-weight: bold;">
+        總計重量：<span style="color: #db2828; font-size: 1.1rem;">{{ batch.total_weight }}</span> G
+    </div>
+</template>
+{% endfor %}
+
+<script>
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        flatpickr("#start_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
+        flatpickr("#end_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
+    });
+
+    window.submitWithSort = function(val) { document.getElementById('hiddenSortInput').value = val; document.getElementById('searchForm').submit(); }
+    
+    window.changePageSize = function(size) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page_size', size); urlParams.set('page', 1);
+        window.location.search = urlParams.toString();
+    }
+
+    window.toggleAll = function(src) { document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); updateUI(); }
+    window.updateUI = function() {
+        const count = document.querySelectorAll('.record-checkbox:checked').length;
+        document.getElementById('btnBatchDeleteText').innerText = count > 0 ? `刪除 (${count})` : "刪除";
+    }
+
+    window.pendingDeleteIds = null;
+    window.openBatchDelete = function() {
+        const ids = Array.from(document.querySelectorAll('.record-checkbox:checked')).map(cb => cb.value);
+        if (ids.length === 0) return alert('請至少選取一筆資料');
+        window.pendingDeleteIds = ids;
+        document.getElementById('deleteModal').showModal();
+    }
+
+    // 單筆刪除
+    window.deleteSingleBatch = function(id) {
+        window.pendingDeleteIds = [id];
+        document.getElementById('deleteModal').showModal();
+    }
+    
+    window.confirmDelete = function() {
+        if (!window.pendingDeleteIds) return;
+        console.log("準備刪除 IDs:", window.pendingDeleteIds); // 1. 確認 ID 有沒有抓到
+
+        fetch("{% url 'dashboard:api_delete_batches' %}", {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': '{{ csrf_token }}' 
+            },
+            body: JSON.stringify({ ids: window.pendingDeleteIds })
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const text = await res.text(); 
+                throw new Error(`HTTP 錯誤: ${res.status} - ${text.substring(0, 100)}...`); 
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                console.error("後端回傳錯誤:", data);
+                alert('刪除失敗，原因：' + (data.message || '未知錯誤'));
+            }
+        })
+        .catch(error => {
+            console.error("Fetch 發生錯誤:", error);
+            alert('系統發生錯誤，請按 F12看 Console。原因：\n' + error.message);
+        });
+    }
+
+    window.openDetailModal = function(id) {
+        const tmpl = document.getElementById('tmpl-' + id);
+        if (tmpl) {
+            document.getElementById('modalBody').innerHTML = tmpl.innerHTML;
+            document.getElementById('detailModal').showModal();
+        }
+    }
+</script>
+{% endblock %}
