@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta
 from django.http import JsonResponse
@@ -15,12 +15,14 @@ dept_names = ['病理檢驗部', '急診室', '放射科', '住院部', '行政�
 loc_names = ['B1 汙物室', '一樓大廳', '二樓護理站', '實驗室', '戶外暫存區']
 user_names = ['王小明', '李大華', '張阿姨', 'Admin']
 agency_names = ['大安環保公司', '綠色清運科技', '永續處理中心']
+type_names = ['一般感染性廢棄物', '病理廢棄物', '尖銳器具', '化學廢棄物']
 
 departments_list = [{'id': i, 'name': n} for i, n in enumerate(dept_names)]
 locations_list = [{'id': i, 'name': n} for i, n in enumerate(loc_names)]
 weighers_list = [{'id': i, 'name': n} for i, n in enumerate(user_names)]
 process_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names)]
 clear_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names)]
+waste_types_list = [{'id': i, 'name': n} for i, n in enumerate(type_names)]
 
 all_records = []
 transport_batches = [] 
@@ -39,6 +41,7 @@ def generate_data():
             'create_time': create_time,
             'weight': round(random.uniform(0.5, 25.0), 2),
             'is_transported': is_transported,
+            'waste_type': waste_types_list[random.randint(0, len(waste_types_list) - 1)],
             'department': departments_list[random.randint(0, 4)],
             'location':   locations_list[random.randint(0, 4)],
             'creator':    weighers_list[random.randint(0, 3)],
@@ -87,6 +90,8 @@ def settlement_view(request):
     f_location = request.GET.get('location', '')
     f_dept = request.GET.get('dept', '')
     f_weigher = request.GET.get('weigher', '')
+    f_waste_type = request.GET.get('waste_type', '') 
+    
     sort_by = request.GET.get('sort_by', 'newest')
 
     filtered_records = []
@@ -103,6 +108,8 @@ def settlement_view(request):
         if f_location and str(r['location']['id']) != str(f_location): match = False
         if f_dept and str(r['department']['id']) != str(f_dept): match = False
         if f_weigher and str(r['creator']['id']) != str(f_weigher): match = False
+        if f_waste_type and str(r['waste_type']['id']) != str(f_waste_type): match = False
+        
         if match: filtered_records.append(r)
 
     if sort_by == 'newest': filtered_records.sort(key=lambda x: x['create_time'], reverse=True)
@@ -118,14 +125,17 @@ def settlement_view(request):
 
     context = {
         'page_obj': page_obj, 'departments': departments_list, 'locations': locations_list,
-        'weighers': weighers_list, 'start_date': f_start_date, 'end_date': f_end_date,
+        'weighers': weighers_list, 
+        'waste_types': waste_types_list, 
+        'start_date': f_start_date, 'end_date': f_end_date,
         'selected_location': f_location, 'selected_dept': f_dept, 'selected_weigher': f_weigher,
+        'selected_waste_type': f_waste_type, 
         'current_sort': sort_by, 'current_page_size': page_size,
     }
     return render(request, 'dashboard_extension/settlement_fragment.html', context)
 
 # =========================================================
-# 3. 廢棄物載運管理紀錄 (加入總重計算)
+# 3. 廢棄物載運管理紀錄
 # =========================================================
 @login_required
 def transportation_view(request):
@@ -153,7 +163,6 @@ def transportation_view(request):
                 match = False
         if match: filtered_batches.append(batch)
 
-    # 🟢 計算總重
     total_weight_sum = sum(batch['total_weight'] for batch in filtered_batches)
 
     if sort_by == 'newest': filtered_batches.sort(key=lambda x: x['settle_time'], reverse=True)
@@ -169,7 +178,7 @@ def transportation_view(request):
         'start_date': f_start_date, 'end_date': f_end_date,
         'selected_agency': f_agency, 'current_page_size': page_size,
         'current_sort': sort_by,
-        'total_weight_sum': round(total_weight_sum, 2), # 傳遞總重
+        'total_weight_sum': round(total_weight_sum, 2), 
     }
     return render(request, 'dashboard_extension/transportation.html', context)
 
@@ -222,6 +231,7 @@ def record_waste_api(request):
             'update_time': datetime.now(),
             'weight': weight,
             'is_transported': False,
+            'waste_type': waste_types_list[0],
             'department': departments_list[0],
             'location': {'id': loc_id, 'name': loc_name},
             'creator': weighers_list[0],
@@ -231,3 +241,57 @@ def record_waste_api(request):
         return JsonResponse({'status': 'success'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+# =========================================================
+# 5. 處理結算單送出
+# =========================================================
+@require_POST
+@login_required
+def settlement_process_view(request):
+    global all_records, transport_batches
+    
+    # 1. 取得前端表單傳來的資料
+    selected_ids_str = request.POST.get('selected_ids', '')
+    process_agency_id = request.POST.get('process_agency')
+    clear_agency_id = request.POST.get('clear_agency')
+    
+    if not selected_ids_str:
+        return redirect('dashboard:settlement_view')
+        
+    selected_ids = selected_ids_str.split(',')
+    
+    # 2. 找出被選取的單筆廢棄物，並將狀態改為 "已載運"
+    batch_items = []
+    for r in all_records:
+        if str(r['id']) in selected_ids and not r['is_transported']:
+            r['is_transported'] = True
+            r['update_time'] = datetime.now()
+            batch_items.append(r)
+            
+    # 3. 如果有成功選取並更新項目，就產生一筆「載運批次紀錄」
+    if batch_items:
+        total_weight = sum(item['weight'] for item in batch_items)
+        
+        # 找出對應的機構名稱，如果找不到就預設第一間
+        p_agency = next((a for a in process_agencies if str(a['id']) == process_agency_id), process_agencies[0])
+        c_agency = next((a for a in clear_agencies if str(a['id']) == clear_agency_id), clear_agencies[0])
+        
+        # 動態產生載運單號 (例如 TR-20260223001)
+        new_batch_id = f"TR-{datetime.now().strftime('%Y%m%d%H%M')}{random.randint(10, 99)}"
+        
+        batch_record = {
+            'id': new_batch_id,
+            'settle_time': datetime.now(),
+            'settler': weighers_list[3], # 假設目前結算人員是 Admin
+            'clear_agency': c_agency,
+            'process_agency': p_agency,
+            'total_weight': round(total_weight, 2),
+            'items': batch_items,
+            'item_count': len(batch_items)
+        }
+        
+        # 將新單據插入到陣列最前面 (最新的在最上面)
+        transport_batches.insert(0, batch_record)
+        
+    # 4. 處理完成後，重新導向回結算頁面
+    return redirect('dashboard:settlement_view')

@@ -135,7 +135,15 @@
 </style>
 
 <div class="ts-container is-fluid" style="padding: 30px;">
-    
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="ts-header" style="color: var(--my-text-main); margin: 0;">
+            <span class="ts-icon is-truck-icon"></span> 廢棄物載運管理紀錄
+        </h2>
+        <button class="ts-button is-secondary is-outlined is-start-icon" onclick="window.print()">
+            <span class="ts-icon is-printer-icon"></span> 列印報表
+        </button>
+    </div>
+
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
             <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
@@ -158,7 +166,16 @@
                 </div>
             </div>
 
-            <div class="ts-grid is-relaxed is-4-columns">
+            <div class="ts-grid is-relaxed is-5-columns">
+                <div class="column">
+                    <label>種類</label>
+                    <select name="waste_type" class="ts-select is-fluid">
+                        <option value="">全部種類</option>
+                        {% for type in waste_types %}
+                            <option value="{{ type.id }}" {% if selected_waste_type == type.id|stringformat:"i" %}selected{% endif %}>{{ type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="column">
                     <label>定點</label>
                     <select name="location" class="ts-select is-fluid"><option value="">全部定點</option>{% for loc in locations %}<option value="{{ loc.id }}" {% if selected_location == loc.id|stringformat:"i" %}selected{% endif %}>{{ loc.name }}</option>{% endfor %}</select>
@@ -169,7 +186,7 @@
                 </div>
                 <div class="column">
                     <label>過磅人員</label>
-                    <select name="weigher" class="ts-select is-fluid"><option value="">全部人員</option>{% for user in weighers %}<option value="{{ user.id }}" {% if selected_weigher == user.id|stringformat:"i" %}selected{% endif %}>{{ user.name }}</option>{% endfor %}</select>
+                    <select name="weigher" class="ts-select is-fluid"><option value="">全部人員</option>{% for user in weighers %}<option value="{{ user.id }}" {% if selected_weigher == user.id|stringformat:"i" %}selected{% endif %}>{{ user.user }}</option>{% endfor %}</select>
                 </div>
                 <div class="column" style="display: flex; align-items: flex-end;">
                     <button type="submit" class="ts-button is-primary is-fluid" style="margin-right: 10px;">
@@ -221,6 +238,7 @@
                         <th>過磅時間</th>
                         <th>重量 (kg)</th>
                         <th>狀態</th>
+                        <th>種類</th>
                         <th>部門</th>
                         <th>定點</th>
                         <th>過磅人員</th>
@@ -249,22 +267,27 @@
                         <td>
                             {% if record.is_transported %}<span class="ts-label is-success">已載運</span>{% else %}<span class="ts-label is-secondary">未載運</span>{% endif %}
                         </td>
+                        <td>{{ record.waste_type.name }}</td>
                         <td>{{ record.department.name }}</td>
                         <td>{{ record.location.name }}</td>
-                        <td>{{ record.creator.name }}</td>
-                        <td>{{ record.updater.name|default:"-" }}</td>
+                        <td>{{ record.creator.username }}</td>
+                        <td>{{ record.updater.username|default:"-" }}</td>
                         <td>{{ record.update_time|date:"Y-m-d H:i"|default:"-" }}</td>
                         <td>
                             {% if not record.is_expired and not record.is_transported %}
-                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})"><span class="ts-icon is-trash-can-icon"></span></button>
+                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
+                                    <span class="ts-icon is-trash-can-icon"></span>
+                                </button>
                             {% else %}
-                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button"><span class="ts-icon is-lock-icon"></span></button>
+                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
+                                    <span class="ts-icon is-lock-icon"></span>
+                                </button>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" style="text-align: center !important; padding: 60px 0;">
+                        <td colspan="11" style="text-align: center !important; padding: 60px 0;">
                             <div class="ts-icon is-file-circle-question-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5; color: var(--my-text-sub);"></div>
                             <div style="font-size: 1.1rem; font-weight: bold; color: var(--my-text-sub);">資料表內沒有資料</div>
                         </td>
@@ -288,7 +311,7 @@
                 </div>
                 <div class="column">
                     <div class="ts-pagination is-small is-secondary">
-                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
+                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&waste_type="|add:selected_waste_type|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
                             {% if page_obj.has_previous %}<a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>{% endif %}
                             <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
                             {% if page_obj.has_next %}<a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>{% endif %}
@@ -308,7 +331,7 @@
                 <div style="margin-bottom:8px;">目前時間：<span id="modalCurrentTime" style="color:var(--my-text-main);"></span></div>
                 <div>您已選取：<strong id="modalSelectedCount" style="color:#4db8ff;">0</strong> 筆資料</div>
             </div>
-            <form id="settlementForm" method="post" class="ts-form">
+            <form id="settlementForm" method="post" class="ts-form" action="{% url 'dashboard:settlement_process' %}">
                 {% csrf_token %}
                 <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
                 <div class="field">
@@ -354,7 +377,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const config = { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true, disableMobile: "true" };
+        const config = { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true, theme: "dark", disableMobile: "true" };
         flatpickr("#start_date", config);
         flatpickr("#end_date", config);
     });
@@ -374,29 +397,62 @@
     window.closeDeleteModal = function(){window.pendingDeleteIds=null;document.getElementById('deleteModal').close();}
     
     // 刪除邏輯改為呼叫 API
-    window.confirmDelete = function(){
-        if(window.pendingDeleteIds && window.pendingDeleteIds.length > 0){
-            fetch('/dashboard/api/delete_records/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({ ids: window.pendingDeleteIds })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    window.location.reload(); // 成功後重整頁面
-                } else {
-                    alert('刪除失敗');
+    window.confirmDelete = function() {
+    if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
+
+    // 1. 準備要傳給後端的資料
+    const formData = new FormData();
+    // 將陣列轉成字串傳送 (例如 "1,2,5")
+    formData.append('ids', window.pendingDeleteIds.join(','));
+
+    // 2. 使用 fetch 發送 POST 請求
+    // 注意：請確認你的 urls.py 有設定這個路徑
+    fetch('/dashboard/delete_records/', { 
+        method: 'POST',
+        headers: {
+            // Django 需要 CSRF Token 才能接受 POST
+            'X-CSRFToken': getCookie('csrftoken'), 
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // 3. 後端刪除成功後，才執行前端移除畫面
+            window.pendingDeleteIds.forEach(id => {
+                let row = document.getElementById('row_' + id);
+                if (row) {
+                    row.style.transition = "opacity 0.3s";
+                    row.style.opacity = "0";
+                    setTimeout(() => row.remove(), 300);
                 }
-            })
-            .catch(error => console.error('Error:', error));
+            });
+            setTimeout(() => { window.updateUI(); }, 300);
+            window.closeDeleteModal();
+        } else {
+            alert('刪除失敗，請稍後再試。');
         }
-        window.closeDeleteModal();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('發生錯誤');
+    });
+}
+
+// 輔助函式：取得 CSRF Token (Django 必備)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
     }
-    
+    return cookieValue;
+}
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     window.changePageSize = function(size){const urlParams=new URLSearchParams(window.location.search);urlParams.set('page_size',size);urlParams.set('page',1);window.location.search=urlParams.toString();}
 </script>

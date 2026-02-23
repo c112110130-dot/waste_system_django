@@ -13,6 +13,9 @@ urlpatterns = [
     # 3. 廢棄物載運管理紀錄 (整批管理)
     path('transportation/', views.transportation_view, name='transportation_view'),
 
+    # 🟢 新增：處理結算表單送出的路由 (解決 NoReverseMatch 錯誤的關鍵)
+    path('settlement_process/', views.settlement_process_view, name='settlement_process'),
+
     # --- API ---
     # 刪除單筆紀錄
     path('api/delete_records/', views.delete_records_api, name='api_delete_records'),
