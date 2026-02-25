@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
+
 <style>
     /* ========================================= */
     /* 1. 智慧顏色變數 (深色/淺色模式支援)       */
@@ -101,7 +102,7 @@
     }
     .sort-select option { background: var(--my-bg-panel); color: var(--my-text-main); }
     html.is-dark .flatpickr-calendar { filter: invert(1) hue-rotate(180deg); }
-
+    
     /* 視窗樣式 */
     #settlementModal > div {
         background: var(--my-modal-bg) !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border);
@@ -130,10 +131,110 @@
     #deleteModal button { border-radius: 6px !important; height: 45px; font-weight: bold; cursor: pointer; border: none; }
     #deleteModal .btn-cancel { background: var(--del-cancel-bg) !important; color: var(--del-cancel-fg) !important; }
     #deleteModal .btn-confirm { background: #db2828 !important; color: #ffffff !important; }
+    /* ========================================= */
+    /* 🟢 3. 報表列印專屬淨化樣式               */
+    /* ========================================= */
+    @media print {
+        /* 1. 終極隱藏：強制拿掉 Hello root、Navbar、側邊欄等任何外框 */
+        nav, header, footer, aside, 
+        .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
+        .ts-topbar, .topbar, .navbar, .sidebar, 
+        [class*="topbar"], [class*="navbar"], [class*="header"], 
+        .user-greeting, #greeting { 
+            display: none !important; 
+        }
 
+        /* 🟢 解決瀏覽器預設印出「網頁標題」與「網址」的關鍵 */
+        @page { 
+            margin: 0; /* 設為 0，取消瀏覽器自帶的頁首/頁尾 */
+        }
+
+        /* 消除原本外框預留的邊距，改用 body 自己的 padding 來防止文字貼齊紙張邊緣 */
+        body, html, .ts-app-layout, .ts-app-content, main, .ts-content, .ts-container {
+            background: white !important; 
+            color: black !important;
+            overflow: visible !important;
+            margin: 0 !important;
+        }
+        
+        body {
+            padding: 1.5cm !important; /* 取代 @page margin，當作報表留白 */
+        }
+
+        .ts-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
+
+        /* 2. 隱藏本頁面的控制元素：篩選面板、標題操作列、分頁列 */
+        .control-panel, 
+        .data-panel > .ts-content.is-secondary, 
+        .ts-pagination { 
+            display: none !important; 
+        }
+
+        .dashboard-panel { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important;}
+        .data-panel { border-left: none !important; }
+
+        /* 3. 隱藏表格中不需要的欄位 (最左邊核取方塊、最右邊操作按鈕) */
+        .ts-table th.collapsing, .ts-table td.collapsing,
+        .ts-table th:last-child, .ts-table td:last-child,
+        .ts-button.is-secondary { 
+            display: none !important; 
+        }
+
+        /* 4. 隱藏沒有被勾選的列 */
+        .no-print-row { display: none !important; }
+
+        /* 5. 報表專屬美化 */
+        .print-header-title { 
+            display: block !important; 
+            text-align: center; 
+            font-size: 1.8rem; 
+            font-weight: bold; 
+            margin-bottom: 20px; 
+            color: black !important;
+            border-bottom: 2px solid black;
+            padding-bottom: 10px;
+        }
+        .ts-table { width: 100% !important; border-collapse: collapse !important; }
+        .ts-table th { 
+            background-color: #f0f0f0 !important; 
+            color: black !important; 
+            border-bottom: 2px solid #000 !important;
+        }
+        .ts-table td { 
+            color: black !important; 
+            border-bottom: 1px solid #ccc !important;
+        }
+        
+        /* 總重量區塊美化 */
+        .total-weight-box { 
+            background: transparent !important; 
+            color: black !important; 
+            border-top: 2px solid #000 !important; 
+            border-bottom: none !important; 
+            padding: 15px 0 !important;
+        }
+        .total-weight-value { color: black !important; }
+    }
+    
+    /* 網頁模式下隱藏專屬報表標題 */
+    .print-header-title { display: none; } 
 </style>
 
-<div class="ts-container is-fluid" style="padding: 30px;">  
+<div class="ts-container is-fluid" style="padding: 30px;">
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="ts-header" style="color: var(--my-text-main); margin: 0;">
+            <span class="ts-icon is-truck-icon"></span> 廢棄物載運管理紀錄
+        </h2>
+        <button class="ts-button is-secondary is-outlined is-start-icon" onclick="printSelectedReport()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    列印報表
+                </button>
+    </div>
+
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
             <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
@@ -156,7 +257,16 @@
                 </div>
             </div>
 
-            <div class="ts-grid is-relaxed is-4-columns">
+            <div class="ts-grid is-relaxed is-5-columns">
+                <div class="column">
+                    <label>種類</label>
+                    <select name="waste_type" class="ts-select is-fluid">
+                        <option value="">全部種類</option>
+                        {% for type in waste_types %}
+                            <option value="{{ type.id }}" {% if selected_waste_type == type.id|stringformat:"i" %}selected{% endif %}>{{ type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="column">
                     <label>定點</label>
                     <select name="location" class="ts-select is-fluid"><option value="">全部定點</option>{% for loc in locations %}<option value="{{ loc.id }}" {% if selected_location == loc.id|stringformat:"i" %}selected{% endif %}>{{ loc.name }}</option>{% endfor %}</select>
@@ -217,8 +327,9 @@
                     <tr>
                         <th class="collapsing"><label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label></th>
                         <th>過磅時間</th>
-                        <th>重量 (G)</th>
+                        <th>重量 (g)</th>
                         <th>狀態</th>
+                        <th>種類</th>
                         <th>部門</th>
                         <th>定點</th>
                         <th>過磅人員</th>
@@ -247,6 +358,7 @@
                         <td>
                             {% if record.is_transported %}<span class="ts-label is-success">已載運</span>{% else %}<span class="ts-label is-secondary">未載運</span>{% endif %}
                         </td>
+                        <td>{{ record.waste_type.name }}</td>
                         <td>{{ record.department.name }}</td>
                         <td>{{ record.location.name }}</td>
                         <td>{{ record.creator.username }}</td>
@@ -254,15 +366,19 @@
                         <td>{{ record.update_time|date:"Y-m-d H:i"|default:"-" }}</td>
                         <td>
                             {% if not record.is_expired and not record.is_transported %}
-                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})"><span class="ts-icon is-trash-can-icon"></span></button>
+                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
+                                    <span class="ts-icon is-trash-can-icon"></span>
+                                </button>
                             {% else %}
-                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button"><span class="ts-icon is-lock-icon"></span></button>
+                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
+                                    <span class="ts-icon is-lock-icon"></span>
+                                </button>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" style="text-align: center !important; padding: 60px 0;">
+                        <td colspan="11" style="text-align: center !important; padding: 60px 0;">
                             <div class="ts-icon is-file-circle-question-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5; color: var(--my-text-sub);"></div>
                             <div style="font-size: 1.1rem; font-weight: bold; color: var(--my-text-sub);">資料表內沒有資料</div>
                         </td>
@@ -286,7 +402,7 @@
                 </div>
                 <div class="column">
                     <div class="ts-pagination is-small is-secondary">
-                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
+                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&waste_type="|add:selected_waste_type|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
                             {% if page_obj.has_previous %}<a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>{% endif %}
                             <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
                             {% if page_obj.has_next %}<a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>{% endif %}
@@ -349,6 +465,7 @@
         </div>
     </div>
 </dialog>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const config = { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true, theme: "dark", disableMobile: "true" };
@@ -369,7 +486,8 @@
     window.openBatchDelete = function(){let ids=getSelectedIds();if(ids.length===0)return alert('請至少選取一筆資料');window.pendingDeleteIds=ids;document.getElementById('deleteModal').showModal();}
     window.deleteRecord = function(id){window.pendingDeleteIds=[id];document.getElementById('deleteModal').showModal();}
     window.closeDeleteModal = function(){window.pendingDeleteIds=null;document.getElementById('deleteModal').close();}
-    // window.confirmDelete = function(){if(window.pendingDeleteIds&&window.pendingDeleteIds.length>0){window.pendingDeleteIds.forEach(id=>{let row=document.getElementById('row_'+id);if(row){row.style.transition="opacity 0.3s";row.style.opacity="0";setTimeout(()=>row.remove(),300);}});setTimeout(()=>{window.updateUI();},300);}window.closeDeleteModal();}
+    
+    // 刪除邏輯改為呼叫 API
     window.confirmDelete = function() {
     if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
 
@@ -428,6 +546,28 @@ function getCookie(name) {
 }
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     window.changePageSize = function(size){const urlParams=new URLSearchParams(window.location.search);urlParams.set('page_size',size);urlParams.set('page',1);window.location.search=urlParams.toString();}
+    window.printSelectedReport = function() {
+        const checkboxes = document.querySelectorAll('.record-checkbox');
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        
+        // 隱藏未勾選的列
+        if (selectedCount > 0) {
+            checkboxes.forEach(cb => {
+                if (!cb.checked) {
+                    cb.closest('tr').classList.add('no-print-row');
+                }
+            });
+        }
+        
+        window.print();
+        
+        // 恢復原狀
+        if (selectedCount > 0) {
+            checkboxes.forEach(cb => {
+                cb.closest('tr').classList.remove('no-print-row');
+            });
+        }
+    }
 </script>
 
 {% endblock %}

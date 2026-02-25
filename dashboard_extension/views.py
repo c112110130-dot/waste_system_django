@@ -74,12 +74,14 @@ def settlement_view(request):
     weighers_list = UserProfile.objects.all()
     process_agencies = processAgency.objects.all()
     clear_agencies = clearAgency.objects.all()
+    Waste_types = WasteType.objects.all()
     all_records =  WasteRecord.objects.filter().order_by('-create_time')
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_location = request.GET.get('location', '')
     f_dept = request.GET.get('dept', '')
     f_weigher = request.GET.get('weigher', '')
+    f_waste_type = request.GET.get('waste_type', '')
     sort_by = request.GET.get('sort_by', 'newest') # 預設排序：最新
 
     filtered_records =  []
@@ -106,6 +108,7 @@ def settlement_view(request):
         if f_location and str(r.location_id) != str(f_location): match = False
         if f_dept and str(r.department_id) != str(f_dept): match = False
         if f_weigher and str(r.creator_id) != str(f_weigher): match = False
+        if f_waste_type and str(r.waste_type_id) != str(f_waste_type): match = False
 
         if match:
             filtered_records.append(r)
@@ -144,11 +147,13 @@ def settlement_view(request):
         'selected_location': f_location,
         'selected_dept': f_dept,
         'selected_weigher': f_weigher,
+        'selected_waste_type': f_waste_type,
         'current_sort': sort_by,
 
         'departments': departments_list,
         'locations': locations_list,
         'weighers': weighers_list,
+        'waste_types': Waste_types,
         'process_agencies': process_agencies,
         'clear_agencies': clear_agencies,
     }

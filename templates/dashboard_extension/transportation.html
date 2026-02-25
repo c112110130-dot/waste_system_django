@@ -38,158 +38,161 @@
     /* 2. 嚴格隔離樣式 (Scoped CSS)              */
     /* ========================================= */
 
-    /* 輸入框與選擇單 */
     .transport-page .ts-select, 
     .transport-page .ts-input input, 
     .transport-page .flatpickr-input { 
-        height: 38px !important;
-        background-color: var(--tp-bg-input) !important;
-        border: 1px solid var(--tp-border) !important;
-        color: var(--tp-text-main) !important;
-        border-radius: 4px !important;
-        box-sizing: border-box !important;
-        font-size: 1rem !important;
-        width: 100% !important; 
-        display: block;
+        height: 38px !important; background-color: var(--tp-bg-input) !important;
+        border: 1px solid var(--tp-border) !important; color: var(--tp-text-main) !important;
+        border-radius: 4px !important; box-sizing: border-box !important;
+        font-size: 1rem !important; width: 100% !important; display: block;
     }
 
-    /* 🟢 修正：日曆顏色 (跟單筆紀錄頁面一致) */
     html.is-dark .flatpickr-calendar { filter: invert(1) hue-rotate(180deg); }
 
-    /* 🟢 修正：排序選單寬度 (縮短，不要填滿) */
-    .transport-page .sort-select {
-        width: auto !important;
-        min-width: 140px;
-        max-width: 200px;
-    }
+    .transport-page .sort-select { width: auto !important; min-width: 140px; max-width: 200px; }
 
-    /* 🟢 修正：列印按鈕樣式 (防止擠壓) */
     .btn-print-custom {
-        height: 38px !important;
-        background-color: var(--tp-bg-input) !important;
-        border: 1px solid var(--tp-border) !important;
-        color: var(--tp-text-main) !important;
-        border-radius: 4px !important;
-        padding: 0 15px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        cursor: pointer;
-        font-size: 0.95rem !important;
-        font-weight: bold;
-        white-space: nowrap !important; /* 禁止換行 */
-        flex-shrink: 0 !important; /* 禁止被壓縮 */
-        transition: background-color 0.2s;
+        height: 38px !important; background-color: var(--tp-bg-input) !important;
+        border: 1px solid var(--tp-border) !important; color: var(--tp-text-main) !important;
+        border-radius: 4px !important; padding: 0 15px !important;
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        cursor: pointer; font-size: 0.95rem !important; font-weight: bold;
+        white-space: nowrap !important; flex-shrink: 0 !important; transition: background-color 0.2s;
     }
     .btn-print-custom:hover { background-color: var(--tp-hover) !important; }
 
-    /* 🟢 修正：刪除按鈕樣式 (紅色實心) */
     .btn-delete-main {
-        height: 38px !important;
-        background-color: #db2828 !important;
-        border: none !important;
-        color: #ffffff !important;
-        border-radius: 4px !important;
-        padding: 0 15px !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        cursor: pointer;
-        font-size: 0.95rem !important;
-        font-weight: bold;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        transition: background-color 0.2s;
+        height: 38px !important; background-color: #db2828 !important; border: none !important;
+        color: #ffffff !important; border-radius: 4px !important; padding: 0 15px !important;
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        cursor: pointer; font-size: 0.95rem !important; font-weight: bold;
+        white-space: nowrap !important; flex-shrink: 0 !important; transition: background-color 0.2s;
     }
     .btn-delete-main:hover { background-color: #a81010 !important; }
     
-    /* 表格內的單筆刪除按鈕 (紅色) */
     .btn-row-delete {
-        background-color: #db2828 !important;
-        color: white !important;
-        border: none !important;
-        width: 30px !important;
-        height: 30px !important;
-        border-radius: 4px !important;
-        display: inline-flex; align-items: center; justify-content: center;
-        cursor: pointer;
+        background-color: #db2828 !important; color: white !important; border: none !important;
+        width: 30px !important; height: 30px !important; border-radius: 4px !important;
+        display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
     }
     .btn-row-delete:hover { background-color: #a81010 !important; }
 
-    /* 面板按鈕 (通用) */
-    .transport-page .dashboard-panel .ts-button {
-        height: 38px !important;
-        border-radius: 4px !important;
-    }
-
-    /* 日曆圖示 */
+    .transport-page .dashboard-panel .ts-button { height: 38px !important; border-radius: 4px !important; }
     .transport-page .date-picker-wrapper { position: relative; width: 100% !important; display: block; }
     .transport-page .calendar-icon {
         position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
         pointer-events: none; opacity: 0.6; width: 16px; height: 16px; stroke: var(--tp-text-main); z-index: 2;
     }
 
-    /* 面板佈局 */
     .transport-page .dashboard-panel {
-        background-color: var(--tp-bg-panel);
-        border: 1px solid var(--tp-border);
-        border-radius: 6px;
-        margin-bottom: 20px;
+        background-color: var(--tp-bg-panel); border: 1px solid var(--tp-border);
+        border-radius: 6px; margin-bottom: 20px;
     }
     .transport-page .control-panel { padding: 20px; }
     .transport-page .data-panel { padding: 0; border-left: 4px solid #2185d0; min-height: 400px; }
-    
-    .transport-page label {
-        color: var(--tp-text-sub); margin-bottom: 6px; display: block; font-weight: bold; font-size: 0.95rem;
-    }
+    .transport-page label { color: var(--tp-text-sub); margin-bottom: 6px; display: block; font-weight: bold; font-size: 0.95rem; }
 
-    /* 表格樣式 */
     .transport-page .ts-table { background: transparent !important; color: var(--tp-text-main) !important; }
-    .transport-page .ts-table thead th {
-        background-color: var(--tp-bg-panel) !important;
-        border-bottom: 1px solid var(--tp-border) !important;
-        color: var(--tp-text-main) !important;
-        font-size: 0.95rem;
-    }
-    .transport-page .ts-table tbody td {
-        border-bottom: 1px solid var(--tp-border) !important;
-        vertical-align: middle !important;
-        font-size: 0.95rem;
-    }
+    .transport-page .ts-table thead th { background-color: var(--tp-bg-panel) !important; border-bottom: 1px solid var(--tp-border) !important; color: var(--tp-text-main) !important; font-size: 0.95rem; }
+    .transport-page .ts-table tbody td { border-bottom: 1px solid var(--tp-border) !important; vertical-align: middle !important; font-size: 0.95rem; }
     .transport-page .ts-table tbody tr:hover { background-color: var(--tp-hover) !important; }
 
-    /* Modal 樣式 */
-    .custom-modal-content {
-        background: var(--tp-modal-bg) !important; color: var(--tp-text-main) !important; border: 1px solid var(--tp-border);
-    }
-    #deleteModal > div {
-        width: 400px; max-width: 90vw; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.2); text-align: center;
-    }
-    .delete-icon-circle {
-        display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px;
-        border-radius: 50%; margin-bottom: 15px; background: var(--tp-text-main); color: var(--tp-bg-panel);
-    }
-    #detailModal > div {
-        width: 800px; max-width: 95vw; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 85vh;
-    }
+    .custom-modal-content { background: var(--tp-modal-bg) !important; color: var(--tp-text-main) !important; border: 1px solid var(--tp-border); }
+    #deleteModal > div { width: 400px; max-width: 90vw; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.2); text-align: center; }
+    .delete-icon-circle { display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 50%; margin-bottom: 15px; background: var(--tp-text-main); color: var(--tp-bg-panel); }
+    #detailModal > div { width: 800px; max-width: 95vw; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 85vh; }
     .sub-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .sub-table th, .sub-table td { padding: 8px; border-bottom: 1px solid var(--tp-border); color: var(--tp-text-main); }
     
-    /* 總重顯示區 */
-    .total-weight-box {
-        padding: 15px 25px;
-        border-bottom: 1px solid var(--tp-border);
-        background: var(--tp-bg-panel);
-        color: var(--tp-text-sub);
-        text-align: right;
-        font-size: 1rem;
+    .total-weight-box { padding: 15px 25px; border-bottom: 1px solid var(--tp-border); background: var(--tp-bg-panel); color: var(--tp-text-sub); text-align: right; font-size: 1rem; }
+    .total-weight-value { color: #db2828; font-weight: bold; font-size: 1.3rem; margin-left: 8px; }
+
+    /* ========================================= */
+    /* 🟢 3. 報表列印專屬淨化樣式               */
+    /* ========================================= */
+    @media print {
+        /* 1. 終極隱藏：強制拿掉 Hello root、Navbar、側邊欄等任何外框 */
+        nav, header, footer, aside, 
+        .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
+        .ts-topbar, .topbar, .navbar, .sidebar, 
+        [class*="topbar"], [class*="navbar"], [class*="header"], 
+        .user-greeting, #greeting { 
+            display: none !important; 
+        }
+
+        /* 🟢 解決瀏覽器預設印出「網頁標題」與「網址」的關鍵 */
+        @page { 
+            margin: 0; /* 設為 0，取消瀏覽器自帶的頁首/頁尾 */
+        }
+
+        /* 消除原本外框預留的邊距，改用 body 自己的 padding 來防止文字貼齊紙張邊緣 */
+        body, html, .ts-app-layout, .ts-app-content, main, .ts-content, .ts-container {
+            background: white !important; 
+            color: black !important;
+            overflow: visible !important;
+            margin: 0 !important;
+        }
+        
+        body {
+            padding: 1.5cm !important; /* 取代 @page margin，當作報表留白 */
+        }
+
+        .ts-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
+
+        /* 2. 隱藏本頁面的控制元素：篩選面板、標題操作列、分頁列 */
+        .control-panel, 
+        .data-panel > .ts-content.is-secondary, 
+        .ts-pagination { 
+            display: none !important; 
+        }
+
+        .dashboard-panel { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important;}
+        .data-panel { border-left: none !important; }
+
+        /* 3. 隱藏表格中不需要的欄位 (最左邊核取方塊、最右邊操作按鈕) */
+        .ts-table th.collapsing, .ts-table td.collapsing,
+        .ts-table th:last-child, .ts-table td:last-child { 
+            display: none !important; 
+        }
+
+        /* 4. 隱藏沒有被勾選的列 */
+        .no-print-row { display: none !important; }
+
+        /* 5. 報表專屬美化 */
+        .print-header-title { 
+            display: block !important; 
+            text-align: center; 
+            font-size: 1.8rem; 
+            font-weight: bold; 
+            margin-bottom: 20px; 
+            color: black !important;
+            border-bottom: 2px solid black;
+            padding-bottom: 10px;
+        }
+        .ts-table { width: 100% !important; border-collapse: collapse !important; }
+        .ts-table th { 
+            background-color: #f0f0f0 !important; 
+            color: black !important; 
+            border-bottom: 2px solid #000 !important;
+        }
+        .ts-table td { 
+            color: black !important; 
+            border-bottom: 1px solid #ccc !important;
+        }
+        
+        /* 總重量區塊美化 */
+        .total-weight-box { 
+            background: transparent !important; 
+            color: black !important; 
+            border-top: 2px solid #000 !important; 
+            border-bottom: none !important; 
+            padding: 15px 0 !important;
+        }
+        .total-weight-value { color: black !important; }
     }
-    .total-weight-value {
-        color: #db2828;
-        font-weight: bold;
-        font-size: 1.3rem;
-        margin-left: 8px;
-    }
+    
+    /* 網頁模式下隱藏專屬報表標題 */
+    .print-header-title { display: none; } 
 </style>
 
 <div class="ts-container is-fluid transport-page" style="padding: 20px;">
@@ -272,7 +275,7 @@
                 
                 <div style="width: 1px; height: 20px; background: var(--tp-border); margin: 0 5px;"></div>
                 
-                <button class="btn-print-custom" onclick="window.print()">
+                <button class="btn-print-custom" onclick="printSelectedReport()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
                         <polyline points="6 9 6 2 18 2 18 9"></polyline>
                         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
@@ -281,15 +284,15 @@
                     列印報表
                 </button>
 
-                <button type="button" id="btnBatchDelete" class="btn-delete-main" onclick="openBatchDelete()">
-                    <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> 
-                    <span id="btnBatchDeleteText">刪除</span>
+                <button type="button" id="btnBatchDelete" class="ts-button is-warning" style="height: 38px !important; border-radius: 4px !important; font-weight: bold; padding: 0 15px !important; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="openBatchDelete()">
+                    <span class="ts-icon is-rotate-left-icon" style="margin-right: 6px;"></span> 
+                    <span id="btnBatchDeleteText">取消載運</span>
                 </button>
             </div>
         </div>
         
         <div class="ts-content is-fitted" style="overflow-x: auto;">
-            <table class="ts-table is-celled is-striped is-fullwidth">
+            <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable">
                 <thead>
                     <tr>
                         <th class="collapsing"><label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label></th>
@@ -306,7 +309,7 @@
                     <tr>
                         <td class="collapsing">
                             <label class="ts-checkbox">
-                                <input type="checkbox" name="batch_ids" value="{{ batch.id }}" class="record-checkbox" onchange="updateUI()">
+                                <input type="checkbox" name="batch_ids" value="{{ batch.id }}" class="record-checkbox" data-weight="{{ batch.total_weight }}" onchange="updateUI()">
                             </label>
                         </td>
                         <td>{{ batch.settle_time|date:"Y-m-d H:i" }}</td>
@@ -321,8 +324,8 @@
                                 <button class="ts-button is-info is-small is-outlined" style="height: 30px !important;" onclick="openDetailModal('{{ batch.id }}')">
                                     <span class="ts-icon is-eye-icon"></span> 查看
                                 </button>
-                                <button class="btn-row-delete" onclick="deleteSingleBatch('{{ batch.id }}')" title="刪除此紀錄">
-                                    <span class="ts-icon is-trash-can-icon"></span>
+                                <button class="ts-button is-warning is-icon is-small is-dense" style="width: 30px !important; height: 30px !important; padding: 0; display: inline-flex; justify-content: center; align-items: center;" onclick="deleteSingleBatch('{{ batch.id }}')" title="取消載運狀態">
+                                    <span class="ts-icon is-rotate-left-icon"></span>
                                 </button>
                             </div>
                         </td>
@@ -340,8 +343,8 @@
         </div>
 
         <div class="total-weight-box">
-            <span>本查詢結果總重量：</span>
-            <span class="total-weight-value">{{ total_weight_sum }}</span>
+            <span id="weightLabel">本查詢結果總重量：</span>
+            <span class="total-weight-value" id="displayTotalWeight" data-original="{{ total_weight_sum }}">{{ total_weight_sum }}</span>
             <span style="font-size: 0.9rem;">G</span>
         </div>
 
@@ -382,13 +385,15 @@
 <dialog id="deleteModal" style="padding:0;border:none;background:transparent;margin:auto;">
     <div class="custom-modal-content">
         <div style="padding:30px 20px 20px;">
-            <div class="delete-icon-circle"><span class="ts-icon is-question-icon" style="font-size: 30px;"></span></div>
-            <div style="font-size:1.3rem;font-weight:bold;margin-bottom:10px;">確認刪除</div>
-            <p style="font-size:0.95rem; opacity:0.8;">確定要刪除選取的載運單嗎？<br>此動作無法復原。</p>
+            <div class="delete-icon-circle" style="background: #fbbd08 !important; color: #000 !important;">
+                <span class="ts-icon is-rotate-left-icon" style="font-size: 30px;"></span>
+            </div>
+            <div style="font-size:1.3rem;font-weight:bold;margin-bottom:10px;">確認取消載運</div>
+            <p style="font-size:0.95rem; opacity:0.8;">確定要取消選取的載運單嗎？<br>單內的廢棄物將會恢復成「未載運」狀態。</p>
         </div>
         <div style="padding:15px 25px 25px;display:flex;gap:15px;">
-            <button class="ts-button" onclick="document.getElementById('deleteModal').close()" style="flex:1; background:var(--del-cancel-bg); color:var(--del-cancel-fg);">取消</button>
-            <button class="ts-button" onclick="confirmDelete()" style="flex:1; background:#db2828; color:#fff;">確定</button>
+            <button class="ts-button" onclick="document.getElementById('deleteModal').close()" style="flex:1; background:var(--del-cancel-bg); color:var(--del-cancel-fg);">返回</button>
+            <button class="ts-button" onclick="confirmDelete()" style="flex:1; background:#fbbd08; color:#000; border: none; font-weight: bold;">確定取消</button>
         </div>
     </div>
 </dialog>
@@ -450,10 +455,30 @@
 
     window.toggleAll = function(src) { document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); updateUI(); }
     window.updateUI = function() {
-        const count = document.querySelectorAll('.record-checkbox:checked').length;
-        document.getElementById('btnBatchDeleteText').innerText = count > 0 ? `刪除 (${count})` : "刪除";
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+        const count = checkboxes.length;
+        
+        // 更新按鈕文字
+        document.getElementById('btnBatchDeleteText').innerText = count > 0 ? `取消載運 (${count})` : "取消載運";
+        document.getElementById('btnPrintText').innerText = count > 0 ? `列印報表 (${count})` : "列印報表";
+        
+        // 更新總重量顯示
+        const weightLabel = document.getElementById('weightLabel');
+        const displayTotalWeight = document.getElementById('displayTotalWeight');
+        
+        if (count > 0) {
+            let selectedWeight = 0;
+            checkboxes.forEach(cb => {
+                selectedWeight += parseFloat(cb.getAttribute('data-weight')) || 0;
+            });
+            weightLabel.innerText = "已選取資料總重量：";
+            displayTotalWeight.innerText = selectedWeight.toFixed(2);
+        } else {
+            weightLabel.innerText = "本查詢結果總重量：";
+            displayTotalWeight.innerText = displayTotalWeight.getAttribute('data-original');
+        }
+        
     }
-
     window.pendingDeleteIds = null;
     window.openBatchDelete = function() {
         const ids = Array.from(document.querySelectorAll('.record-checkbox:checked')).map(cb => cb.value);
@@ -492,7 +517,7 @@
                 window.location.reload();
             } else {
                 console.error("後端回傳錯誤:", data);
-                alert('刪除失敗，原因：' + (data.message || '未知錯誤'));
+                alert('操作失敗，原因：' + (data.message || '未知錯誤'));
             }
         })
         .catch(error => {
@@ -506,6 +531,28 @@
         if (tmpl) {
             document.getElementById('modalBody').innerHTML = tmpl.innerHTML;
             document.getElementById('detailModal').showModal();
+        }
+    }
+    window.printSelectedReport = function() {
+        const checkboxes = document.querySelectorAll('.record-checkbox');
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        
+        // 隱藏未勾選的列
+        if (selectedCount > 0) {
+            checkboxes.forEach(cb => {
+                if (!cb.checked) {
+                    cb.closest('tr').classList.add('no-print-row');
+                }
+            });
+        }
+        
+        window.print();
+        
+        // 恢復原狀
+        if (selectedCount > 0) {
+            checkboxes.forEach(cb => {
+                cb.closest('tr').classList.remove('no-print-row');
+            });
         }
     }
 </script>
