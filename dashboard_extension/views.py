@@ -17,12 +17,13 @@ user_names = ['王小明', '李大華', '張阿姨', 'Admin']
 agency_names = ['大安環保公司', '綠色清運科技', '永續處理中心']
 type_names = ['一般感染性廢棄物', '病理廢棄物', '尖銳器具', '化學廢棄物']
 
-departments_list = [{'id': i, 'name': n} for i, n in enumerate(dept_names)]
-locations_list = [{'id': i, 'name': n} for i, n in enumerate(loc_names)]
-weighers_list = [{'id': i, 'name': n} for i, n in enumerate(user_names)]
-process_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names)]
-clear_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names)]
-waste_types_list = [{'id': i, 'name': n} for i, n in enumerate(type_names)]
+# 💡 已經幫您優化：讓假資料的 ID 從 1 開始編號，這樣新增時數字就能完美銜接了！
+departments_list = [{'id': i, 'name': n} for i, n in enumerate(dept_names, 1)]
+locations_list = [{'id': i, 'name': n} for i, n in enumerate(loc_names, 1)]
+weighers_list = [{'id': i, 'name': n} for i, n in enumerate(user_names, 1)]
+process_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names, 1)]
+clear_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names, 1)]
+waste_types_list = [{'id': i, 'name': n} for i, n in enumerate(type_names, 1)]
 
 all_records = []
 transport_batches = [] 
@@ -295,3 +296,128 @@ def settlement_process_view(request):
         
     # 4. 處理完成後，重新導向回結算頁面
     return redirect('dashboard:settlement_view')
+
+# =========================================================
+# 6. 定點機構管理 (畫面)
+# =========================================================
+@login_required
+def location_management_view(request):
+    context = {
+        'locations': locations_list,
+        'clear_agencies': clear_agencies,
+        'process_agencies': process_agencies,
+    }
+    return render(request, 'dashboard_extension/location_management.html', context)
+
+# =========================================================
+# 6-1. API：儲存/編輯/新增 定點
+# =========================================================
+@require_POST
+@login_required
+def api_save_location(request):
+    global locations_list
+    try:
+        data = json.loads(request.body)
+        loc_id = data.get('id')
+        name = data.get('name', '').strip()
+        
+        if not name: return JsonResponse({'success': False, 'error': '定點名稱不能為空'})
+            
+        if loc_id and loc_id != 'new':
+            # 編輯現有資料
+            for loc in locations_list:
+                if str(loc['id']) == str(loc_id):
+                    loc['name'] = name
+                    break
+        else:
+            # 新增資料
+            new_id = len(locations_list) + 1
+            locations_list.insert(0, {'id': new_id, 'name': name})
+            
+        return JsonResponse({'success': True, 'message': '定點儲存成功'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# =========================================================
+# 6-2. API：刪除 定點
+# =========================================================
+@require_POST
+@login_required
+def api_delete_location(request):
+    global locations_list
+    try:
+        data = json.loads(request.body)
+        ids_to_delete = [str(i) for i in data.get('ids', [])]
+        
+        # 過濾掉被勾選刪除的 ID
+        locations_list = [loc for loc in locations_list if str(loc['id']) not in ids_to_delete]
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# =========================================================
+# 6-3. API：儲存/編輯/新增 機構
+# =========================================================
+@require_POST
+@login_required
+def api_save_agency(request):
+    global clear_agencies, process_agencies
+    try:
+        data = json.loads(request.body)
+        raw_id = data.get('id') # 可能是 'new' 或是 'clear_1', 'process_2'
+        name = data.get('name', '').strip()
+        new_type = data.get('type', '')
+        
+        if not name: return JsonResponse({'success': False, 'error': '機構名稱不能為空'})
+            
+        if raw_id and raw_id != 'new':
+            # 編輯現有資料：先將舊資料從原陣列抽出，再塞進新的分類陣列中
+            old_type, actual_id = raw_id.split('_')[0], raw_id.split('_')[1]
+            target_list = clear_agencies if old_type == 'clear' else process_agencies
+            item_to_move = None
+            
+            for i, item in enumerate(target_list):
+                if str(item['id']) == actual_id:
+                    item_to_move = target_list.pop(i)
+                    break
+            
+            if item_to_move:
+                item_to_move['name'] = name
+                # 根據選擇的新類型放入對應陣列
+                if new_type == 'clear': clear_agencies.insert(0, item_to_move)
+                else: process_agencies.insert(0, item_to_move)
+        else:
+            # 新增資料
+            if new_type == 'clear':
+                new_id = len(clear_agencies) + 1
+                clear_agencies.insert(0, {'id': new_id, 'name': name})
+            else:
+                new_id = len(process_agencies) + 1
+                process_agencies.insert(0, {'id': new_id, 'name': name})
+                
+        return JsonResponse({'success': True, 'message': '機構儲存成功'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# =========================================================
+# 6-4. API：刪除 機構
+# =========================================================
+@require_POST
+@login_required
+def api_delete_agency(request):
+    global clear_agencies, process_agencies
+    try:
+        data = json.loads(request.body)
+        raw_ids = data.get('ids', []) # ex: ['clear_1', 'process_2']
+        
+        # 解析出要刪除的清理機構 ID 和 處理機構 ID
+        clear_ids = [i.split('_')[1] for i in raw_ids if i.startswith('clear_')]
+        process_ids = [i.split('_')[1] for i in raw_ids if i.startswith('process_')]
+        
+        clear_agencies = [a for a in clear_agencies if str(a['id']) not in clear_ids]
+        process_agencies = [a for a in process_agencies if str(a['id']) not in process_ids]
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

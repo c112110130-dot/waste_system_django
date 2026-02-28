@@ -135,15 +135,6 @@
 </style>
 
 <div class="ts-container is-fluid" style="padding: 30px;">
-    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <h2 class="ts-header" style="color: var(--my-text-main); margin: 0;">
-            <span class="ts-icon is-truck-icon"></span> 廢棄物載運管理紀錄
-        </h2>
-        <button class="ts-button is-secondary is-outlined is-start-icon" onclick="window.print()">
-            <span class="ts-icon is-printer-icon"></span> 列印報表
-        </button>
-    </div>
-
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
             <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">

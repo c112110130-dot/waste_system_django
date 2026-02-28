@@ -264,6 +264,13 @@
                                     部門廢棄物資料表管理
                                 </button>
                             {% endif %}
+                            <!-- Location Management Page: For root & mod. -->
+                            {% if user_is_over_mod %}
+                            <button class="item" data-href="{% url 'dashboard:location_management' %}">
+                            <span class="ts-icon is-location-dot-icon"></span>
+                            定點機構管理
+                            </button>
+                            {% endif %}
                             <!-- Account Management Page: For root & mod. -->
                             {% if user_is_over_mod %}
                                 <button class="item" data-href="{% url 'account:manage' %}">
