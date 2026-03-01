@@ -21,4 +21,13 @@ urlpatterns = [
     # 刪除載運單
     path('api/delete_batches/', views.delete_batches_api, name='api_delete_batches'),
     path('api/locations/', views.locations_api, name='locations_api'),
+    
+    path('api/location/save/', views.api_save_location, name='api_save_location'),
+    path('api/location/delete/', views.api_delete_location, name='api_delete_location'),
+    
+    # 新增：儲存機構 (由 JavaScript fetch 呼叫)
+    path('api/agency/save/', views.api_save_agency, name='api_save_agency'),
+    path('api/agency/delete/', views.api_delete_agency, name='api_delete_agency'),
+
+    path('location/', views.location_management_view, name='location_management'),
 ]

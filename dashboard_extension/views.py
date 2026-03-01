@@ -370,3 +370,125 @@ def locations_api(request):
         return JsonResponse({'locations': locations_list})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    
+@login_required
+def location_management_view(request):
+    locations_list = LocationPoint.objects.all()
+    clear_agencies = clearAgency.objects.all()
+    process_agencies = processAgency.objects.all()
+    context = {
+        'locations': locations_list,
+        'clear_agencies': clear_agencies,
+        'process_agencies': process_agencies,
+    }
+    return render(request, 'dashboard_extension/location_management.html', context)
+
+
+# =========================================================
+# 6-1. API：儲存/編輯/新增 定點
+# =========================================================
+@require_POST
+@login_required
+def api_save_location(request):
+    locations_list = LocationPoint.objects.all()
+    try:
+        data = json.loads(request.body)
+        loc_id = data.get('id')
+        name = data.get('name', '').strip()
+            
+        if not name: return JsonResponse({'success': False, 'error': '定點名稱不能為空'})
+                
+        if loc_id and loc_id != 'new':
+            # 編輯現有資料
+            for loc in locations_list:
+                if str(loc.id) == str(loc_id):
+                    loc.name = name
+                    loc.save()
+                    break
+        else:
+            # 新增資料
+            LocationPoint.objects.create(name=name)      
+        return JsonResponse({'success': True, 'message': '定點儲存成功'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# =========================================================
+# 6-2. API：刪除 定點
+# =========================================================
+@require_POST
+@login_required
+def api_delete_location(request):
+    try:
+        data = json.loads(request.body)
+        ids_to_delete = data.get('ids', [])
+        
+        # 刪除所有被選中的 LocationPoint 物件
+        LocationPoint.objects.filter(id__in=[int(i) for i in ids_to_delete]).delete()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# =========================================================
+# 6-3. API：儲存/編輯/新增 機構
+# =========================================================
+@require_POST
+@login_required
+def api_save_agency(request):
+    try:
+        data = json.loads(request.body)
+        raw_id = data.get('id') 
+        name = data.get('name', '').strip()
+        new_type = data.get('type', '')
+        
+        if not name: return JsonResponse({'success': False, 'error': '機構名稱不能為空'})
+            
+        if raw_id and raw_id != 'new':
+            old_type, actual_id = raw_id.split('_')[0], raw_id.split('_')[1]
+            if old_type == 'clear':
+                if new_type == 'process':
+                    # 從 clear 變 process
+                    clearAgency.objects.filter(id=actual_id).delete()
+                    processAgency.objects.create(name=name)
+                elif new_type == 'clear':
+                    clearAgency.objects.filter(id=actual_id).update(name=name)
+            else:
+                if new_type == 'clear':
+                    # 從 process 變 clear
+                    processAgency.objects.filter(id=actual_id).delete()
+                    clearAgency.objects.create(name=name)
+                elif new_type == 'process':
+                    processAgency.objects.filter(id=actual_id).update(name=name)
+        else:
+            # 新增資料
+            if new_type == 'clear':
+                clearAgency.objects.create(name=name)
+            else:
+                processAgency.objects.create(name=name)
+                
+        return JsonResponse({'success': True, 'message': '機構儲存成功'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# =========================================================
+# 6-4. API：刪除 機構
+# =========================================================
+@require_POST
+@login_required
+def api_delete_agency(request):
+    try:
+        data = json.loads(request.body)
+        raw_ids = data.get('ids', []) # ex: ['clear_1', 'process_2']
+        
+        # 解析出要刪除的清理機構 ID 和 處理機構 ID
+        clear_ids = [i.split('_')[1] for i in raw_ids if i.startswith('clear_')]
+        process_ids = [i.split('_')[1] for i in raw_ids if i.startswith('process_')]
+        
+        # 刪除清理機構和處理機構
+        clearAgency.objects.filter(id__in=clear_ids).delete()
+        processAgency.objects.filter(id__in=process_ids).delete()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})        
