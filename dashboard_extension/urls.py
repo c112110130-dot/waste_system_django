@@ -19,6 +19,8 @@ urlpatterns = [
     # 5. 定點機構管理 (畫面)
     path('location/', views.location_management_view, name='location_management'),
 
+    # 6. QR Code 列印頁面
+    path('qrcode/', views.qrcode_print_view, name='qrcode_print'),
 
     # ==========================================
     # --- API 路由區 ---

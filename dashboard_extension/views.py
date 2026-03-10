@@ -421,3 +421,22 @@ def api_delete_agency(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+# =========================================================
+# 7. QR Code 列印頁面
+# =========================================================
+# @login_required
+def qrcode_print_view(request):
+    if request.user.is_authenticated:
+        # 🟢 順序對調：先抓 first_name (在中文通常被當作姓氏) 再抓 last_name (名字)
+        full_name = f"{request.user.first_name}{request.user.last_name}".strip()
+        current_user = full_name if full_name else request.user.username
+    else:
+        current_user = '測試人員'
+        
+    context = {
+        'departments': departments_list,
+        'waste_types': waste_types_list,
+        'current_user': current_user
+    }
+    return render(request, 'dashboard_extension/qrcode_print.html', context)

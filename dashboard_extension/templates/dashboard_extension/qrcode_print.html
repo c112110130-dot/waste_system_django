@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}QR Code 列印{% endblock %}
+
+{% block content %}
+<style>
+    /* 隱藏原生數字輸入框的上下箭頭 */
+    #input-qty::-webkit-outer-spin-button,
+    #input-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #input-qty[type=number] { -moz-appearance: textfield; }
+    button[onclick^="changeQty"]:hover { background: var(--ts-gray-200) !important; }
+
+    /* ========================================================= */
+    /* 列印專用樣式 (@media print)                               */
+    /* ========================================================= */
+    /* 平常隱藏專門用來列印的區塊 */
+    #print-area { display: none; }
+
+    @media print {
+        /* 列印時隱藏網頁原本的所有東西 */
+        body * { visibility: hidden; }
+        
+        /* 顯示列印專區 */
+        #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+        #print-area * { visibility: visible; }
+        
+        /* 設定每張標籤印完就換下一頁 (配合實體標籤機) */
+        .print-page {
+            page-break-after: always;
+            width: 100%;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        @page { size: auto; margin: 0mm; } 
+    }
+</style>
+
+<div class="ts-container has-vertically-spaced-large" style="--width: 1400px; padding-top: 20px;">
+    <div class="ts-grid is-evenly-divided is-relaxed">
+        
+        <div class="column">
+            <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                
+                <div class="ts-header is-large is-heavy has-bottom-spaced" style="width: 100%;">條碼預覽</div>
+
+                <div id="printable-label" style="width: 100%; max-width: 480px; background-color: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    
+                    <div id="qrcode-img" style="width: 140px; height: 140px; background-color: #fff; display: flex; align-items: center; justify-content: center;">
+                    </div>
+                    
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 14px; font-size: 1.15rem; color: #333;">
+                        <div><strong>清潔人員：</strong> <span id="preview-user">{{ current_user }}</span></div>
+                        <div><strong>廢棄物種類：</strong> <span id="preview-type" style="color: #aaa;">請選擇種類</span></div>
+                        <div><strong>部門：</strong> <span id="preview-dept" style="color: #aaa;">請選擇部門</span></div>
+                        <div style="font-size: 0.95rem; color: #888; margin-top: 10px;">
+                            <strong>列印時間：</strong> <span id="preview-time" style="font-family: monospace;"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px;">
+                <div class="ts-header is-large is-heavy has-bottom-spaced">列印設定</div>
+                
+                <div class="ts-grid is-stacked has-vertically-spaced-large" style="margin-top: 20px;">
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">操作人員</label></div>
+                            <div class="column is-9-wide">
+                                <div class="ts-input is-solid is-fluid is-large">
+                                    <input type="text" value="{{ current_user }}" readonly style="background-color: var(--ts-gray-100); color: var(--ts-gray-700);">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">所屬部門</label></div>
+                            <div class="column is-9-wide">
+                                <div class="ts-select is-fluid is-large">
+                                    <select id="select-dept" onchange="updatePreview()">
+                                        <option value="" disabled selected>請選擇產出部門</option>
+                                        {% for dept in departments %}
+                                        <option value="{{ dept.name }}">{{ dept.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">廢棄物種類</label></div>
+                            <div class="column is-9-wide">
+                                <div class="ts-select is-fluid is-large">
+                                    <select id="select-type" onchange="updatePreview()">
+                                        <option value="" disabled selected>請選擇廢棄物種類</option>
+                                        {% for type in waste_types %}
+                                        <option value="{{ type.name }}">{{ type.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">列印張數</label></div>
+                            <div class="column is-9-wide">
+                                <div style="display: flex; align-items: stretch; height: 46px; border-radius: 6px; overflow: hidden; border: 1px solid var(--ts-gray-300);">
+                                    <button type="button" onclick="changeQty(-1)" style="width: 50px; background: var(--ts-gray-100); border: none; border-right: 1px solid var(--ts-gray-300); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <span class="ts-icon is-minus-icon" style="color: var(--ts-gray-700);"></span>
+                                    </button>
+                                    <input type="number" id="input-qty" value="1" min="1" max="500" style="flex: 1; text-align: center; font-weight: bold; font-size: 1.3rem; border: none; outline: none; margin: 0; padding: 0; color: var(--ts-gray-800);">
+                                    <button type="button" onclick="changeQty(1)" style="width: 50px; background: var(--ts-gray-100); border: none; border-left: 1px solid var(--ts-gray-300); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <span class="ts-icon is-plus-icon" style="color: var(--ts-gray-700);"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="column" style="margin-top: 30px;">
+                        <div class="ts-text is-description is-small" style="text-align: right; margin-bottom: 8px; color: var(--ts-gray-600);">
+                            <span class="ts-icon is-circle-info-icon"></span> 提示：列印前請確認標籤機已連線並開啟電源
+                        </div>
+                        <button class="ts-button is-positive is-large" style="width: 100%; font-size: 1.3rem; letter-spacing: 10px;" onclick="handlePrint()">
+                            <span class="ts-icon is-print-icon" style="margin-right: 8px;"></span> 列 印
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="print-area"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.getFullYear() + '/' + 
+                          String(now.getMonth() + 1).padStart(2, '0') + '/' + 
+                          String(now.getDate()).padStart(2, '0') + ' ' + 
+                          String(now.getHours()).padStart(2, '0') + ':' + 
+                          String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('preview-time').innerText = timeString;
+    }
+
+    function generateQRCode() {
+        const typeVal = document.getElementById('select-type').value || '未選擇';
+        const deptVal = document.getElementById('select-dept').value || '未選擇';
+        const userVal = document.getElementById('preview-user').innerText;
+        const timeVal = document.getElementById('preview-time').innerText;
+
+        const qrDataString = `部門:${deptVal}\n種類:${typeVal}\n人員:${userVal}\n時間:${timeVal}`;
+        const encodedData = encodeURIComponent(qrDataString);
+        const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodedData}`;
+        
+        const qDiv = document.getElementById('qrcode-img');
+        qDiv.innerHTML = `<img src="${apiUrl}" alt="QR Code" style="width: 140px; height: 140px; border-radius: 4px;" />`;
+    }
+
+    function updatePreview() {
+        const typeVal = document.getElementById('select-type').value;
+        const deptVal = document.getElementById('select-dept').value;
+        
+        document.getElementById('preview-type').innerText = typeVal || '請選擇種類';
+        document.getElementById('preview-type').style.color = typeVal ? '#333' : '#aaa';
+        
+        document.getElementById('preview-dept').innerText = deptVal || '請選擇部門';
+        document.getElementById('preview-dept').style.color = deptVal ? '#333' : '#aaa';
+        
+        updateTime(); 
+        generateQRCode(); 
+    }
+
+    function changeQty(amount) {
+        const input = document.getElementById('input-qty');
+        let currentVal = parseInt(input.value) || 0;
+        let newVal = currentVal + amount;
+        if (newVal < 1) newVal = 1; 
+        if (newVal > 500) newVal = 500; 
+        input.value = newVal;
+    }
+
+    // 強化版列印功能：支援多張連續列印
+    function handlePrint() {
+        const typeVal = document.getElementById('select-type').value;
+        const deptVal = document.getElementById('select-dept').value;
+        const qty = parseInt(document.getElementById('input-qty').value) || 1;
+
+        if (!typeVal || !deptVal) {
+            alert("請先選擇「所屬部門」與「廢棄物種類」才能列印！");
+            return;
+        }
+        
+        const labelContent = document.getElementById('printable-label').innerHTML;
+        const printArea = document.getElementById('print-area');
+        
+        printArea.innerHTML = '';
+        
+        for (let i = 0; i < qty; i++) {
+            const pageDiv = document.createElement('div');
+            pageDiv.className = 'print-page';
+            pageDiv.innerHTML = labelContent;
+            printArea.appendChild(pageDiv);
+        }
+        
+        window.print();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateTime();
+        generateQRCode(); 
+        setInterval(updateTime, 60000);
+    });
+</script>
+{% endblock %}
