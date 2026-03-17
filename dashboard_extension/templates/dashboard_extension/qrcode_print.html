@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}QR Code 列印{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統 - QR code列印{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/dashboard/qrcode_print.css' %}">
+{% endblock %}
 
 {% block content %}
 <style>
@@ -58,7 +61,7 @@
                         <div><strong>廢棄物種類：</strong> <span id="preview-type" style="color: #aaa;">請選擇種類</span></div>
                         <div><strong>部門：</strong> <span id="preview-dept" style="color: #aaa;">請選擇部門</span></div>
                         <div style="font-size: 0.95rem; color: #888; margin-top: 10px;">
-                            <strong>列印時間：</strong> <span id="preview-time" style="font-family: monospace;"></span>
+                            <strong>列印時間：</strong> <span id="preview-time-display" style="font-family: monospace;"></span>
                         </div>
                     </div>
 
@@ -154,23 +157,33 @@
 
 {% block scripts %}
 <script>
+    // 全域變數儲存「省空間版」的時間字串，給 QR Code 用
+    let currentCompactTime = '';
+
     function updateTime() {
         const now = new Date();
-        const timeString = now.getFullYear() + '/' + 
-                          String(now.getMonth() + 1).padStart(2, '0') + '/' + 
-                          String(now.getDate()).padStart(2, '0') + ' ' + 
-                          String(now.getHours()).padStart(2, '0') + ':' + 
-                          String(now.getMinutes()).padStart(2, '0');
-        document.getElementById('preview-time').innerText = timeString;
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const date = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
+        // 畫面顯示用的格式 (給人看的)：2026/03/12 14:30
+        const displayTime = `${year}/${month}/${date} ${hours}:${minutes}`;
+        document.getElementById('preview-time-display').innerText = displayTime;
+
+        // QR Code 用的格式 (機器看的省空間版)：202603121430
+        currentCompactTime = `${year}${month}${date}${hours}${minutes}`;
     }
 
     function generateQRCode() {
         const typeVal = document.getElementById('select-type').value || '未選擇';
         const deptVal = document.getElementById('select-dept').value || '未選擇';
         const userVal = document.getElementById('preview-user').innerText;
-        const timeVal = document.getElementById('preview-time').innerText;
 
-        const qrDataString = `部門:${deptVal}\n種類:${typeVal}\n人員:${userVal}\n時間:${timeVal}`;
+        // 🌟 核心修改：採用組長指定的省空間格式 (使用逗號與冒號)
+        const qrDataString = `dept:${deptVal},type:${typeVal},clea:${userVal},time:${currentCompactTime}`;
+        
         const encodedData = encodeURIComponent(qrDataString);
         const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodedData}`;
         
@@ -201,7 +214,6 @@
         input.value = newVal;
     }
 
-    // 強化版列印功能：支援多張連續列印
     function handlePrint() {
         const typeVal = document.getElementById('select-type').value;
         const deptVal = document.getElementById('select-dept').value;
@@ -230,7 +242,13 @@
     document.addEventListener('DOMContentLoaded', () => {
         updateTime();
         generateQRCode(); 
-        setInterval(updateTime, 60000);
+        setInterval(() => {
+            updateTime();
+            // 只有在已經選擇了部門或種類時，才自動更新 QR Code 的時間
+            if (document.getElementById('select-type').value || document.getElementById('select-dept').value) {
+                generateQRCode();
+            }
+        }, 60000);
     });
 </script>
 {% endblock %}

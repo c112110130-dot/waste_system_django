@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物載運紀錄{% endblock %}
 
-{% block title %}廢棄物載運管理紀錄{% endblock %}
-
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/dashboard/transportation.css' %}">
+{% endblock %}
 {% block content %}
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -52,7 +54,7 @@
     .transport-page .sort-select { width: auto !important; min-width: 140px; max-width: 200px; }
 
     .btn-print-custom {
-        height: 38px !important; background-color: var(--tp-bg-input) !important;
+        height: 38px !important; background-color: transparent !important;
         border: 1px solid var(--tp-border) !important; color: var(--tp-text-main) !important;
         border-radius: 4px !important; padding: 0 15px !important;
         display: inline-flex !important; align-items: center !important; justify-content: center !important;
@@ -101,54 +103,50 @@
     .total-weight-value { color: #db2828; font-weight: bold; font-size: 1.3rem; margin-left: 8px; }
 
     /* ========================================= */
-    /* 🟢 3. 報表列印專屬淨化樣式               */
+    /* 🟢 3. 報表列印專屬淨化樣式 (絕對統一版)   */
     /* ========================================= */
     @media print {
-        nav, header, footer, aside, 
-        .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
-        .ts-topbar, .topbar, .navbar, .sidebar, 
-        [class*="topbar"], [class*="navbar"], [class*="header"], 
-        .user-greeting, #greeting { display: none !important; }
+        /* 隱藏所有不需要列印的 UI */
+        nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
+        .ts-topbar, .topbar, .navbar, .sidebar, [class*="topbar"], [class*="navbar"], [class*="header"], 
+        .user-greeting, #greeting, .control-panel, .ts-pagination, .dashboard-panel:not(.data-panel),
+        .data-panel > .ts-content.is-secondary, .total-weight-box { display: none !important; }
 
         @page { margin: 0; }
-
         body, html, .ts-app-layout, .ts-app-content, main, .ts-content, .ts-container {
             background: white !important; color: black !important;
             overflow: visible !important; margin: 0 !important;
         }
         body { padding: 1.5cm !important; }
-
         .ts-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
-
-        .control-panel, #chartPanel,
-        .data-panel > .ts-content.is-secondary, 
-        .ts-pagination { display: none !important; }
 
         .dashboard-panel { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important;}
         .data-panel { border-left: none !important; }
 
+        /* 隱藏勾選框與操作欄位 */
         .ts-table th.collapsing, .ts-table td.collapsing,
         .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
-
         .no-print-row { display: none !important; }
 
+        /* 統一報表標題 */
         .print-header-title { 
             display: block !important; text-align: center; font-size: 1.8rem; 
             font-weight: bold; margin-bottom: 20px; color: black !important;
             border-bottom: 2px solid black; padding-bottom: 10px;
         }
+
+        /* 統一表格外觀 */
         .ts-table { width: 100% !important; border-collapse: collapse !important; }
-        .ts-table th { background-color: #f0f0f0 !important; color: black !important; border-bottom: 2px solid #000 !important;}
-        .ts-table td { color: black !important; border-bottom: 1px solid #ccc !important;}
-        
-        .total-weight-box { 
-            background: transparent !important; color: black !important; 
-            border-top: 2px solid #000 !important; border-bottom: none !important; 
-            padding: 15px 0 !important;
+        .ts-table th { background-color: #f0f0f0 !important; color: black !important; border-bottom: 2px solid #000 !important; font-size: 12pt !important; padding: 10px !important;}
+        .ts-table td { color: black !important; border-bottom: 1px solid #ccc !important; font-size: 11pt !important; padding: 8px !important;}
+
+        /* 顯示列印專用總結區塊 */
+        .print-summary-box { 
+            display: block !important; text-align: right; padding: 15px 0; margin-top: 5px;
+            border-top: 2px solid #000; font-size: 14pt; font-weight: bold; color: black !important;
         }
-        .total-weight-value { color: black !important; }
     }
-    .print-header-title { display: none; } 
+    .print-header-title, .print-summary-box { display: none; } 
 </style>
 
 <div class="ts-container is-fluid transport-page" style="padding: 20px;">
@@ -201,22 +199,6 @@
         </form>
     </div>
 
-    <div class="dashboard-panel" id="chartPanel" style="display: none; padding: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div style="font-weight: bold; font-size: 1.1rem; color: var(--tp-text-main);">
-                <span class="ts-icon is-chart-line-icon"></span> 載運重量數據圖表
-            </div>
-            <div>
-                <select class="ts-select is-small" onchange="renderChart(this.value)" style="width: auto; height: 32px !important;">
-                    <option value="area">趨勢圖 (面積)</option>
-                    <option value="bar">長條圖</option>
-                    <option value="pie">圓餅圖 (佔比)</option>
-                </select>
-            </div>
-        </div>
-        <div id="weightChart"></div>
-    </div>
-
     <div class="dashboard-panel data-panel">
         <div class="ts-content is-secondary is-fitted" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--tp-border); background-color: var(--tp-bg-panel); border-radius: 6px 6px 0 0;">
             <div style="display: flex; align-items: center; flex-shrink: 1; margin-right: 15px;">
@@ -236,10 +218,22 @@
                 
                 <div style="width: 1px; height: 20px; background: var(--tp-border); margin: 0 5px;"></div>
                 
-                <button class="btn-print-custom" onclick="exportToExcel()" style="color: #21ba45 !important; border-color: #21ba45 !important;">
-                    <span class="ts-icon is-file-excel-icon" style="margin-right: 6px;"></span> 
-                    <span id="btnExportText">匯出 Excel</span>
+                <button class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important;">
+                    <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 
+                    <span id="btnExportText">匯出報表</span>
+                    <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
                 </button>
+                <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
+                    <button class="item" onclick="exportToExcel()">
+                        <span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel
+                    </button>
+                    <button class="item" onclick="exportToPDF()">
+                        <span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF
+                    </button>
+                    <button class="item" onclick="exportToPNG()">
+                        <span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG
+                    </button>
+                </div>
 
                 <button class="btn-print-custom" onclick="printSelectedReport()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
@@ -247,7 +241,7 @@
                         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                         <rect x="6" y="14" width="12" height="8"></rect>
                     </svg>
-                    <span id="btnPrintText">列印報表</span>
+                    <span id="btnPrintText">直接列印</span>
                 </button>
 
                 <button type="button" id="btnBatchDelete" class="ts-button is-warning" style="height: 38px !important; border-radius: 4px !important; font-weight: bold; padding: 0 15px !important; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="openBatchDelete()">
@@ -306,6 +300,9 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <div class="print-summary-box">
+                總計列印重量：<span id="printTotalWeight">0.00</span> kg
+            </div>
         </div>
 
         <div class="total-weight-box">
@@ -408,18 +405,14 @@
     document.addEventListener("DOMContentLoaded", function() {
         flatpickr("#start_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
         flatpickr("#end_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
-        
-        renderChart(); // 初始化預設圖表
     });
 
     window.submitWithSort = function(val) { document.getElementById('hiddenSortInput').value = val; document.getElementById('searchForm').submit(); }
-    
     window.changePageSize = function(size) {
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.set('page_size', size); urlParams.set('page', 1);
         window.location.search = urlParams.toString();
     }
-
     window.toggleAll = function(src) { document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); updateUI(); }
     
     window.updateUI = function() {
@@ -427,17 +420,15 @@
         const count = checkboxes.length;
         
         document.getElementById('btnBatchDeleteText').innerText = count > 0 ? `取消載運 (${count})` : "取消載運";
-        document.getElementById('btnPrintText').innerText = count > 0 ? `列印報表 (${count})` : "列印報表";
-        document.getElementById('btnExportText').innerText = count > 0 ? `匯出 Excel (${count})` : "匯出 Excel";
+        document.getElementById('btnPrintText').innerText = count > 0 ? `直接列印 (${count})` : "直接列印";
+        document.getElementById('btnExportText').innerText = count > 0 ? `匯出報表 (${count})` : "匯出報表";
         
         const weightLabel = document.getElementById('weightLabel');
         const displayTotalWeight = document.getElementById('displayTotalWeight');
         
         if (count > 0) {
             let selectedWeight = 0;
-            checkboxes.forEach(cb => {
-                selectedWeight += parseFloat(cb.getAttribute('data-weight')) || 0;
-            });
+            checkboxes.forEach(cb => { selectedWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
             weightLabel.innerText = "已選取資料總重量：";
             displayTotalWeight.innerText = selectedWeight.toFixed(2);
         } else {
@@ -446,176 +437,137 @@
         }
     }
 
-    // 🌟 升級：匯出 Excel，加入自動日期與標題
-    window.exportToExcel = function() {
-        if (typeof XLSX === 'undefined') {
-            alert("載入 Excel 套件失敗，請稍後再試！");
-            return;
-        }
+    // PDF/PNG 隱形表格邏輯保持不變
+    function createPrintableTable() {
+        const now = new Date();
+        const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute'; wrapper.style.top = '-9999px'; wrapper.style.left = '-9999px';
+        wrapper.style.width = '1000px'; wrapper.style.background = '#ffffff'; wrapper.style.color = '#000000';      
+        wrapper.style.padding = '40px'; wrapper.style.fontFamily = 'sans-serif';
 
+        let html = `<h2 style="text-align:center; margin-bottom: 5px; font-size: 24px;">廢棄物載運紀錄報表</h2>`;
+        html += `<p style="text-align:center; margin-bottom: 25px; font-size: 16px;">匯出日期：${dateStr}</p>`;
+        html += `<table style="width:100%; border-collapse: collapse; text-align: left; font-size: 16px;"><thead><tr>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">結算時間</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">總重量 (KG)</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">清理機構</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">處理機構</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">結算人員</th></tr></thead><tbody>`;
+
+        const rows = document.querySelectorAll('#dataTable tbody tr');
+        let hasData = false;
+        const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
+
+        rows.forEach(row => {
+            const cb = row.querySelector('.record-checkbox');
+            if(!cb || (selectedCount > 0 && !cb.checked)) return;
+            const cols = row.querySelectorAll('td');
+            if(cols.length >= 6) {
+                hasData = true;
+                html += `<tr>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[1].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px; color: #db2828; font-weight: bold;">${cols[2].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[3].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[4].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[5].innerText.trim()}</td></tr>`;
+            }
+        });
+        html += `</tbody></table>`;
+        wrapper.innerHTML = html;
+        return { wrapper, hasData, dateStr };
+    }
+
+    window.exportToPNG = function() {
+        if (typeof html2canvas === 'undefined') { alert("載入圖片套件失敗！"); return; }
+        const { wrapper, hasData, dateStr } = createPrintableTable();
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        document.body.appendChild(wrapper);
+        html2canvas(wrapper, { scale: 2 }).then(canvas => {
+            let link = document.createElement('a'); link.download = `廢棄物載運紀錄報表_${dateStr}.png`;
+            link.href = canvas.toDataURL('image/png'); link.click(); document.body.removeChild(wrapper);
+        });
+    }
+
+    window.exportToPDF = function() {
+        if (typeof pdfMake === 'undefined' || typeof html2canvas === 'undefined') { alert("載入 PDF 套件失敗！"); return; }
+        const { wrapper, hasData, dateStr } = createPrintableTable();
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        document.body.appendChild(wrapper);
+        html2canvas(wrapper, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const docDef = { content: [{ image: imgData, width: 515 }], pageSize: 'A4', pageMargins: [40, 40, 40, 40] };
+            pdfMake.createPdf(docDef).download(`廢棄物載運紀錄報表_${dateStr}.pdf`); document.body.removeChild(wrapper);
+        });
+    }
+
+    window.exportToExcel = function() {
+        if (typeof XLSX === 'undefined') { alert("載入 Excel 套件失敗！"); return; }
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        
-        // 取得今日日期字串 YYYY-MM-DD
         const now = new Date();
         const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
-        let data = [];
-        
-        // 幫 Excel 前面加入大標題和匯出日期
-        data.push(['廢棄物載運紀錄報表']);
-        data.push(['匯出日期：', dateStr]);
-        data.push([]); // 空一行比較好看
-
-        // 加入欄位標題
-        data.push(['結算時間', '總重量 (KG)', '清理機構', '處理機構', '結算人員']);
-
+        let data = [['廢棄物載運紀錄報表'], ['匯出日期：', dateStr], [], ['結算時間', '總重量 (KG)', '清理機構', '處理機構', '結算人員']];
         const rows = document.querySelectorAll('#dataTable tbody tr');
         let hasData = false;
         rows.forEach(row => {
             const cb = row.querySelector('.record-checkbox');
-            if (!cb) return; 
-            
-            if (selectedCount > 0 && !cb.checked) return;
-
+            if (!cb || (selectedCount > 0 && !cb.checked)) return;
             const cols = row.querySelectorAll('td');
             if (cols.length >= 6) {
                 hasData = true;
-                let timeStr = cols[1].innerText.trim();
-                let weight = parseFloat(cols[2].innerText.trim());
-                let clearAgency = cols[3].innerText.trim();
-                let processAgency = cols[4].innerText.trim();
-                let settler = cols[5].innerText.trim();
-                data.push([timeStr, weight, clearAgency, processAgency, settler]);
+                data.push([cols[1].innerText.trim(), parseFloat(cols[2].innerText.trim()), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim()]);
             }
         });
-
-        if (!hasData) {
-            alert("目前沒有資料可以匯出喔！");
-            return;
-        }
-
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "載運紀錄");
-        
-        // 將日期加入到下載的檔案名稱中
-        XLSX.writeFile(wb, `廢棄物載運紀錄報表_${dateStr}.xlsx`);
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "載運紀錄"); XLSX.writeFile(wb, `廢棄物載運紀錄報表_${dateStr}.xlsx`);
     }
 
-    // 🌟 升級：動態圖表繪製，支援切換類型 (area, bar, pie)
-    window.apexChartInstance = null; // 用來儲存圖表實例，切換時才能銷毀重建
-    window.renderChart = function(chartType = 'area') {
-        if (typeof ApexCharts === 'undefined') return;
-
-        const rows = document.querySelectorAll('#dataTable tbody tr');
-        let chartData = [];
-        
-        rows.forEach(row => {
-            const cb = row.querySelector('.record-checkbox');
-            if (!cb) return;
-            const cols = row.querySelectorAll('td');
-            if (cols.length >= 6) {
-                let dateStr = cols[1].innerText.trim().split(' ')[0]; // 只取日期 YYYY-MM-DD
-                let weight = parseFloat(cols[2].innerText.trim());
-                chartData.push({ date: dateStr, weight: weight });
-            }
-        });
-
-        if (chartData.length === 0) return;
-
-        // 加總同一天的重量
-        let groupedData = {};
-        chartData.forEach(item => {
-            if (!groupedData[item.date]) groupedData[item.date] = 0;
-            groupedData[item.date] += item.weight;
-        });
-
-        let sortedDates = Object.keys(groupedData).sort();
-        let seriesData = sortedDates.map(date => parseFloat(groupedData[date].toFixed(2)));
-
-        document.getElementById('chartPanel').style.display = 'block';
-
-        // 取得目前的文字顏色 (深/淺色模式)
-        let textColor = getComputedStyle(document.documentElement).getPropertyValue('--tp-text-sub').trim() || '#aaa';
-        let isDark = document.documentElement.classList.contains('is-dark');
-
-        let options = {};
-
-        // 判斷要畫哪種圖表，圓餅圖的設定方式跟長條圖/面積圖不一樣
-        if (chartType === 'pie') {
-            options = {
-                series: seriesData, // 圓餅圖的 series 是一維陣列
-                labels: sortedDates,
-                chart: { type: 'pie', height: 350, foreColor: textColor },
-                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: val => val + " KG" } },
-                legend: { position: 'bottom' }
-            };
-        } else {
-            // area (面積圖) 或 bar (長條圖)
-            options = {
-                series: [{ name: '載運總量 (KG)', data: seriesData }],
-                chart: { type: chartType, height: 350, toolbar: { show: false }, foreColor: textColor },
-                colors: ['#2185d0'],
-                dataLabels: { enabled: false },
-                stroke: { curve: 'smooth', width: chartType === 'area' ? 3 : 0 },
-                xaxis: { categories: sortedDates, tooltip: { enabled: false } },
-                yaxis: { title: { text: '重量 (KG)' } },
-                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: val => val + " KG" } }
-            };
-        }
-
-        // 如果圖表已經存在，先把它砍掉再重新畫
-        if (window.apexChartInstance) {
-            window.apexChartInstance.destroy();
-        }
-
-        window.apexChartInstance = new ApexCharts(document.querySelector("#weightChart"), options);
-        window.apexChartInstance.render();
-    }
-
-    // ---------------------------------------------
-    // 下面保留原本的列印與刪除功能
-    // ---------------------------------------------
+    // 🎯 更新：智能計算實際列印總重量
     window.printSelectedReport = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        if (selectedCount > 0) { checkboxes.forEach(cb => { if (!cb.checked) cb.closest('tr').classList.add('no-print-row'); }); }
+        let printWeight = 0;
+
+        if (selectedCount > 0) {
+            checkboxes.forEach(cb => {
+                if (!cb.checked) { cb.closest('tr').classList.add('no-print-row'); } 
+                else { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; }
+            });
+        } else {
+            checkboxes.forEach(cb => { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
+        }
+        
+        // 寫入列印專用總重區塊
+        const printTotalEl = document.getElementById('printTotalWeight');
+        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(2);
+        
         window.print();
+        
         if (selectedCount > 0) { checkboxes.forEach(cb => { cb.closest('tr').classList.remove('no-print-row'); }); }
     }
 
+    // 刪除邏輯保持不變
     window.pendingDeleteIds = null;
     window.openBatchDelete = function() {
         const ids = Array.from(document.querySelectorAll('.record-checkbox:checked')).map(cb => cb.value);
         if (ids.length === 0) return alert('請至少選取一筆資料');
-        window.pendingDeleteIds = ids;
-        document.getElementById('deleteModal').showModal();
+        window.pendingDeleteIds = ids; document.getElementById('deleteModal').showModal();
     }
-
-    window.deleteSingleBatch = function(id) {
-        window.pendingDeleteIds = [id];
-        document.getElementById('deleteModal').showModal();
-    }
-    
+    window.deleteSingleBatch = function(id) { window.pendingDeleteIds = [id]; document.getElementById('deleteModal').showModal(); }
     window.confirmDelete = function() {
         if (!window.pendingDeleteIds) return;
         fetch("{% url 'dashboard:api_delete_batches' %}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
             body: JSON.stringify({ ids: window.pendingDeleteIds })
-        }).then(res => res.json()).then(data => {
-            if (data.status === 'success') window.location.reload();
-            else alert('操作失敗');
-        });
+        }).then(res => res.json()).then(data => { if (data.status === 'success') window.location.reload(); else alert('操作失敗'); });
     }
-
     window.openDetailModal = function(id) {
         const tmpl = document.getElementById('tmpl-' + id);
-        if (tmpl) {
-            document.getElementById('modalBody').innerHTML = tmpl.innerHTML;
-            document.getElementById('detailModal').showModal();
-        }
+        if (tmpl) { document.getElementById('modalBody').innerHTML = tmpl.innerHTML; document.getElementById('detailModal').showModal(); }
     }
 </script>
 {% endblock %}

@@ -2,6 +2,11 @@ import json
 import logging
 import sqlite3
 import time
+import json
+from datetime import datetime
+from django.http import JsonResponse
+from collections import defaultdict
+from django.db.models import Sum, Avg
 from datetime import datetime
 from collections import Counter
 
@@ -1996,3 +2001,144 @@ def visualize_department_data(request):
     except Exception as e:
         logger.error(f"Department visualization data error: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': f'資料處理失敗: {str(e)}'})
+
+# ==========================================
+# --- 載運紀錄圖表專用 API (讀取模擬資料版) ---
+# ==========================================
+def api_visualize_transport_data(request):
+    """
+    處理前端傳來的「廢棄物載運紀錄」圖表生成請求
+    這版會直接去讀取 dashboard_extension.views 裡面的假資料
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': '只允許 POST 請求'})
+        
+    try:
+        # ⚠️ 關鍵：從您的 dashboard_extension 匯入假資料
+        from dashboard_extension.views import transport_batches
+        
+        # 1. 解析前端傳來的 JSON 設定
+        data = json.loads(request.body)
+        y_axis = data.get('y_axis', 'kilogram')
+        x_axis = data.get('x_axis', 'month_sum')
+        datasets = data.get('datasets', [])
+        title = data.get('title', '載運趨勢分析')
+        show_values = data.get('show_values', True)
+
+        categories_set = set() 
+        series_data = []       
+
+        # 2. 針對每一條線段進行資料過濾與加總
+        for dataset in datasets:
+            start_date_str = dataset.get('start_date')
+            end_date_str = dataset.get('end_date')
+            name = dataset.get('name')
+            color = dataset.get('color')
+
+            dataset_values = defaultdict(float)
+            record_counts = defaultdict(int)
+
+            # 迴圈跑每一筆假資料
+            for batch in transport_batches:
+                batch_date = batch['settle_time']
+                
+                if not batch_date:
+                    continue
+
+                label = ""
+                is_in_range = False
+                
+                # 根據前端選擇的 X 軸單位，判斷這筆資料有沒有在選擇的年份/月份內
+                if x_axis.startswith('year'):
+                    if int(start_date_str) <= batch_date.year <= int(end_date_str):
+                        label = batch_date.strftime("%Y")
+                        is_in_range = True
+                        
+                elif x_axis.startswith('month'):
+                    batch_month_str = batch_date.strftime("%Y-%m")
+                    if start_date_str <= batch_month_str <= end_date_str:
+                        label = batch_month_str
+                        is_in_range = True
+                        
+                elif x_axis.startswith('quarter'):
+                    batch_month_str = batch_date.strftime("%Y-%m")
+                    if start_date_str <= f"{batch_date.year}-{(batch_date.month-1)//3+1}" <= end_date_str:
+                        q = (batch_date.month - 1) // 3 + 1
+                        label = f"{batch_date.year}-Q{q}"
+                        is_in_range = True
+
+                # 如果資料在範圍內，就把它加總起來
+                if is_in_range:
+                    categories_set.add(label)
+                    
+                    val = float(batch['total_weight'])
+                    if y_axis == 'metric_ton':
+                        val = val / 1000.0
+                    elif y_axis == 'new_taiwan_dollar':
+                        val = val * 35  
+                        
+                    dataset_values[label] += val
+                    record_counts[label] += 1
+
+            if 'avg' in x_axis:
+                for lbl in dataset_values:
+                    if record_counts[lbl] > 0:
+                        dataset_values[lbl] = dataset_values[lbl] / record_counts[lbl]
+
+            for lbl in dataset_values:
+                dataset_values[lbl] = round(dataset_values[lbl], 2)
+
+            series_data.append({
+                "name": name,
+                "color": color,
+                "values": dict(dataset_values)
+            })
+
+        # 3. 排序 X 軸標籤
+        sorted_categories = sorted(list(categories_set))
+
+        # 4. 對齊每一條線段的數據
+        formatted_series = []
+        for series in series_data:
+            data_array = []
+            for cat in sorted_categories:
+                data_array.append(series['values'].get(cat, 0))
+            
+            formatted_series.append({
+                "name": series["name"],
+                "color": series["color"],
+                "data": data_array
+            })
+
+        # 5. 產生表格專用的資料結構
+        table_data = []
+        for cat in sorted_categories:
+            row_dict = {"category": cat, "values": {}}
+            for series in formatted_series:
+                idx = sorted_categories.index(cat)
+                row_dict["values"][series["name"]] = series["data"][idx]
+            table_data.append(row_dict)
+
+        # 6. 回傳給前端
+        y_axis_unit = '公斤'
+        if y_axis == 'metric_ton':
+            y_axis_unit = '公噸'
+        elif y_axis == 'new_taiwan_dollar':
+            y_axis_unit = '新台幣'
+
+        return JsonResponse({
+            "success": True,
+            "title": title,
+            "chart_type": "line", 
+            "x_axis_labels": sorted_categories, 
+            "series": formatted_series,
+            "table_data": table_data,
+            "show_values": show_values,
+            "y_axis": y_axis,
+            "y_axis_unit": y_axis_unit
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
