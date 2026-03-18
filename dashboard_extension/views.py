@@ -211,12 +211,28 @@ def delete_records_api(request):
 @require_POST
 @login_required
 def delete_batches_api(request):
-    global transport_batches
+    global transport_batches, all_records  # 🎯 記得這裡要把 all_records 加進來
     try:
         data = json.loads(request.body)
         batch_ids = list(map(str, data.get('ids', [])))
+        
+        # 1. 先找出準備要被刪除的這些載運單 (批次)
+        batches_to_delete = [b for b in transport_batches if str(b['id']) in batch_ids]
+        
+        # 2. 🎯 核心修復：把這些載運單裡面的「單筆垃圾」，狀態通通改回「未載運」
+        for batch in batches_to_delete:
+            for item in batch.get('items', []):
+                # 去總資料庫 (all_records) 裡面把這包垃圾找出來解鎖
+                for r in all_records:
+                    if str(r['id']) == str(item['id']):
+                        r['is_transported'] = False   # 狀態改回未載運
+                        r['update_time'] = datetime.now() # 順便更新一下操作時間
+                        break
+        
+        # 3. 最後再把這些載運單從畫面上刪除
         before_len = len(transport_batches)
         transport_batches = [b for b in transport_batches if str(b['id']) not in batch_ids]
+        
         return JsonResponse({'status': 'success', 'deleted_count': before_len - len(transport_batches)})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
