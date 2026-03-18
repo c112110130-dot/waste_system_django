@@ -192,6 +192,7 @@ class WasteType(models.Model):
     UNIT_CHOICES = [
         ('metric_ton', '公噸'),
         ('kilogram', '公斤'),
+        ('gram', '公克'),
     ]
     
     id = models.AutoField(primary_key=True)

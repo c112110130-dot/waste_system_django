@@ -124,10 +124,13 @@ def settlement_view(request):
     paginator = Paginator(filtered_records, page_size)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
+    # 🎯 就在這裡！把 clear_agencies 跟 process_agencies 補上！
     context = {
         'page_obj': page_obj, 'departments': departments_list, 'locations': locations_list,
         'weighers': weighers_list, 
         'waste_types': waste_types_list, 
+        'clear_agencies': clear_agencies,        # 👈 補上這行
+        'process_agencies': process_agencies,    # 👈 補上這行
         'start_date': f_start_date, 'end_date': f_end_date,
         'selected_location': f_location, 'selected_dept': f_dept, 'selected_weigher': f_weigher,
         'selected_waste_type': f_waste_type, 

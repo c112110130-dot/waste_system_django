@@ -269,12 +269,12 @@
                     <tr>
                         <td class="collapsing">
                             <label class="ts-checkbox">
-                                <input type="checkbox" name="batch_ids" value="{{ batch.id }}" class="record-checkbox" data-weight="{{ batch.total_weight }}" onchange="updateUI()">
+                                <input type="checkbox" name="batch_ids" value="{{ batch.id }}" class="record-checkbox" data-weight="{{ batch.total_weight|floatformat:3 }}" onchange="updateUI()">
                             </label>
                         </td>
                         <td>{{ batch.settle_time|date:"Y-m-d H:i" }}</td>
                         <td>
-                            <span style="color: #db2828; font-weight: bold;">{{ batch.total_weight }}</span>
+                            <span style="color: #db2828; font-weight: bold;">{{ batch.total_weight|floatformat:3 }}</span>
                         </td>
                         <td>{{ batch.clear_agency.name }}</td>
                         <td>{{ batch.process_agency.name }}</td>
@@ -301,13 +301,13 @@
                 </tbody>
             </table>
             <div class="print-summary-box">
-                總計列印重量：<span id="printTotalWeight">0.00</span> kg
+                總計列印重量：<span id="printTotalWeight">0.000</span> kg
             </div>
         </div>
 
         <div class="total-weight-box">
             <span id="weightLabel">本查詢結果總重量：</span>
-            <span class="total-weight-value" id="displayTotalWeight" data-original="{{ total_weight_sum }}">{{ total_weight_sum }}</span>
+            <span class="total-weight-value" id="displayTotalWeight" data-original="{{ total_weight_sum|floatformat:3 }}">{{ total_weight_sum|floatformat:3 }}</span>
             <span style="font-size: 0.9rem;">KG</span>
         </div>
 
@@ -389,14 +389,14 @@
                 <td style="font-family: monospace;">#{{ item.id }}</td>
                 <td>{{ item.department.name }}</td><td>{{ item.location.name }}</td>
                 <td>{{ item.create_time|date:"Y-m-d H:i" }}</td>
-                <td style="text-align: right; font-weight: bold;">{{ item.weight }}</td>
+                <td style="text-align: right; font-weight: bold;">{{ item.weight|floatformat:3 }}</td>
                 <td>{{ item.creator.name }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     <div style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed var(--tp-border); text-align: right; font-weight: bold;">
-        總計重量：<span style="color: #db2828; font-size: 1.1rem;">{{ batch.total_weight }}</span> KG
+        總計重量：<span style="color: #db2828; font-size: 1.1rem;">{{ batch.total_weight|floatformat:3 }}</span> KG
     </div>
 </template>
 {% endfor %}
@@ -430,14 +430,15 @@
             let selectedWeight = 0;
             checkboxes.forEach(cb => { selectedWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
             weightLabel.innerText = "已選取資料總重量：";
-            displayTotalWeight.innerText = selectedWeight.toFixed(2);
+            // 🎯 JS 動態加總限制小數點後三位
+            displayTotalWeight.innerText = selectedWeight.toFixed(3);
         } else {
             weightLabel.innerText = "本查詢結果總重量：";
             displayTotalWeight.innerText = displayTotalWeight.getAttribute('data-original');
         }
     }
 
-    // PDF/PNG 隱形表格邏輯保持不變
+    // PDF/PNG 隱形表格邏輯
     function createPrintableTable() {
         const now = new Date();
         const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -526,7 +527,7 @@
         XLSX.utils.book_append_sheet(wb, ws, "載運紀錄"); XLSX.writeFile(wb, `廢棄物載運紀錄報表_${dateStr}.xlsx`);
     }
 
-    // 🎯 更新：智能計算實際列印總重量
+    // 🎯 更新：智能計算實際列印總重量 (小數點後三位)
     window.printSelectedReport = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
@@ -541,9 +542,9 @@
             checkboxes.forEach(cb => { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
         }
         
-        // 寫入列印專用總重區塊
+        // 🎯 寫入列印專用總重區塊，並格式化為小數點後三位
         const printTotalEl = document.getElementById('printTotalWeight');
-        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(2);
+        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(3);
         
         window.print();
         

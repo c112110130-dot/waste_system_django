@@ -200,7 +200,12 @@
                 </div>
                 <div class="column">
                     <label>過磅人員</label>
-                    <select name="weigher" class="ts-select is-fluid"><option value="">全部人員</option>{% for user in weighers %}<option value="{{ user.id }}" {% if selected_weigher == user.id|stringformat:"i" %}selected{% endif %}>{{ user.user }}</option>{% endfor %}</select>
+                    <select name="weigher" class="ts-select is-fluid">
+                        <option value="">全部人員</option>
+                        {% for w in weighers %}
+                            <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>{{ w.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="column" style="display: flex; align-items: flex-end;">
                     <button type="submit" class="ts-button is-primary is-fluid" style="margin-right: 10px;">
@@ -233,7 +238,7 @@
                 </div>
                 <div style="width: 1px; height: 24px; background: var(--my-border); margin-right: 15px;"></div>
                 <div style="margin-right: 15px; color: var(--my-text-main); font-size: 1rem;">
-                    選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.00</span> kg
+                    選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.000</span> kg
                 </div>
 
                 <button class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; margin-right: 10px;">
@@ -289,7 +294,7 @@
                     <tr id="row_{{ record.id }}" class="{% if record.is_expired or record.is_transported %}tr-locked{% endif %}">
                         <td class="collapsing">
                             <label class="ts-checkbox">
-                                <input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" data-weight="{{ record.weight }}" onchange="updateUI()" {% if record.is_expired or record.is_transported %}disabled{% endif %}>
+                                <input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" data-weight="{{ record.weight|floatformat:3 }}" onchange="updateUI()" {% if record.is_expired or record.is_transported %}disabled{% endif %}>
                             </label>
                         </td>
                         <td>
@@ -300,15 +305,15 @@
                                 <span class="ts-text is-micro" style="display:block; margin-top:2px; color: var(--my-text-sub);">(已歸檔)</span>
                             {% endif %}
                         </td>
-                        <td>{{ record.weight }}</td>
+                        <td>{{ record.weight|floatformat:3 }}</td>
                         <td>
                             {% if record.is_transported %}<span class="ts-label is-success">已載運</span>{% else %}<span class="ts-label is-secondary">未載運</span>{% endif %}
                         </td>
                         <td>{{ record.waste_type.name }}</td>
                         <td>{{ record.department.name }}</td>
                         <td>{{ record.location.name }}</td>
-                        <td>{{ record.creator.username }}</td>
-                        <td>{{ record.updater.username|default:"-" }}</td>
+                        <td>{{ record.creator.name|default:"-" }}</td>
+                        <td>{{ record.updater.name|default:"-" }}</td>
                         <td>{{ record.update_time|date:"Y-m-d H:i"|default:"-" }}</td>
                         <td>
                             {% if not record.is_expired and not record.is_transported %}
@@ -333,7 +338,7 @@
                 </tbody>
             </table>
             <div class="print-summary-box">
-                總計列印重量：<span id="printTotalWeight">0.00</span> kg
+                總計列印重量：<span id="printTotalWeight">0.000</span> kg
             </div>
         </div>
 
@@ -432,7 +437,8 @@
             if(!isNaN(w))total+=w;
         });
         const display=document.getElementById('displayTotalWeight');
-        if(display)display.innerText=total.toFixed(2);
+        // 🎯 動態加總小數點後三位設定
+        if(display)display.innerText=total.toFixed(3);
         const count=checkedBoxes.length;
         
         const btnText=document.getElementById('btnBatchDeleteText');
@@ -453,22 +459,46 @@
     
     window.confirmDelete = function() {
         if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
-        const formData = new FormData();
-        formData.append('ids', window.pendingDeleteIds.join(','));
 
-        fetch('/dashboard/delete_records/', { 
+        // 🎯 這裡換成 Django 的動態網址標籤，保證絕對不會 404！
+        const apiUrl = "{% url 'dashboard:api_delete_records' %}";
+
+        fetch(apiUrl, { 
             method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken'), },
-            body: formData
-        }).then(response => {
-            if (response.ok) {
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ ids: window.pendingDeleteIds })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('伺服器回應狀態碼：' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                // 刪除成功，把畫面上的列隱藏並移除
                 window.pendingDeleteIds.forEach(id => {
                     let row = document.getElementById('row_' + id);
-                    if (row) { row.style.transition = "opacity 0.3s"; row.style.opacity = "0"; setTimeout(() => row.remove(), 300); }
+                    if (row) { 
+                        row.style.transition = "opacity 0.3s"; 
+                        row.style.opacity = "0"; 
+                        setTimeout(() => row.remove(), 300); 
+                    }
                 });
-                setTimeout(() => { window.updateUI(); }, 300); window.closeDeleteModal();
-            } else { alert('刪除失敗，請稍後再試。'); }
-        }).catch(error => { console.error('Error:', error); alert('發生錯誤'); });
+                // 更新總重與畫面
+                setTimeout(() => { window.updateUI(); }, 300); 
+                window.closeDeleteModal();
+            } else { 
+                alert('刪除失敗：' + (data.message || '未知錯誤')); 
+            }
+        })
+        .catch(error => { 
+            console.error('Error:', error); 
+            alert('發生錯誤，請稍後再試。\n' + error.message); 
+        });
     }
 
     function getCookie(name) {
@@ -566,7 +596,7 @@
         XLSX.utils.book_append_sheet(wb, ws, "結算紀錄"); XLSX.writeFile(wb, `廢棄物結算報表_${dateStr}.xlsx`);
     }
 
-    // 🎯 更新：智能計算實際列印總重量
+    // 🎯 更新：智能計算實際列印總重量 (小數點後三位)
     window.printSelectedReport = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
@@ -583,7 +613,7 @@
         
         // 寫入列印專用總重區塊
         const printTotalEl = document.getElementById('printTotalWeight');
-        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(2);
+        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(3);
         
         window.print();
         
