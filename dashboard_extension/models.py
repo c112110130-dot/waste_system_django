@@ -3,17 +3,17 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Sum  
 from django.conf import settings 
-from WasteManagement.models import Department
+from WasteManagement.models import Department, WasteType
 
-class Department(models.Model):
-    id = models.AutoField(primary_key=True)                  # 部門ID
-    code = models.CharField(max_length=100)       # 部門代碼
-    name = models.CharField(max_length=100)       # 部門名稱
-    created_time = models.DateTimeField(auto_now_add=True)     # 建立時間
+# class Department(models.Model):
+#     id = models.AutoField(primary_key=True)                  # 部門ID
+#     code = models.CharField(max_length=100)       # 部門代碼
+#     name = models.CharField(max_length=100)       # 部門名稱
+#     created_time = models.DateTimeField(auto_now_add=True)     # 建立時間
 
-    class Meta:
-        db_table = 'department' # 資料庫裡的表格名稱
-        verbose_name = "部門"
+#     class Meta:
+#         db_table = 'department' # 資料庫裡的表格名稱
+#         verbose_name = "部門"
 
 class LocationPoint(models.Model):
     id = models.AutoField(primary_key=True)        # 定點ID
@@ -91,7 +91,8 @@ class WasteRecord(models.Model):
     weight = models.DecimalField(max_digits=5,decimal_places=2)
     department = models.ForeignKey(
         Department,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='extension_records'
     )  # 部門ID（外來鍵）
     location = models.ForeignKey(
         LocationPoint,
@@ -103,9 +104,10 @@ class WasteRecord(models.Model):
         on_delete=models.SET_NULL
     )
     waste_type = models.ForeignKey(
-        'WasteType',
+        WasteType,
         on_delete=models.SET_NULL,
-        null=True, blank=True
+        null=True, blank=True,
+        related_name='extension_types'
     )  # 廢棄物種類（外來鍵）
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
@@ -128,11 +130,4 @@ class WasteRecord(models.Model):
         db_table = 'waste_record' # 資料庫裡的表格名稱
         verbose_name = "廢棄物紀錄"
 
-class WasteType(models.Model):
-    id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100)
-    measurement = models.CharField(max_length=20)
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name="建立時間")
-    class Meta:
-        db_table = 'waste_type' # 資料庫裡的表格名稱
-        verbose_name = "廢棄物種類"
+

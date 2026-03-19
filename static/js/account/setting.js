@@ -108,6 +108,7 @@ function createAccountTable(contentBox, data, perm, fullName, nameClass) {
     
     // Add rows
     tbody.appendChild(createRow('帳號ID', data.username, `ts-text monospace ${!data.username ? 'is-empty' : ''}`));
+    tbody.appendChild(createRow('代碼', data.code || '', ` ${!data.code ? 'is-empty' : ''}`));
     tbody.appendChild(createRow('姓名', fullName, nameClass));
     tbody.appendChild(createRow('身份', {
         element: true,

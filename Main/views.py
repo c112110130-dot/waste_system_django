@@ -27,7 +27,7 @@ from WasteManagement.models import (
     PharmaceuticalGlassProductionAndDisposalCosts,
     PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenue,
     Department,
-    WasteType
+    WasteType,
 )
 from .models import UserProfile
 from .forms import PasswordChangeForm
@@ -531,6 +531,7 @@ def view_account_manage_info(request, account_id):
             account = User.objects.get(username=account_id)
             account_data = {
                 'username': account.username,
+                'code': UserProfile.objects.get(user=account).code if hasattr(account, 'profile') else '',
                 'first_name': account.first_name,
                 'last_name': account.last_name,
                 'group': account.groups.first().name if account.groups.exists() else "",
@@ -585,6 +586,7 @@ def delete_account(request, username):
 def view_account_register(request):
     if request.method == 'POST':
         username = request.POST.get('username')
+        code = request.POST.get('code')
         email = request.POST.get('email')
         first_name = request.POST.get('first_name')
         last_name = request.POST.get('last_name')
@@ -604,6 +606,7 @@ def view_account_register(request):
                 last_name=last_name,
                 password=password
             )
+            
 
             # Confirm group exists and assign
             user_permission = Group.objects.get(name=permission)
@@ -660,6 +663,7 @@ def get_department_waste_data(request):
         departments_data = [{
             'id': dept.id,
             'name': dept.name,
+            'code': dept.code,
             'display_order': dept.display_order
         } for dept in departments]
         
@@ -806,12 +810,17 @@ def save_department(request):
         data = json.loads(request.body)
         department_id = data.get('id')
         name = data.get('name', '').strip()
+        code = data.get('code', '').strip()
         
         if not name:
             return JsonResponse({'success': False, 'error': '部門名稱不能為空'})
         
+        if not code:
+            return JsonResponse({'success': False, 'error': '部門代碼不能為空'})
+        
         # Handle multiple names separated by semicolon
         names = [n.strip() for n in name.split(';') if n.strip()]
+        codes = [c.strip() for c in code.split(';') if c.strip()]
         created_count = 0
         updated_count = 0
         reused_count = 0
@@ -819,40 +828,43 @@ def save_department(request):
         
         # Handle each department name individually to prevent transaction rollback
         for name_item in names:
-            try:
-                with transaction.atomic():
-                    if department_id:
-                        # Update existing department
-                        try:
-                            department = Department.objects.get(id=department_id)
-                            if len(names) == 1:
-                                department.name = name_item
-                                department.save()
-                                updated_count = 1
-                            else:
-                                errors.append('編輯模式下不支援一次更新多個部門')
+            for code_item in codes:
+                try:
+                    with transaction.atomic():
+                        if department_id:
+                            # Update existing department
+                            try:
+                                department = Department.objects.get(id=department_id)
+                                if len(names) == 1:
+                                    department.name = name_item
+                                    department.code = code_item
+                                    department.save()
+                                    updated_count = 1
+                                else:
+                                    errors.append('編輯模式下不支援一次更新多個部門')
+                                    continue
+                            except Department.DoesNotExist:
+                                errors.append('部門不存在')
                                 continue
-                        except Department.DoesNotExist:
-                            errors.append('部門不存在')
-                            continue
-                    else:
-                        # Try to get existing department or create new one
-                        department, created = Department.objects.get_or_create(
-                            name=name_item,
-                            defaults={
-                                'display_order': Department.objects.aggregate(
-                                    max_order=models.Max('display_order')
-                                )['max_order'] or 0 + 1
-                            }
-                        )
-                        
-                        if created:
-                            created_count += 1
                         else:
-                            reused_count += 1
+                            # Try to get existing department or create new one
+                            department, created = Department.objects.get_or_create(
+                                name=name_item,
+                                code=code_item,
+                                defaults={
+                                    'display_order': Department.objects.aggregate(
+                                        max_order=models.Max('display_order')
+                                    )['max_order'] or 0 + 1
+                                }
+                            )
+                            
+                            if created:
+                                created_count += 1
+                            else:
+                                reused_count += 1
                                 
-            except Exception as e:
-                errors.append(f"處理部門 '{name_item}' 時發生錯誤: {str(e)}")
+                except Exception as e:
+                    errors.append(f"處理部門 '{name_item}' 時發生錯誤: {str(e)}")
         
         # Build response message
         message_parts = []

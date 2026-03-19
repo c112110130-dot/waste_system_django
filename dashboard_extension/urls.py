@@ -5,7 +5,7 @@ app_name = 'dashboard'
 
 urlpatterns = [
     # 這就是你的結算頁面網址
-    path('settlement/', views.settlement_view, name='settlement_page'),
+    path('settlement/', views.settlement_view, name='settlement_view'),
     path('delete_records/', views.delete_records_api, name='delete_records'),
     path('settlement_process/', views.settlement_process, name='settlement_process'),
     # 2. 行動工作站 (手機版)
@@ -30,4 +30,6 @@ urlpatterns = [
     path('api/agency/delete/', views.api_delete_agency, name='api_delete_agency'),
 
     path('location/', views.location_management_view, name='location_management'),
+    # 6. QR Code 列印頁面
+    path('qrcode/', views.qrcode_print_view, name='qrcode_print'),
 ]

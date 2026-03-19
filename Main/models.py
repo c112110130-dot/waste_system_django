@@ -4,8 +4,9 @@ from django.db import models
 
 
 class UserProfile(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    code = models.CharField(max_length=20, blank=True, null=True)
     theme_preference = models.CharField(
         max_length=10,
         choices=[
@@ -30,7 +31,7 @@ from django.dispatch import receiver
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.create(user=instance)
+        UserProfile.objects.create(user=instance, code=f"USER{instance.id:04d}")
 
 
 @receiver(post_save, sender=User)

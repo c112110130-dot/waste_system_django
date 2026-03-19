@@ -54,7 +54,7 @@
                         <thead>
                             <tr>
                                 <th class="checkbox-column"><label class="ts-checkbox is-solo is-large"><input type="checkbox"></label></th>
-                                <th>ID</th>
+                                <th>代號</th>
                                 <th>定點名稱</th>
                                 <th class="action-column" style="text-align: right;">操作</th>
                             </tr>
@@ -63,7 +63,7 @@
                             {% for loc in locations %}
                             <tr data-id="{{ loc.id }}">
                                 <td><label class="ts-checkbox is-solo is-large"><input type="checkbox" value="{{ loc.id }}"></label></td>
-                                <td>{{ loc.id }}</td>
+                                <td>{{ loc.code }}</td>
                                 <td>{{ loc.name }}</td>
                                 <td style="text-align: right;">
                                     <button type="button" class="ts-button is-icon is-warning is-small btn-edit-location" data-id="{{ loc.id }}"><span class="ts-icon is-pencil-icon"></span></button>
@@ -108,7 +108,7 @@
                         <thead>
                             <tr>
                                 <th class="checkbox-column"><label class="ts-checkbox is-solo is-large"><input type="checkbox"></label></th>
-                                <th>ID</th>
+                                <th>代號</th>
                                 <th>機構名稱</th>
                                 <th>類型</th>
                                 <th class="action-column" style="text-align: right;">操作</th>
@@ -118,9 +118,9 @@
                             {% for agency in clear_agencies %}
                             <tr data-id="clear_{{ agency.id }}">
                                 <td><label class="ts-checkbox is-solo is-large"><input type="checkbox" value="clear_{{ agency.id }}"></label></td>
-                                <td>{{ agency.id }}</td>
+                                <td>{{ agency.code }}</td>
                                 <td>{{ agency.name }}</td>
-                                <td><span class="ts-badge is-small is-outlined is-info">清理</span></td>
+                                <td>清理</td>
                                 <td style="text-align: right;">
                                     <button type="button" class="ts-button is-icon is-warning is-small btn-edit-agency" data-id="clear_{{ agency.id }}"><span class="ts-icon is-pencil-icon"></span></button>
                                 </td>
@@ -130,9 +130,9 @@
                             {% for agency in process_agencies %}
                             <tr data-id="process_{{ agency.id }}">
                                 <td><label class="ts-checkbox is-solo is-large"><input type="checkbox" value="process_{{ agency.id }}"></label></td>
-                                <td>{{ agency.id }}</td>
+                                <td>{{ agency.code }}</td>
                                 <td>{{ agency.name }}</td>
-                                <td><span class="ts-badge is-small is-outlined is-warning">處理</span></td>
+                                <td>處理</td>
                                 <td style="text-align: right;">
                                     <button type="button" class="ts-button is-icon is-warning is-small btn-edit-agency" data-id="process_{{ agency.id }}"><span class="ts-icon is-pencil-icon"></span></button>
                                 </td>

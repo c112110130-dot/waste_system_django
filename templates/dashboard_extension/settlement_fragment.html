@@ -160,7 +160,15 @@
         body {
             padding: 1.5cm !important; /* 取代 @page margin，當作報表留白 */
         }
-
+    .btn-print-custom {
+        height: 38px !important; background-color: var(--tp-bg-input) !important;
+        border: 1px solid var(--tp-border) !important; color: var(--tp-text-main) !important;
+        border-radius: 4px !important; padding: 0 15px !important;
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        cursor: pointer; font-size: 0.95rem !important; font-weight: bold;
+        white-space: nowrap !important; flex-shrink: 0 !important; transition: background-color 0.2s;
+    }
+    .btn-print-custom:hover { background-color: var(--tp-hover) !important; }
         .ts-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
 
         /* 2. 隱藏本頁面的控制元素：篩選面板、標題操作列、分頁列 */
@@ -298,6 +306,14 @@
                 <div style="margin-right: 25px; color: var(--my-text-main); font-size: 1rem;">
                     選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.00</span> g
                 </div>
+                <button class="btn-print-custom" onclick="printSelectedReport()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    列印報表
+                </button>
                 <button type="button" class="ts-button is-positive" onclick="openSettlementModal()">
                     <span class="ts-icon is-calculator-icon"></span> 結算
                 </button>

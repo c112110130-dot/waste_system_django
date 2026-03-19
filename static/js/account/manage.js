@@ -121,6 +121,8 @@ async function fetchAccountData(account, contentBox) {
             
             const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
             createRow('姓名', fullName, fullName === '' ? 'is-empty' : '');
+
+            createRow('代碼', data.code || '', `${!data.profile?.code ? 'is-empty' : ''}`);
             
             createRow('身份', perm.name, `ts-text ${perm.color} ${!data.group ? 'is-empty' : ''}`);
             

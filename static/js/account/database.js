@@ -145,6 +145,7 @@ class DatabaseManager {
                     <select class="edit-unit">
                         <option value="metric_ton" ${wasteType.unit === 'metric_ton' ? 'selected' : ''}>公噸</option>
                         <option value="kilogram" ${wasteType.unit === 'kilogram' ? 'selected' : ''}>公斤</option>
+                        <option value="gram" ${wasteType.unit === 'gram' ? 'selected' : ''}>公克</option>
                     </select>
                 </div>
             </td>
@@ -209,6 +210,7 @@ class DatabaseManager {
                     <input type="checkbox" value="${department.id}">
                 </label>
             </td>
+            <td>${DOMUtils.escapeHtml(department.code)}</td>
             <td>${DOMUtils.escapeHtml(department.name)}</td>
             <td class="action-cell">
                 <button class="ts-button is-warning is-start-icon btn-edit-department" data-id="${department.id}">
@@ -225,6 +227,12 @@ class DatabaseManager {
                 <label class="ts-checkbox is-solo is-large">
                     <input type="checkbox" disabled>
                 </label>
+            </td>
+            <td>
+                <div class="ts-input is-solid is-fluid">
+                    <input type="text" class="edit-code" value="${DOMUtils.escapeHtml(department.code)}" 
+                           placeholder="輸入部門代碼">
+                </div>
             </td>
             <td>
                 <div class="ts-input is-solid is-fluid">
@@ -345,9 +353,13 @@ class DatabaseManager {
         const option2 = document.createElement('option');
         option2.value = 'kilogram';
         option2.textContent = '公斤';
+        const option3 = document.createElement('option');
+        option3.value = 'gram';
+        option3.textContent = '克';
         
         unitSelect.appendChild(option1);
         unitSelect.appendChild(option2);
+        unitSelect.appendChild(option3);
         unitDiv.appendChild(unitSelect);
         unitCell.appendChild(unitDiv);
         
@@ -534,6 +546,18 @@ class DatabaseManager {
         nameDiv.appendChild(nameInput);
         nameCell.appendChild(nameDiv);
         
+        // Create code input cell
+        const codeCell = document.createElement('td');
+        const codeDiv = document.createElement('div');
+        codeDiv.className = 'ts-input is-solid is-fluid';
+        const codeInput = document.createElement('input');
+        codeInput.type = 'text';
+        codeInput.className = 'edit-code';
+        codeInput.placeholder = '輸入部門代碼';
+        codeDiv.appendChild(codeInput);
+        codeCell.appendChild(codeDiv);
+        
+
         // Create action cell
         const actionCell = document.createElement('td');
         actionCell.className = 'ts-wrap';
@@ -556,6 +580,7 @@ class DatabaseManager {
         
         // Append all cells to row
         newRow.appendChild(checkboxCell);
+        newRow.appendChild(codeCell);
         newRow.appendChild(nameCell);
         newRow.appendChild(actionCell);
         
@@ -602,8 +627,9 @@ class DatabaseManager {
         try {
             const editingRow = document.querySelector('.department-table tbody tr .btn-save-department').closest('tr');
             const nameInput = editingRow.querySelector('.edit-name');
-            
+            const codeInput = editingRow.querySelector('.edit-code');
             const name = nameInput.value.trim();
+            const code = codeInput.value.trim();
             
             if (!name) {
                 NotificationUtils.showAlert('錯誤', '請輸入部門名稱', 'error');
@@ -611,7 +637,7 @@ class DatabaseManager {
                 return;
             }
             
-            const payload = { name: name };
+            const payload = { name: name, code: code };
             
             if (this.editingDepartmentId !== 'new') {
                 payload.id = this.editingDepartmentId;

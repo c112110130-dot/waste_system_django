@@ -10,7 +10,7 @@ import json
 from django.db.models import Sum, Count, Q
 from Main.models import UserProfile
 
-from .models import WasteRecord,  LocationPoint,Department, clearAgency, processAgency, TransportRecord,WasteType
+from .models import WasteRecord,  LocationPoint, Department, clearAgency, processAgency, TransportRecord,WasteType
 
 
 
@@ -163,7 +163,7 @@ def settlement_view(request):
 
 @login_required
 def transportation_view(request):
-    global transport_batches
+    
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_agency = request.GET.get('agency', '') 
@@ -192,11 +192,12 @@ def transportation_view(request):
             end_dt = timezone.make_aware(datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1))
             batches = batches.filter(settle_time__lt=end_dt)
         except ValueError: pass
-
+    agency_id = None
     if f_agency:
         try:
             agency_type, agency_id = f_agency.split('_')
-            
+            f_agency = agency_type
+            agency_id = int(agency_id)
             if agency_type == 'clear':
                 batches = batches.filter(clear_agency_id=agency_id)
                 
@@ -231,6 +232,7 @@ def transportation_view(request):
         clear_agencies = []
 
     context = {
+        'agency_ids': agency_id,
         'page_obj': page_obj, 
         'start_date': f_start_date, 
         'end_date': f_end_date,
@@ -238,8 +240,8 @@ def transportation_view(request):
         'current_page_size': page_size,
         'current_sort': sort_by,
         'total_weight_sum': round(total_weight_sum, 2),
-        'process_agencies': process_agencies,
         'clear_agencies': clear_agencies,
+        'process_agencies': process_agencies,
     }
     
     return render(request, 'dashboard_extension/transportation.html', context)
@@ -396,19 +398,22 @@ def api_save_location(request):
         data = json.loads(request.body)
         loc_id = data.get('id')
         name = data.get('name', '').strip()
+        code = data.get('code', '').strip() 
             
         if not name: return JsonResponse({'success': False, 'error': '定點名稱不能為空'})
-                
+        if not code: return JsonResponse({'success': False, 'error': '定點代碼不能為空'})
+
         if loc_id and loc_id != 'new':
             # 編輯現有資料
             for loc in locations_list:
                 if str(loc.id) == str(loc_id):
                     loc.name = name
+                    loc.code = code
                     loc.save()
                     break
         else:
             # 新增資料
-            LocationPoint.objects.create(name=name)      
+            LocationPoint.objects.create(name=name, code=code)      
         return JsonResponse({'success': True, 'message': '定點儲存成功'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -440,9 +445,11 @@ def api_save_agency(request):
         data = json.loads(request.body)
         raw_id = data.get('id') 
         name = data.get('name', '').strip()
+        code = data.get('code', '').strip()
         new_type = data.get('type', '')
         
         if not name: return JsonResponse({'success': False, 'error': '機構名稱不能為空'})
+        if not code: return JsonResponse({'success': False, 'error': '機構代碼不能為空'})
             
         if raw_id and raw_id != 'new':
             old_type, actual_id = raw_id.split('_')[0], raw_id.split('_')[1]
@@ -450,23 +457,23 @@ def api_save_agency(request):
                 if new_type == 'process':
                     # 從 clear 變 process
                     clearAgency.objects.filter(id=actual_id).delete()
-                    processAgency.objects.create(name=name)
+                    processAgency.objects.create(name=name, code=code)
                 elif new_type == 'clear':
-                    clearAgency.objects.filter(id=actual_id).update(name=name)
+                    clearAgency.objects.filter(id=actual_id).update(name=name, code=code)
             else:
                 if new_type == 'clear':
                     # 從 process 變 clear
                     processAgency.objects.filter(id=actual_id).delete()
-                    clearAgency.objects.create(name=name)
+                    clearAgency.objects.create(name=name, code=code)
                 elif new_type == 'process':
-                    processAgency.objects.filter(id=actual_id).update(name=name)
+                    processAgency.objects.filter(id=actual_id).update(name=name, code=code)
         else:
             # 新增資料
             if new_type == 'clear':
-                clearAgency.objects.create(name=name)
+                clearAgency.objects.create(name=name, code=code)
             else:
-                processAgency.objects.create(name=name)
-                
+                processAgency.objects.create(name=name, code=code)
+
         return JsonResponse({'success': True, 'message': '機構儲存成功'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -491,4 +498,25 @@ def api_delete_agency(request):
         
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})        
+        return JsonResponse({'success': False, 'error': str(e)})     
+
+    # =========================================================
+# 7. QR Code 列印頁面
+# =========================================================
+# @login_required
+def qrcode_print_view(request):
+    departments_list = Department.objects.all()
+    waste_types_list = WasteType.objects.all()
+    if request.user.is_authenticated:
+        # 🟢 順序對調：先抓 first_name (在中文通常被當作姓氏) 再抓 last_name (名字)
+        full_name = f"{request.user.first_name}{request.user.last_name}".strip()
+        current_user = full_name if full_name else request.user.username
+    else:
+        current_user = '測試人員'
+        
+    context = {
+        'departments': departments_list,
+        'waste_types': waste_types_list,
+        'current_user': current_user
+    }
+    return render(request, 'dashboard_extension/qrcode_print.html', context)   
