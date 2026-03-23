@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物結算{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物過磅紀錄{% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
 {% endblock %}
@@ -22,7 +22,6 @@
         --del-icon-bg: #ffffff; --del-icon-fg: #000000;
         --del-cancel-bg: #e0e0e0; --del-cancel-fg: #333333;
     }
-
     html.is-light {
         --my-bg-panel: #f7f7f7; --my-bg-input: #ffffff;
         --my-text-main: #333333; --my-text-sub: #555555;
@@ -31,51 +30,42 @@
         --del-icon-bg: #000000; --del-icon-fg: #ffffff;
         --del-cancel-bg: #333333; --del-cancel-fg: #ffffff;
     }
-
-    html.is-dark {
-        --my-bg-panel: #363636; --my-bg-input: #222222;
-        --my-text-main: #ffffff; --my-text-sub: #cccccc;
-        --my-border: #555555; --my-hover: rgba(255, 255, 255, 0.05);
-        --my-modal-bg: #2b2b2b;
-        --del-icon-bg: #ffffff; --del-icon-fg: #000000;
-        --del-cancel-bg: #e0e0e0; --del-cancel-fg: #333333;
-    }
-
+    
     /* ========================================= */
-    /* 2. 樣式調整                               */
+    /* 2. 基礎樣式調整                           */
     /* ========================================= */
     .ts-select, .ts-input input, .flatpickr-input { 
         height: 45px !important; font-size: 1rem !important;
         background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important;
-        color: var(--my-text-main) !important; border-radius: 4px !important; width: 100% !important; box-sizing: border-box !important;
+        color: var(--my-text-main) !important; border-radius: 4px !important; box-sizing: border-box !important;
     }
     .ts-select option { background-color: var(--my-bg-panel); color: var(--my-text-main); }
     
+    .control-panel .ts-select, .control-panel .ts-input input, .control-panel .flatpickr-input,
+    #settlementModal .ts-select { width: 100% !important; }
+
     .date-picker-wrapper { position: relative; width: 100%; }
     .calendar-icon {
         position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
         pointer-events: none; opacity: 0.6; width: 20px; height: 20px; stroke: var(--my-text-main);
     }
-
     .ts-button { height: 45px !important; border-radius: 6px !important; font-size: 1rem !important; }
     .ts-button.is-secondary { background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important; color: var(--my-text-main) !important; }
-
+    
     .btn-print-custom {
         height: 45px !important; background-color: transparent !important;
         border: 1px solid var(--my-border) !important; color: var(--my-text-main) !important;
         border-radius: 6px !important; padding: 0 15px !important;
         display: inline-flex !important; align-items: center !important; justify-content: center !important;
-        cursor: pointer; font-size: 1rem !important; font-weight: bold;
-        white-space: nowrap !important; flex-shrink: 0 !important; transition: background-color 0.2s;
+        cursor: pointer; font-size: 1rem !important; font-weight: bold; transition: background-color 0.2s;
     }
     .btn-print-custom:hover { background-color: var(--my-hover) !important; }
     
     .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 5px; margin-bottom: 25px; }
     .control-panel { padding: 30px; }
     .data-panel { padding: 0; border-left: 4px solid #fbbd08; min-height: 400px; }
-
     label { color: var(--my-text-sub); font-size: 1rem; margin-bottom: 8px; display: block; font-weight: 500; }
-
+    
     .ts-table { background: transparent !important; color: var(--my-text-main) !important; }
     .ts-table thead th { background-color: var(--my-bg-panel) !important; color: var(--my-text-main) !important; border-bottom: 1px solid var(--my-border) !important; }
     .ts-table tbody td { border-bottom: 1px solid var(--my-border) !important; vertical-align: middle !important; }
@@ -84,23 +74,21 @@
 
     .sort-select {
         background-color: transparent !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border) !important;
-        height: 36px !important; padding: 0 15px !important; border-radius: 4px; cursor: pointer;
+        height: 36px !important; padding: 0 15px !important; border-radius: 4px; cursor: pointer; width: auto !important;
     }
     .sort-select option { background: var(--my-bg-panel); color: var(--my-text-main); }
-
-    #settlementModal > div {
+    
+    #settlementModal > div, #deleteModal > div {
         background: var(--my-modal-bg) !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border);
-        width: 500px; max-width: 95vw; border-radius: 5px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        border-radius: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
+    #settlementModal > div { width: 500px; max-width: 95vw; display: flex; flex-direction: column; }
+    #deleteModal > div { width: 450px; max-width: 90vw; border-radius: 10px; text-align: center; }
+    
     #settlementModal label { text-align: center; width: 100%; display: block; margin-bottom: 10px; color: var(--my-text-main); font-weight: bold; font-size: 1.1rem; }
     #settlementModal select { width: 100% !important; height: 55px !important; font-size: 1.1rem !important; padding-left: 15px !important; box-sizing: border-box; }
     .modal-info-box { background: var(--my-bg-panel); border: 1px solid var(--my-border); padding: 15px; border-radius: 5px; margin-bottom: 20px; color: var(--my-text-sub); }
-    #settlementModal button { border-radius: 6px !important; }
-
-    #deleteModal > div {
-        width: 450px; max-width: 90vw; background: var(--my-modal-bg) !important; color: var(--my-text-main) !important;
-        border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid var(--my-border); text-align: center;
-    }
+    
     .delete-icon-circle { display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 70px; border-radius: 50%; margin-bottom: 20px; background: var(--del-icon-bg) !important; color: var(--del-icon-fg) !important; }
     .delete-hint-text { color: var(--my-text-sub) !important; background: var(--my-hover); padding: 10px; border-radius: 5px; }
     #deleteModal button { border-radius: 6px !important; height: 45px; font-weight: bold; cursor: pointer; border: none; }
@@ -108,55 +96,76 @@
     #deleteModal .btn-confirm { background: #db2828 !important; color: #ffffff !important; }
 
     /* ========================================= */
-    /* 🟢 3. 報表列印專屬淨化樣式 (絕對統一版)   */
+    /* 🟢 3. RWD 全面響應式適應 (重點升級)       */
+    /* ========================================= */
+    
+    .rwd-toolbar {
+        display: flex;
+        flex-wrap: wrap; 
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+    .rwd-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+    .rwd-group-divider {
+        width: 1px; height: 24px; background: var(--my-border); margin: 0 5px;
+    }
+
+    .page-size-wrap {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        white-space: nowrap !important;
+    }
+
+    @media (max-width: 991px) {
+        .rwd-toolbar { flex-direction: column; align-items: stretch; gap: 15px; }
+        .rwd-group { justify-content: space-between; width: 100%; }
+        
+        /* 搜尋區塊：改為單行堆疊 */
+        .ts-grid.is-5-columns .column, .ts-grid.is-6-wide { width: 100% !important; margin-bottom: 10px; }
+        
+        /* 按鈕小螢幕滿版 */
+        .rwd-group .ts-button, .rwd-group .btn-print-custom { width: 100%; justify-content: center; }
+        .sort-select { flex: 1; min-width: 0; }
+        .rwd-group-divider { display: none; }
+    }
+
+    /* ========================================= */
+    /* 🟢 4. 網頁直接列印專屬淨化樣式            */
     /* ========================================= */
     @media print {
-        /* 隱藏所有不需要列印的 UI */
         nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
         .ts-topbar, .topbar, .navbar, .sidebar, [class*="topbar"], [class*="navbar"], [class*="header"], 
         .user-greeting, #greeting, .control-panel, .ts-pagination, .dashboard-panel:not(.data-panel),
-        .data-panel > .ts-content.is-secondary { display: none !important; }
+        .data-panel > .ts-content.is-secondary, .top-pagination-bar, .bottom-pagination-bar { display: none !important; }
 
-        @page { margin: 0; }
-        body, html, .ts-app-layout, .ts-app-content, main, .ts-content, .ts-container {
-            background: white !important; color: black !important;
-            overflow: visible !important; margin: 0 !important;
-        }
-        body { padding: 1.5cm !important; }
-        .ts-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
+        @page { size: A4 landscape; margin: 15mm; }
 
-        .dashboard-panel { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important;}
-        .data-panel { border-left: none !important; }
-
-        /* 隱藏勾選框與操作欄位 */
-        .ts-table th.collapsing, .ts-table td.collapsing,
-        .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
+        body, html { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; }
+        .ts-container, .ts-content, .data-panel, .dashboard-panel { padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; background: transparent !important; }
+        .ts-table th.collapsing, .ts-table td.collapsing, .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
         .no-print-row { display: none !important; }
 
-        /* 統一報表標題 */
-        .print-header-title { 
-            display: block !important; text-align: center; font-size: 1.8rem; 
-            font-weight: bold; margin-bottom: 20px; color: black !important;
-            border-bottom: 2px solid black; padding-bottom: 10px;
-        }
-
-        /* 統一表格外觀 */
-        .ts-table { width: 100% !important; border-collapse: collapse !important; }
-        .ts-table th { background-color: #f0f0f0 !important; color: black !important; border-bottom: 2px solid #000 !important; font-size: 12pt !important; padding: 10px !important;}
-        .ts-table td { color: black !important; border-bottom: 1px solid #ccc !important; font-size: 11pt !important; padding: 8px !important;}
-
-        /* 顯示列印專用總結區塊 */
-        .print-summary-box { 
-            display: block !important; text-align: right; padding: 15px 0; margin-top: 5px;
-            border-top: 2px solid #000; font-size: 14pt; font-weight: bold; color: black !important;
-        }
+        .print-header-title { display: block !important; text-align: center; font-size: 1.8rem; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: black !important; }
+        .ts-table { width: 100% !important; border-collapse: collapse !important; border: none !important; table-layout: auto !important; }
+        .ts-table thead { display: table-header-group; } 
+        .ts-table tr { page-break-inside: avoid; } 
+        .ts-table th { background-color: transparent !important; color: black !important; border: none !important; border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 11pt !important; padding: 10px 6px !important; }
+        .ts-table td { color: black !important; border: none !important; border-bottom: 1px solid #e0e0e0 !important; font-size: 10pt !important; padding: 8px 6px !important; }
+        .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; }
     }
     .print-header-title, .print-summary-box { display: none; } 
 </style>
 
 <div class="ts-container is-fluid" style="padding: 30px;">
     
-    <div class="print-header-title">廢棄物結算報表</div>
+    <div class="print-header-title">廢棄物過磅紀錄報表</div>
 
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
@@ -208,57 +217,62 @@
                     </select>
                 </div>
                 <div class="column" style="display: flex; align-items: flex-end;">
-                    <button type="submit" class="ts-button is-primary is-fluid" style="margin-right: 10px;">
-                        <span class="ts-icon is-magnifying-glass-icon"></span> 查詢
-                    </button>
-                    <button type="button" class="ts-button is-secondary" onclick="clearAllFilters()" style="width: 80px;">
-                        <span class="ts-icon is-rotate-left-icon"></span>
-                    </button>
+                    <div class="rwd-group" style="width: 100%;">
+                        <button type="submit" class="ts-button is-primary" style="flex: 1;">
+                            <span class="ts-icon is-magnifying-glass-icon"></span> 查詢
+                        </button>
+                        <button type="button" class="ts-button is-secondary" onclick="clearAllFilters()" style="width: 60px;" title="重置">
+                            <span class="ts-icon is-rotate-left-icon"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </form>
     </div>
 
     <div class="dashboard-panel data-panel">
-        <div class="ts-content is-secondary is-fitted" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; border-bottom: 1px solid var(--my-border); background-color: var(--my-bg-panel); border-radius: 5px 5px 0 0;">
-            <div class="ts-wrap is-middle-aligned">
-                <div class="ts-header" style="margin: 0; font-size: 1.1rem; margin-right: 15px;">查詢結果</div>
+        
+        <div class="ts-content is-secondary is-fitted rwd-toolbar" style="padding: 15px 25px; border-bottom: 1px solid var(--my-border); background-color: var(--my-bg-panel); border-radius: 5px 5px 0 0;">
+            <div class="rwd-group">
+                <div class="ts-header" style="margin: 0; font-size: 1.1rem;">查詢結果</div>
                 <span class="ts-text is-small" style="color: var(--my-text-sub);">(共 {{ page_obj.paginator.count|default:"0" }} 筆)</span>
             </div>
             
-            <div class="ts-wrap is-middle-aligned">
-                <div style="margin-right: 15px; display: flex; align-items: center;">
-                    <span style="color: var(--my-text-sub); font-size: 0.95rem; margin-right: 10px;">排序：</span>
-                    <select class="sort-select" onchange="submitWithSort(this.value)">
-                        <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊) ↓</option>
-                        <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新) ↑</option>
-                        <option value="weight_desc" {% if current_sort == 'weight_desc' %}selected{% endif %}>重量 (重 → 輕) ↓</option>
-                        <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重) ↑</option>
-                    </select>
-                </div>
-                <div style="width: 1px; height: 24px; background: var(--my-border); margin-right: 15px;"></div>
-                <div style="margin-right: 15px; color: var(--my-text-main); font-size: 1rem;">
+            <div class="rwd-group">
+                <span style="color: var(--my-text-sub); font-size: 0.95rem;">排序：</span>
+                <select class="sort-select" onchange="submitWithSort(this.value)">
+                    <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊) ↓</option>
+                    <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新) ↑</option>
+                    <option value="weight_desc" {% if current_sort == 'weight_desc' %}selected{% endif %}>重量 (重 → 輕) ↓</option>
+                    <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重) ↑</option>
+                </select>
+                
+                <div class="rwd-group-divider"></div>
+                
+                <div style="color: var(--my-text-main); font-size: 1rem;">
                     選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.000</span> kg
                 </div>
 
-                <button class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; margin-right: 10px;">
-                    <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 
-                    <span id="btnExportText">匯出報表</span>
-                    <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
-                </button>
-                <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
-                    <button class="item" onclick="exportToExcel()">
-                        <span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel
+                <div style="position: relative; flex: 1;">
+                    <button id="exportBtn" class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; width: 100%;">
+                        <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 
+                        <span id="btnExportText">匯出報表</span>
+                        <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
                     </button>
-                    <button class="item" onclick="exportToPDF()">
-                        <span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF
-                    </button>
-                    <button class="item" onclick="exportToPNG()">
-                        <span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG
-                    </button>
+                    <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
+                        <button class="item" onclick="exportToExcel()">
+                            <span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel
+                        </button>
+                        <button class="item" onclick="exportToPDF()">
+                            <span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF
+                        </button>
+                        <button class="item" onclick="exportToPNG()">
+                            <span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG
+                        </button>
+                    </div>
                 </div>
 
-                <button class="btn-print-custom" onclick="printSelectedReport()" style="margin-right: 10px;">
+                <button class="btn-print-custom" onclick="printSelectedReport()">
                     <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span>
                     <span id="btnPrintText">直接列印</span>
                 </button>
@@ -266,14 +280,33 @@
                 <button type="button" class="ts-button is-positive" onclick="openSettlementModal()">
                     <span class="ts-icon is-calculator-icon"></span> 結算
                 </button>
-                <button type="button" id="btnBatchDelete" class="ts-button is-negative" onclick="openBatchDelete()" style="margin-left: 10px;">
+                <button type="button" id="btnBatchDelete" class="ts-button is-negative" onclick="openBatchDelete()">
                     <span class="ts-icon is-trash-can-icon"></span> <span id="btnBatchDeleteText">刪除</span>
                 </button>
             </div>
         </div>
+
+        <div class="ts-content is-secondary top-pagination-bar rwd-toolbar" style="background-color: var(--my-bg-panel); border-bottom: 1px solid var(--my-border); padding: 8px 25px;">
+            <div class="page-size-wrap rwd-group">
+                <span style="color: var(--my-text-sub); font-size: 0.95rem;">每頁顯示：</span>
+                <select class="ts-select is-small" style="background-color: var(--my-bg-input); color: var(--my-text-main); border-color: var(--my-border); width: 80px !important; height: 32px !important; padding-left: 10px !important;" onchange="changePageSize(this.value)">
+                    <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+                </select>
+            </div>
+            <div class="ts-pagination is-small is-secondary rwd-group" style="justify-content: flex-end;">
+                {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&waste_type="|add:selected_waste_type|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
+                    {% if page_obj.has_previous %}<a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>{% endif %}
+                    <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
+                    {% if page_obj.has_next %}<a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>{% endif %}
+                {% endwith %}
+            </div>
+        </div>
         
-        <div class="ts-content is-fitted">
-            <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable">
+        <div class="ts-content is-fitted" style="overflow-x: auto;">
+            <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable" style="min-width: 1000px;">
                 <thead>
                     <tr>
                         <th class="collapsing"><label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label></th>
@@ -342,29 +375,35 @@
             </div>
         </div>
 
-        <div class="ts-content is-secondary" style="background-color: var(--my-bg-panel); border-top: 1px solid var(--my-border); padding: 15px 25px; border-radius: 0 0 5px 5px;">
-            <div class="ts-grid is-middle-aligned is-between">
-                <div class="column">
-                    <div class="ts-wrap is-middle-aligned">
-                        <span style="color: var(--my-text-sub); margin-right: 10px; font-size: 0.95rem;">每頁顯示：</span>
-                        <select class="ts-select is-small" style="background-color: var(--my-bg-input); color: var(--my-text-main); border-color: var(--my-border); width: auto;" onchange="changePageSize(this.value)">
-                            <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
-                            <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
-                            <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
-                        </select>
-                    </div>
+        <div class="ts-content is-secondary bottom-pagination-bar rwd-toolbar" style="background-color: var(--my-bg-panel); border-top: 1px solid var(--my-border); padding: 12px 25px; border-radius: 0 0 5px 5px;">
+            
+            <div class="page-size-wrap rwd-group">
+                <span style="color: var(--my-text-sub); font-size: 0.95rem;">每頁顯示：</span>
+                <select class="ts-select is-small" style="background-color: var(--my-bg-input); color: var(--my-text-main); border-color: var(--my-border); width: 80px !important; height: 32px !important; padding-left: 10px !important;" onchange="changePageSize(this.value)">
+                    <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+                </select>
+            </div>
+            
+            <div class="rwd-group" style="justify-content: flex-end; gap: 20px;">
+                <div style="font-size: 1rem;">
+                    <span style="color: var(--my-text-sub);">選取總重：</span>
+                    <span id="displayTotalWeightBottom" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.000</span>
+                    <span style="color: var(--my-text-sub); font-size: 0.9rem;">kg</span>
                 </div>
-                <div class="column">
-                    <div class="ts-pagination is-small is-secondary">
-                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&waste_type="|add:selected_waste_type|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
-                            {% if page_obj.has_previous %}<a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>{% endif %}
-                            <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
-                            {% if page_obj.has_next %}<a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>{% endif %}
-                        {% endwith %}
-                    </div>
+                
+                <div class="ts-pagination is-small is-secondary">
+                    {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&waste_type="|add:selected_waste_type|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
+                        {% if page_obj.has_previous %}<a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>{% endif %}
+                        <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
+                        {% if page_obj.has_next %}<a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>{% endif %}
+                    {% endwith %}
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -415,10 +454,17 @@
 </dialog>
 
 <script>
+    const allFilteredData = JSON.parse('{{ all_filtered_data|escapejs }}' || '[]');
+
     document.addEventListener("DOMContentLoaded", function() {
         const config = { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true, theme: "dark", disableMobile: "true" };
         flatpickr("#start_date", config);
         flatpickr("#end_date", config);
+        
+        // 載入時同步選單寬度
+        syncDropdownWidth();
+        // 🎯 綁定視窗縮放事件，隨時跟著按鈕調整大小！
+        window.addEventListener('resize', syncDropdownWidth);
     });
 
     window.submitWithSort = function(sortValue) {
@@ -429,6 +475,18 @@
     window.pendingDeleteIds = null;
     window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
     
+    // 🎯 動態同步下拉選單寬度
+    function syncDropdownWidth() {
+        const btn = document.getElementById('exportBtn');
+        const menu = document.getElementById('export-menu');
+        if (btn && menu) {
+            const width = btn.getBoundingClientRect().width;
+            menu.style.width = width + 'px';
+            menu.style.minWidth = width + 'px';
+            menu.style.boxSizing = 'border-box';
+        }
+    }
+
     window.updateUI = function(){
         let total=0;
         const checkedBoxes=document.querySelectorAll('.record-checkbox:checked');
@@ -436,9 +494,12 @@
             let w=parseFloat(cb.getAttribute('data-weight'));
             if(!isNaN(w))total+=w;
         });
-        const display=document.getElementById('displayTotalWeight');
-        // 🎯 動態加總小數點後三位設定
-        if(display)display.innerText=total.toFixed(3);
+        
+        const displayTop = document.getElementById('displayTotalWeight');
+        const displayBottom = document.getElementById('displayTotalWeightBottom');
+        if(displayTop) displayTop.innerText = total.toFixed(3);
+        if(displayBottom) displayBottom.innerText = total.toFixed(3);
+
         const count=checkedBoxes.length;
         
         const btnText=document.getElementById('btnBatchDeleteText');
@@ -446,6 +507,9 @@
 
         const btnExportText = document.getElementById('btnExportText');
         if (btnExportText) btnExportText.innerText = count > 0 ? `匯出報表 (${count})` : "匯出報表";
+
+        // 當文字改變導致按鈕變寬時，重新對齊選單
+        setTimeout(syncDropdownWidth, 10);
 
         const btnPrintText = document.getElementById('btnPrintText');
         if (btnPrintText) btnPrintText.innerText = count > 0 ? `直接列印 (${count})` : "直接列印";
@@ -459,46 +523,27 @@
     
     window.confirmDelete = function() {
         if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
-
-        // 🎯 這裡換成 Django 的動態網址標籤，保證絕對不會 404！
         const apiUrl = "{% url 'dashboard:api_delete_records' %}";
-
         fetch(apiUrl, { 
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
             body: JSON.stringify({ ids: window.pendingDeleteIds })
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error('伺服器回應狀態碼：' + response.status);
-            }
+            if (!response.ok) throw new Error('伺服器回應狀態碼：' + response.status);
             return response.json();
         })
         .then(data => {
             if (data.status === 'success') {
-                // 刪除成功，把畫面上的列隱藏並移除
                 window.pendingDeleteIds.forEach(id => {
                     let row = document.getElementById('row_' + id);
-                    if (row) { 
-                        row.style.transition = "opacity 0.3s"; 
-                        row.style.opacity = "0"; 
-                        setTimeout(() => row.remove(), 300); 
-                    }
+                    if (row) { row.style.transition = "opacity 0.3s"; row.style.opacity = "0"; setTimeout(() => row.remove(), 300); }
                 });
-                // 更新總重與畫面
                 setTimeout(() => { window.updateUI(); }, 300); 
                 window.closeDeleteModal();
-            } else { 
-                alert('刪除失敗：' + (data.message || '未知錯誤')); 
-            }
+            } else { alert('刪除失敗：' + (data.message || '未知錯誤')); }
         })
-        .catch(error => { 
-            console.error('Error:', error); 
-            alert('發生錯誤，請稍後再試。\n' + error.message); 
-        });
+        .catch(error => { console.error('Error:', error); alert('發生錯誤，請稍後再試。\n' + error.message); });
     }
 
     function getCookie(name) {
@@ -518,85 +563,183 @@
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     window.changePageSize = function(size){const urlParams=new URLSearchParams(window.location.search);urlParams.set('page_size',size);urlParams.set('page',1);window.location.search=urlParams.toString();}
 
-    // 匯出功能保持不變
-    function createPrintableTable() {
-        const now = new Date(); const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    function createPrintableElement(titleText) {
+        const now = new Date(); 
+        const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        
         const wrapper = document.createElement('div');
-        wrapper.style.position = 'absolute'; wrapper.style.top = '-9999px'; wrapper.style.left = '-9999px'; wrapper.style.width = '1000px'; wrapper.style.background = '#ffffff'; wrapper.style.color = '#000000'; wrapper.style.padding = '40px'; wrapper.style.fontFamily = 'sans-serif';
+        wrapper.style.width = '1050px'; 
+        wrapper.style.boxSizing = 'border-box'; 
+        wrapper.style.background = '#ffffff'; 
+        wrapper.style.color = '#000000'; 
+        wrapper.style.padding = '30px 40px'; 
+        wrapper.style.fontFamily = 'sans-serif';
 
-        let html = `<h2 style="text-align:center; margin-bottom: 5px; font-size: 24px;">廢棄物結算報表</h2>`;
-        html += `<p style="text-align:center; margin-bottom: 25px; font-size: 16px;">匯出日期：${dateStr}</p>`;
-        html += `<table style="width:100%; border-collapse: collapse; text-align: left; font-size: 16px;"><thead><tr>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">過磅時間</th>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">重量 (kg)</th>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">狀態</th>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">種類</th>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">部門</th>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">定點</th>`;
-        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">過磅人員</th></tr></thead><tbody>`;
+        let html = `
+            <style>
+                .export-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; margin-top: 15px; }
+                .export-table th, .export-table td { padding: 10px 8px; color: #000000; }
+                .export-table th { border-top: 2px solid #000000; border-bottom: 2px solid #000000; font-weight: bold; background-color: #ffffff; }
+                .export-table td { border-bottom: 1px solid #e0e0e0; }
+                .export-table tr { page-break-inside: avoid; } 
+                .export-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 5px; color: #000; }
+                .export-date { text-align: center; font-size: 14px; color: #555; margin-bottom: 20px; }
+                .export-highlight { color: #db2828; font-weight: bold; }
+            </style>
+            <div class="export-title">${titleText}</div>
+            <div class="export-date">匯出日期：${dateStr}</div>
+            <table class="export-table">
+                <thead>
+                    <tr>
+                        <th>過磅時間</th>
+                        <th>重量 (kg)</th>
+                        <th>狀態</th>
+                        <th>種類</th>
+                        <th>部門</th>
+                        <th>定點</th>
+                        <th>過磅人員</th>
+                        <th>更新人員</th>
+                        <th>更新時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
-        const rows = document.querySelectorAll('#dataTable tbody tr');
-        let hasData = false; const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
+        let hasData = false; 
+        let printWeight = 0; 
+        const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
 
-        rows.forEach(row => {
-            const cb = row.querySelector('.record-checkbox');
-            if(!cb || (selectedCount > 0 && !cb.checked)) return;
-            const cols = row.querySelectorAll('td');
-            if(cols.length >= 8) {
-                hasData = true;
-                let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
-                html += `<tr>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cleanTime}</td>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px; color: #db2828; font-weight: bold;">${cols[2].innerText.trim()}</td>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[3].innerText.trim()}</td>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[4].innerText.trim()}</td>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[5].innerText.trim()}</td>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[6].innerText.trim()}</td>`;
-                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[7].innerText.trim()}</td></tr>`;
-            }
+        if (selectedCount > 0) {
+            document.querySelectorAll('#dataTable tbody tr').forEach(row => {
+                const cb = row.querySelector('.record-checkbox');
+                if(!cb || !cb.checked) return;
+                const cols = row.querySelectorAll('td');
+                if(cols.length >= 10) {
+                    hasData = true;
+                    let w = parseFloat(cols[2].innerText.trim()) || 0;
+                    printWeight += w;
+                    let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
+                    html += `<tr>
+                        <td>${cleanTime}</td>
+                        <td class="export-highlight">${w.toFixed(3)}</td>
+                        <td>${cols[3].innerText.trim()}</td>
+                        <td>${cols[4].innerText.trim()}</td>
+                        <td>${cols[5].innerText.trim()}</td>
+                        <td>${cols[6].innerText.trim()}</td>
+                        <td>${cols[7].innerText.trim()}</td>
+                        <td>${cols[8].innerText.trim()}</td>
+                        <td>${cols[9].innerText.trim()}</td>
+                    </tr>`;
+                }
+            });
+        } else {
+            if (allFilteredData.length > 0) hasData = true;
+            allFilteredData.forEach(item => {
+                let w = parseFloat(item.weight) || 0;
+                printWeight += w;
+                html += `<tr>
+                    <td>${item.create_time}</td>
+                    <td class="export-highlight">${w.toFixed(3)}</td>
+                    <td>${item.status}</td>
+                    <td>${item.waste_type}</td>
+                    <td>${item.department}</td>
+                    <td>${item.location}</td>
+                    <td>${item.creator}</td>
+                    <td>${item.updater}</td>
+                    <td>${item.update_time}</td>
+                </tr>`;
+            });
+        }
+
+        html += `</tbody></table>`; 
+        html += `<div style="text-align: right; font-size: 16px; font-weight: bold; margin-top: 20px; padding-right: 25px;">總計列印重量：<span style="color: #db2828;">${printWeight.toFixed(3)}</span> kg</div>`;
+        wrapper.innerHTML = html; 
+        return { wrapper, hasData, dateStr };
+    }
+
+    window.exportToPDF = function() {
+        if (typeof html2pdf === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            script.onload = executePDFExport;
+            document.head.appendChild(script);
+        } else {
+            executePDFExport();
+        }
+    }
+
+    function executePDFExport() {
+        const { wrapper, hasData, dateStr } = createPrintableElement('廢棄物過磅紀錄報表');
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        
+        const hiddenContainer = document.createElement('div');
+        hiddenContainer.style.width = '0';
+        hiddenContainer.style.height = '0';
+        hiddenContainer.style.overflow = 'hidden';
+        hiddenContainer.appendChild(wrapper);
+        document.body.appendChild(hiddenContainer);
+
+        const opt = {
+            margin:       15, 
+            filename:     `廢棄物過磅紀錄報表_${dateStr}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true }, 
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }, 
+            pagebreak:    { mode: ['css', 'legacy'], avoid: 'tr' } 
+        };
+
+        html2pdf().set(opt).from(wrapper).save().then(() => {
+            document.body.removeChild(hiddenContainer);
         });
-        html += `</tbody></table>`; wrapper.innerHTML = html; return { wrapper, hasData, dateStr };
     }
 
     window.exportToPNG = function() {
         if (typeof html2canvas === 'undefined') { alert("載入圖片套件失敗！"); return; }
-        const { wrapper, hasData, dateStr } = createPrintableTable();
+        const { wrapper, hasData, dateStr } = createPrintableElement('廢棄物過磅紀錄報表');
         if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
-        document.body.appendChild(wrapper); html2canvas(wrapper, { scale: 2 }).then(canvas => {
-            let link = document.createElement('a'); link.download = `廢棄物結算報表_${dateStr}.png`; link.href = canvas.toDataURL('image/png'); link.click(); document.body.removeChild(wrapper);
-        });
-    }
-
-    window.exportToPDF = function() {
-        if (typeof pdfMake === 'undefined' || typeof html2canvas === 'undefined') { alert("載入 PDF 套件失敗！"); return; }
-        const { wrapper, hasData, dateStr } = createPrintableTable();
-        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
-        document.body.appendChild(wrapper); html2canvas(wrapper, { scale: 2 }).then(canvas => {
-            const imgData = canvas.toDataURL('image/png'); const docDef = { content: [{ image: imgData, width: 515 }], pageSize: 'A4', pageMargins: [40, 40, 40, 40] };
-            pdfMake.createPdf(docDef).download(`廢棄物結算報表_${dateStr}.pdf`); document.body.removeChild(wrapper);
+        
+        wrapper.style.position = 'absolute';
+        wrapper.style.left = '-5000px'; 
+        wrapper.style.top = '0';
+        document.body.appendChild(wrapper); 
+        
+        html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', scrollY: 0, scrollX: 0 }).then(canvas => {
+            let link = document.createElement('a'); 
+            link.download = `廢棄物過磅紀錄報表_${dateStr}.png`; 
+            link.href = canvas.toDataURL('image/png'); 
+            link.click(); 
+            document.body.removeChild(wrapper);
         });
     }
 
     window.exportToExcel = function() {
         if (typeof XLSX === 'undefined') { alert("載入 Excel 套件失敗！"); return; }
-        const checkboxes = document.querySelectorAll('.record-checkbox'); const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
         const now = new Date(); const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        let data = [['廢棄物結算報表'], ['匯出日期：', dateStr], [], ['過磅時間', '重量 (kg)', '狀態', '種類', '部門', '定點', '過磅人員', '更新人員', '更新時間']];
-        const rows = document.querySelectorAll('#dataTable tbody tr'); let hasData = false;
-        rows.forEach(row => {
-            const cb = row.querySelector('.record-checkbox'); if (!cb || (selectedCount > 0 && !cb.checked)) return;
-            const cols = row.querySelectorAll('td');
-            if (cols.length >= 10) {
-                hasData = true; let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
-                data.push([cleanTime, parseFloat(cols[2].innerText.trim()), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), cols[6].innerText.trim(), cols[7].innerText.trim(), cols[8].innerText.trim(), cols[9].innerText.trim()]);
-            }
-        });
+        let data = [['廢棄物過磅紀錄報表'], ['匯出日期：', dateStr], [], ['過磅時間', '重量 (kg)', '狀態', '種類', '部門', '定點', '過磅人員', '更新人員', '更新時間']];
+        let hasData = false;
+
+        if (selectedCount > 0) {
+            document.querySelectorAll('#dataTable tbody tr').forEach(row => {
+                const cb = row.querySelector('.record-checkbox'); if (!cb || !cb.checked) return;
+                const cols = row.querySelectorAll('td');
+                if (cols.length >= 10) {
+                    hasData = true; let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
+                    data.push([cleanTime, parseFloat(cols[2].innerText.trim()), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), cols[6].innerText.trim(), cols[7].innerText.trim(), cols[8].innerText.trim(), cols[9].innerText.trim()]);
+                }
+            });
+        } else {
+            if (allFilteredData.length > 0) hasData = true;
+            allFilteredData.forEach(item => {
+                data.push([item.create_time, parseFloat(item.weight), item.status, item.waste_type, item.department, item.location, item.creator, item.updater, item.update_time]);
+            });
+        }
+
         if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
         const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "結算紀錄"); XLSX.writeFile(wb, `廢棄物結算報表_${dateStr}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "過磅紀錄"); XLSX.writeFile(wb, `廢棄物過磅紀錄報表_${dateStr}.xlsx`);
     }
 
-    // 🎯 更新：智能計算實際列印總重量 (小數點後三位)
     window.printSelectedReport = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
@@ -607,17 +750,43 @@
                 if (!cb.checked) { cb.closest('tr').classList.add('no-print-row'); }
                 else { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; }
             });
+            document.getElementById('printTotalWeight').innerText = printWeight.toFixed(3);
+            window.print();
+            checkboxes.forEach(cb => { cb.closest('tr').classList.remove('no-print-row'); });
         } else {
-            checkboxes.forEach(cb => { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
+            const tbody = document.querySelector('#dataTable tbody');
+            const originalHTML = tbody.innerHTML; 
+            
+            let allHTML = '';
+            allFilteredData.forEach(item => {
+                let w = parseFloat(item.weight) || 0;
+                printWeight += w;
+                allHTML += `<tr>
+                    <td class="collapsing"></td>
+                    <td>${item.create_time}</td>
+                    <td style="color: #000; font-weight: bold;">${w.toFixed(3)}</td>
+                    <td>${item.status}</td>
+                    <td>${item.waste_type}</td>
+                    <td>${item.department}</td>
+                    <td>${item.location}</td>
+                    <td>${item.creator}</td>
+                    <td>${item.updater}</td>
+                    <td>${item.update_time}</td>
+                    <td class="collapsing"></td>
+                </tr>`;
+            });
+            
+            tbody.innerHTML = allHTML;
+            document.getElementById('printTotalWeight').innerText = printWeight.toFixed(3);
+            
+            const paginations = document.querySelectorAll('.ts-pagination, .top-pagination-bar, .bottom-pagination-bar');
+            paginations.forEach(p => p.style.display = 'none');
+
+            window.print();
+
+            tbody.innerHTML = originalHTML;
+            paginations.forEach(p => p.style.display = '');
         }
-        
-        // 寫入列印專用總重區塊
-        const printTotalEl = document.getElementById('printTotalWeight');
-        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(3);
-        
-        window.print();
-        
-        if (selectedCount > 0) { checkboxes.forEach(cb => { cb.closest('tr').classList.remove('no-print-row'); }); }
     }
 </script>
 {% endblock %}
