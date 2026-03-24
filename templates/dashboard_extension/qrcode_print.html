@@ -21,10 +21,10 @@
         cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
     }
     .btn-bluetooth:hover { background: #6b6da8; }
-    .btn-bluetooth.connected { background: #21ba45; border-color: #21ba45; color: white; }
     
-    .loading-spinner { animation: spin 1s linear infinite; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
+    /* 🌟 連線成功狀態，以及滑鼠移過去提示可以「斷開」的紅色警告感 */
+    .btn-bluetooth.connected { background: #21ba45; border-color: #21ba45; color: white; }
+    .btn-bluetooth.connected:hover { background: #db2828; border-color: #db2828; }
 </style>
 
 <div class="ts-container has-vertically-spaced-large" style="--width: 1400px; padding-top: 20px;">
@@ -53,7 +53,7 @@
                 
                 <div style="position: absolute; right: 50px; top: 50px; display: flex; align-items: center; gap: 10px;">
                     <span id="bt-status-text" style="color: var(--ts-gray-600); font-size: 0.9rem; font-weight: bold;">尚未連線</span>
-                    <button class="btn-bluetooth" id="btn-bt-connect" onclick="connectPrinter()">
+                    <button class="btn-bluetooth" id="btn-bt-connect" onclick="togglePrinterConnection()">
                         <span class="ts-icon is-bluetooth-icon"></span>
                         <span id="bt-btn-text">連線標籤機</span>
                     </button>
@@ -145,7 +145,7 @@
 {% block scripts %}
 <script>
     // ==========================================
-    // 1. 介面與 QR Code 生成邏輯
+    // 1. 介面與 QR Code 生成邏輯 (🌟 搭載高頻時間偵測系統)
     // ==========================================
     let currentCompactTime = '';
     let currentDisplayTime = '';
@@ -203,18 +203,24 @@
     document.addEventListener('DOMContentLoaded', () => {
         updateTime();
         generateQRCode(); 
+        
+        // 🌟 自動變動時間系統：每秒檢查一次，只要「分鐘」改變了就馬上重繪標籤！
         setInterval(() => {
+            const prevTime = currentDisplayTime;
             updateTime();
-            if (document.getElementById('select-type').value || document.getElementById('select-dept').value) {
-                generateQRCode();
+            // 如果時間字串跟上一秒不一樣，代表跳分了
+            if (prevTime !== currentDisplayTime) {
+                // 檢查如果使用者已經有選資料了，就更新 QR Code 內含的時間
+                if (document.getElementById('select-type').value || document.getElementById('select-dept').value) {
+                    generateQRCode();
+                }
             }
-        }, 60000);
+        }, 1000);
     });
 
     // ==========================================
-    // 2. 藍牙通訊核心與連線
+    // 2. 藍牙通訊核心與連線 (🌟 搭載斷開連線功能)
     // ==========================================
-    // 🌟 修正點：更換成正確的主通道密碼 (ae30)
     const SVC_UUID    = "0000ae30-0000-1000-8000-00805f9b34fb";
     const CMD_UUID    = "0000ae01-0000-1000-8000-00805f9b34fb";
     const NOTIFY_UUID = "0000ae02-0000-1000-8000-00805f9b34fb";
@@ -257,37 +263,43 @@
         }
     }
 
-    async function connectPrinter() {
+    // 🌟 連線/斷線 切換控制器
+    async function togglePrinterConnection() {
         const btn = document.getElementById('btn-bt-connect');
         const icon = btn.querySelector('.ts-icon');
         const text = document.getElementById('bt-btn-text');
         const statusText = document.getElementById('bt-status-text');
         const printBtn = document.getElementById('btn-do-print');
 
+        // 如果目前是連線狀態，就執行「斷開連線」！
+        if (btDevice && btDevice.gatt.connected) {
+            btDevice.gatt.disconnect();
+            return; // 斷開後，會由下面的 gattserverdisconnected 事件處理後續 UI 恢復
+        }
+
         try {
-            icon.className = 'ts-icon is-spinner-icon loading-spinner';
+            icon.className = 'ts-icon is-spinner-icon is-spinning';
             text.innerText = '搜尋中...';
 
-            // 保持全掃描模式，確保機器一定找得到
             btDevice = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: [SVC_UUID]
             });
 
+            // 🌟 註冊斷線處理機制 (不論是手動斷開，還是機器沒電，都會觸發這裡)
             btDevice.addEventListener('gattserverdisconnected', () => {
                 btn.className = 'btn-bluetooth';
                 text.innerText = '連線標籤機';
-                statusText.innerText = '已斷線，請重新連接';
+                statusText.innerText = '已斷線，可重新連接';
                 statusText.style.color = '#db2828';
                 icon.className = 'ts-icon is-bluetooth-icon';
                 printBtn.disabled = true;
                 btDevice = null;
+                document.getElementById('print-hint-msg').innerHTML = '<span class="ts-icon is-circle-info-icon"></span> 請先點擊右上角連接藍牙標籤機';
             });
 
             statusText.innerText = '連線服務中...';
             const server = await btDevice.gatt.connect();
-            
-            // 🌟 這次拿著正確的 ae30 密碼，一定能順利打開房門！
             const service = await server.getPrimaryService(SVC_UUID);
 
             charCmd = await service.getCharacteristic(CMD_UUID);
@@ -297,9 +309,10 @@
             await charNotify.startNotifications();
             charNotify.addEventListener('characteristicvaluechanged', handleNotifications);
 
+            // 連線成功 UI 變更為「斷開連線」
             btn.className = 'btn-bluetooth connected';
-            icon.className = 'ts-icon is-check-icon';
-            text.innerText = '已連線: ' + (btDevice.name || 'Printer');
+            icon.className = 'ts-icon is-link-slash-icon'; // 換成表示斷開連結的圖示
+            text.innerText = '斷開連線';
             statusText.innerText = '設備就緒';
             statusText.style.color = '#21ba45';
             printBtn.disabled = false;
@@ -310,7 +323,6 @@
             icon.className = 'ts-icon is-bluetooth-icon';
             text.innerText = '連線標籤機';
             
-            // 如果還有其他錯誤，繼續把它印出來
             statusText.innerText = '錯誤: ' + error.message; 
             statusText.style.color = '#db2828';
             printBtn.disabled = true;
@@ -319,7 +331,7 @@
     }
 
     // ==========================================
-    // 3. 🌟 終極排版：動態折行與完美置中魔法
+    // 3. 終極排版：動態折行與完美置中魔法
     // ==========================================
     function getWrappedLines(ctx, title, content, maxW) {
         const titleStr = title + ": ";
@@ -367,7 +379,8 @@
 
         const printBtn = document.getElementById('btn-do-print');
         const originalBtnHTML = printBtn.innerHTML;
-        printBtn.innerHTML = '<span class="ts-icon is-spinner-icon loading-spinner" style="margin-right:8px;"></span> 處理資料中...';
+        
+        printBtn.innerHTML = '<span class="ts-icon is-spinner-icon is-spinning" style="margin-right:8px; letter-spacing: normal; display: inline-block;"></span> 處理資料中...';
         printBtn.disabled = true;
 
         try {
@@ -448,7 +461,7 @@
             }
 
             for (let copy = 0; copy < qty; copy++) {
-                printBtn.innerHTML = `<span class="ts-icon is-spinner-icon loading-spinner" style="margin-right:8px;"></span> 正在列印第 ${copy + 1} / ${qty} 張...`;
+                printBtn.innerHTML = `<span class="ts-icon is-spinner-icon is-spinning" style="margin-right:8px; letter-spacing: normal; display: inline-block;"></span> 正在列印第 ${copy + 1} / ${qty} 張...`;
                 
                 await sendCmd(hexToBytes("2221a70000000000")); await sleep(200);
                 await sendCmd(hexToBytes("2221b10001000000ff")); await sleep(200);
@@ -491,7 +504,7 @@
                 if (copy < qty - 1) await sleep(1000); 
             }
 
-            printBtn.innerHTML = '<span class="ts-icon is-check-icon" style="margin-right:8px;"></span> 列印完成！';
+            printBtn.innerHTML = '<span class="ts-icon is-check-icon" style="margin-right:8px; letter-spacing: normal; display: inline-block;"></span> 列印完成！';
             setTimeout(() => {
                 printBtn.innerHTML = originalBtnHTML;
                 printBtn.disabled = false;
