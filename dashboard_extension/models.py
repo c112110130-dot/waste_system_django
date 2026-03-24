@@ -88,7 +88,7 @@ class WasteRecord(models.Model):
     @property
     def can_delete(self):
         return not self.is_transported and not self.is_expired
-    weight = models.DecimalField(max_digits=5,decimal_places=2)
+    weight = models.DecimalField(max_digits=6,decimal_places=3)
     department = models.ForeignKey(
         Department,
         on_delete=models.CASCADE

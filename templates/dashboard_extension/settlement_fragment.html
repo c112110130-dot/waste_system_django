@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物結算{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
+{% endblock %}
 {% block content %}
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -11,77 +14,60 @@
     /* 1. 智慧顏色變數 (深色/淺色模式支援)       */
     /* ========================================= */
     :root {
-        /* 深色模式預設 */
-        --my-bg-panel: #363636;
-        --my-bg-input: #222222;
-        --my-text-main: #ffffff;
-        --my-text-sub: #cccccc;
-        --my-border: #555555;
-        --my-hover: rgba(255, 255, 255, 0.05);
+        --my-bg-panel: #363636; --my-bg-input: #222222;
+        --my-text-main: #ffffff; --my-text-sub: #cccccc;
+        --my-border: #555555; --my-hover: rgba(255, 255, 255, 0.05);
         --my-modal-bg: #2b2b2b;
-        
-        /* 刪除視窗配色 */
-        --del-icon-bg: #ffffff;       
-        --del-icon-fg: #000000;       
-        --del-cancel-bg: #e0e0e0;     
-        --del-cancel-fg: #333333;     
+        --del-icon-bg: #ffffff; --del-icon-fg: #000000;
+        --del-cancel-bg: #e0e0e0; --del-cancel-fg: #333333;
     }
 
     html.is-light {
-        --my-bg-panel: #f7f7f7;
-        --my-bg-input: #ffffff;
-        --my-text-main: #333333;
-        --my-text-sub: #555555;
-        --my-border: #dddddd;
-        --my-hover: rgba(0, 0, 0, 0.05);
+        --my-bg-panel: #f7f7f7; --my-bg-input: #ffffff;
+        --my-text-main: #333333; --my-text-sub: #555555;
+        --my-border: #dddddd; --my-hover: rgba(0, 0, 0, 0.05);
         --my-modal-bg: #ffffff;
-        
-        --del-icon-bg: #000000;       
-        --del-icon-fg: #ffffff;       
-        --del-cancel-bg: #333333;     
-        --del-cancel-fg: #ffffff;     
+        --del-icon-bg: #000000; --del-icon-fg: #ffffff;
+        --del-cancel-bg: #333333; --del-cancel-fg: #ffffff;
     }
 
     html.is-dark {
-        --my-bg-panel: #363636;
-        --my-bg-input: #222222;
-        --my-text-main: #ffffff;
-        --my-text-sub: #cccccc;
-        --my-border: #555555;
-        --my-hover: rgba(255, 255, 255, 0.05);
+        --my-bg-panel: #363636; --my-bg-input: #222222;
+        --my-text-main: #ffffff; --my-text-sub: #cccccc;
+        --my-border: #555555; --my-hover: rgba(255, 255, 255, 0.05);
         --my-modal-bg: #2b2b2b;
-        
-        --del-icon-bg: #ffffff;
-        --del-icon-fg: #000000;
-        --del-cancel-bg: #e0e0e0;
-        --del-cancel-fg: #333333;
+        --del-icon-bg: #ffffff; --del-icon-fg: #000000;
+        --del-cancel-bg: #e0e0e0; --del-cancel-fg: #333333;
     }
 
     /* ========================================= */
     /* 2. 樣式調整                               */
     /* ========================================= */
     .ts-select, .ts-input input, .flatpickr-input { 
-        height: 45px !important; 
-        font-size: 1rem !important;
-        background-color: var(--my-bg-input) !important;
-        border: 1px solid var(--my-border) !important;
-        color: var(--my-text-main) !important;
-        border-radius: 4px !important;
-        width: 100% !important; box-sizing: border-box !important;
+        height: 45px !important; font-size: 1rem !important;
+        background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important;
+        color: var(--my-text-main) !important; border-radius: 4px !important; width: 100% !important; box-sizing: border-box !important;
     }
     .ts-select option { background-color: var(--my-bg-panel); color: var(--my-text-main); }
     
     .date-picker-wrapper { position: relative; width: 100%; }
     .calendar-icon {
         position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-        pointer-events: none; opacity: 0.6; width: 20px; height: 20px;
-        stroke: var(--my-text-main);
+        pointer-events: none; opacity: 0.6; width: 20px; height: 20px; stroke: var(--my-text-main);
     }
 
     .ts-button { height: 45px !important; border-radius: 6px !important; font-size: 1rem !important; }
-    .ts-button.is-secondary {
-        background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important; color: var(--my-text-main) !important;
+    .ts-button.is-secondary { background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important; color: var(--my-text-main) !important; }
+
+    .btn-print-custom {
+        height: 45px !important; background-color: transparent !important;
+        border: 1px solid var(--my-border) !important; color: var(--my-text-main) !important;
+        border-radius: 6px !important; padding: 0 15px !important;
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        cursor: pointer; font-size: 1rem !important; font-weight: bold;
+        white-space: nowrap !important; flex-shrink: 0 !important; transition: background-color 0.2s;
     }
+    .btn-print-custom:hover { background-color: var(--my-hover) !important; }
     
     .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 5px; margin-bottom: 25px; }
     .control-panel { padding: 30px; }
@@ -100,13 +86,10 @@
         height: 36px !important; padding: 0 15px !important; border-radius: 4px; cursor: pointer;
     }
     .sort-select option { background: var(--my-bg-panel); color: var(--my-text-main); }
-    html.is-dark .flatpickr-calendar { filter: invert(1) hue-rotate(180deg); }
 
-    /* 視窗樣式 */
     #settlementModal > div {
         background: var(--my-modal-bg) !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border);
-        width: 500px; max-width: 95vw; border-radius: 5px; display: flex; flex-direction: column;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        width: 500px; max-width: 95vw; border-radius: 5px; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
     #settlementModal label { text-align: center; width: 100%; display: block; margin-bottom: 10px; color: var(--my-text-main); font-weight: bold; font-size: 1.1rem; }
     #settlementModal select { width: 100% !important; height: 55px !important; font-size: 1.1rem !important; padding-left: 15px !important; box-sizing: border-box; }
@@ -114,26 +97,66 @@
     #settlementModal button { border-radius: 6px !important; }
 
     #deleteModal > div {
-        width: 450px; max-width: 90vw;
-        background: var(--my-modal-bg) !important; color: var(--my-text-main) !important;
-        border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid var(--my-border);
-        text-align: center;
+        width: 450px; max-width: 90vw; background: var(--my-modal-bg) !important; color: var(--my-text-main) !important;
+        border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid var(--my-border); text-align: center;
     }
-    .delete-icon-circle {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 70px; height: 70px; border-radius: 50%; margin-bottom: 20px;
-        background: var(--del-icon-bg) !important; color: var(--del-icon-fg) !important;
-    }
-    .delete-hint-text {
-        color: var(--my-text-sub) !important; background: var(--my-hover); padding: 10px; border-radius: 5px;
-    }
+    .delete-icon-circle { display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 70px; border-radius: 50%; margin-bottom: 20px; background: var(--del-icon-bg) !important; color: var(--del-icon-fg) !important; }
+    .delete-hint-text { color: var(--my-text-sub) !important; background: var(--my-hover); padding: 10px; border-radius: 5px; }
     #deleteModal button { border-radius: 6px !important; height: 45px; font-weight: bold; cursor: pointer; border: none; }
     #deleteModal .btn-cancel { background: var(--del-cancel-bg) !important; color: var(--del-cancel-fg) !important; }
     #deleteModal .btn-confirm { background: #db2828 !important; color: #ffffff !important; }
 
+    /* ========================================= */
+    /* 🟢 3. 報表列印專屬淨化樣式 (絕對統一版)   */
+    /* ========================================= */
+    @media print {
+        /* 隱藏所有不需要列印的 UI */
+        nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
+        .ts-topbar, .topbar, .navbar, .sidebar, [class*="topbar"], [class*="navbar"], [class*="header"], 
+        .user-greeting, #greeting, .control-panel, .ts-pagination, .dashboard-panel:not(.data-panel),
+        .data-panel > .ts-content.is-secondary { display: none !important; }
+
+        @page { margin: 0; }
+        body, html, .ts-app-layout, .ts-app-content, main, .ts-content, .ts-container {
+            background: white !important; color: black !important;
+            overflow: visible !important; margin: 0 !important;
+        }
+        body { padding: 1.5cm !important; }
+        .ts-container { padding: 0 !important; max-width: 100% !important; margin: 0 !important;}
+
+        .dashboard-panel { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important;}
+        .data-panel { border-left: none !important; }
+
+        /* 隱藏勾選框與操作欄位 */
+        .ts-table th.collapsing, .ts-table td.collapsing,
+        .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
+        .no-print-row { display: none !important; }
+
+        /* 統一報表標題 */
+        .print-header-title { 
+            display: block !important; text-align: center; font-size: 1.8rem; 
+            font-weight: bold; margin-bottom: 20px; color: black !important;
+            border-bottom: 2px solid black; padding-bottom: 10px;
+        }
+
+        /* 統一表格外觀 */
+        .ts-table { width: 100% !important; border-collapse: collapse !important; }
+        .ts-table th { background-color: #f0f0f0 !important; color: black !important; border-bottom: 2px solid #000 !important; font-size: 12pt !important; padding: 10px !important;}
+        .ts-table td { color: black !important; border-bottom: 1px solid #ccc !important; font-size: 11pt !important; padding: 8px !important;}
+
+        /* 顯示列印專用總結區塊 */
+        .print-summary-box { 
+            display: block !important; text-align: right; padding: 15px 0; margin-top: 5px;
+            border-top: 2px solid #000; font-size: 14pt; font-weight: bold; color: black !important;
+        }
+    }
+    .print-header-title, .print-summary-box { display: none; } 
 </style>
 
-<div class="ts-container is-fluid" style="padding: 30px;">  
+<div class="ts-container is-fluid" style="padding: 30px;">
+    
+    <div class="print-header-title">廢棄物結算報表</div>
+
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
             <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
@@ -156,7 +179,16 @@
                 </div>
             </div>
 
-            <div class="ts-grid is-relaxed is-4-columns">
+            <div class="ts-grid is-relaxed is-5-columns">
+                <div class="column">
+                    <label>種類</label>
+                    <select name="waste_type" class="ts-select is-fluid">
+                        <option value="">全部種類</option>
+                        {% for type in waste_types %}
+                            <option value="{{ type.id }}" {% if selected_waste_type == type.id|stringformat:"i" %}selected{% endif %}>{{ type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="column">
                     <label>定點</label>
                     <select name="location" class="ts-select is-fluid"><option value="">全部定點</option>{% for loc in locations %}<option value="{{ loc.id }}" {% if selected_location == loc.id|stringformat:"i" %}selected{% endif %}>{{ loc.name }}</option>{% endfor %}</select>
@@ -167,7 +199,12 @@
                 </div>
                 <div class="column">
                     <label>過磅人員</label>
-                    <select name="weigher" class="ts-select is-fluid"><option value="">全部人員</option>{% for user in weighers %}<option value="{{ user.id }}" {% if selected_weigher == user.id|stringformat:"i" %}selected{% endif %}>{{ user.user }}</option>{% endfor %}</select>
+                    <select name="weigher" class="ts-select is-fluid">
+                        <option value="">全部人員</option>
+                        {% for w in weighers %}
+                            <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>{{ w.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="column" style="display: flex; align-items: flex-end;">
                     <button type="submit" class="ts-button is-primary is-fluid" style="margin-right: 10px;">
@@ -189,7 +226,7 @@
             </div>
             
             <div class="ts-wrap is-middle-aligned">
-                <div style="margin-right: 25px; display: flex; align-items: center;">
+                <div style="margin-right: 15px; display: flex; align-items: center;">
                     <span style="color: var(--my-text-sub); font-size: 0.95rem; margin-right: 10px;">排序：</span>
                     <select class="sort-select" onchange="submitWithSort(this.value)">
                         <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊) ↓</option>
@@ -198,10 +235,33 @@
                         <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重) ↑</option>
                     </select>
                 </div>
-                <div style="width: 1px; height: 24px; background: var(--my-border); margin-right: 25px;"></div>
-                <div style="margin-right: 25px; color: var(--my-text-main); font-size: 1rem;">
-                    選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.00</span> kg
+                <div style="width: 1px; height: 24px; background: var(--my-border); margin-right: 15px;"></div>
+                <div style="margin-right: 15px; color: var(--my-text-main); font-size: 1rem;">
+                    選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.000</span> kg
                 </div>
+
+                <button class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; margin-right: 10px;">
+                    <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 
+                    <span id="btnExportText">匯出報表</span>
+                    <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
+                </button>
+                <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
+                    <button class="item" onclick="exportToExcel()">
+                        <span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel
+                    </button>
+                    <button class="item" onclick="exportToPDF()">
+                        <span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF
+                    </button>
+                    <button class="item" onclick="exportToPNG()">
+                        <span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG
+                    </button>
+                </div>
+
+                <button class="btn-print-custom" onclick="printSelectedReport()" style="margin-right: 10px;">
+                    <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span>
+                    <span id="btnPrintText">直接列印</span>
+                </button>
+
                 <button type="button" class="ts-button is-positive" onclick="openSettlementModal()">
                     <span class="ts-icon is-calculator-icon"></span> 結算
                 </button>
@@ -212,13 +272,14 @@
         </div>
         
         <div class="ts-content is-fitted">
-            <table class="ts-table is-celled is-striped is-fullwidth">
+            <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable">
                 <thead>
                     <tr>
                         <th class="collapsing"><label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label></th>
                         <th>過磅時間</th>
                         <th>重量 (kg)</th>
                         <th>狀態</th>
+                        <th>種類</th>
                         <th>部門</th>
                         <th>定點</th>
                         <th>過磅人員</th>
@@ -232,7 +293,7 @@
                     <tr id="row_{{ record.id }}" class="{% if record.is_expired or record.is_transported %}tr-locked{% endif %}">
                         <td class="collapsing">
                             <label class="ts-checkbox">
-                                <input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" data-weight="{{ record.weight }}" onchange="updateUI()" {% if record.is_expired or record.is_transported %}disabled{% endif %}>
+                                <input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" data-weight="{{ record.weight|floatformat:3 }}" onchange="updateUI()" {% if record.is_expired or record.is_transported %}disabled{% endif %}>
                             </label>
                         </td>
                         <td>
@@ -243,26 +304,31 @@
                                 <span class="ts-text is-micro" style="display:block; margin-top:2px; color: var(--my-text-sub);">(已歸檔)</span>
                             {% endif %}
                         </td>
-                        <td>{{ record.weight }}</td>
+                        <td>{{ record.weight|floatformat:3 }}</td>
                         <td>
                             {% if record.is_transported %}<span class="ts-label is-success">已載運</span>{% else %}<span class="ts-label is-secondary">未載運</span>{% endif %}
                         </td>
+                        <td>{{ record.waste_type.name }}</td>
                         <td>{{ record.department.name }}</td>
                         <td>{{ record.location.name }}</td>
-                        <td>{{ record.creator.username }}</td>
-                        <td>{{ record.updater.username|default:"-" }}</td>
+                        <td>{{ record.creator.name|default:"-" }}</td>
+                        <td>{{ record.updater.name|default:"-" }}</td>
                         <td>{{ record.update_time|date:"Y-m-d H:i"|default:"-" }}</td>
                         <td>
                             {% if not record.is_expired and not record.is_transported %}
-                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})"><span class="ts-icon is-trash-can-icon"></span></button>
+                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
+                                    <span class="ts-icon is-trash-can-icon"></span>
+                                </button>
                             {% else %}
-                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button"><span class="ts-icon is-lock-icon"></span></button>
+                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
+                                    <span class="ts-icon is-lock-icon"></span>
+                                </button>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" style="text-align: center !important; padding: 60px 0;">
+                        <td colspan="11" style="text-align: center !important; padding: 60px 0;">
                             <div class="ts-icon is-file-circle-question-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5; color: var(--my-text-sub);"></div>
                             <div style="font-size: 1.1rem; font-weight: bold; color: var(--my-text-sub);">資料表內沒有資料</div>
                         </td>
@@ -270,6 +336,9 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <div class="print-summary-box">
+                總計列印重量：<span id="printTotalWeight">0.000</span> kg
+            </div>
         </div>
 
         <div class="ts-content is-secondary" style="background-color: var(--my-bg-panel); border-top: 1px solid var(--my-border); padding: 15px 25px; border-radius: 0 0 5px 5px;">
@@ -286,7 +355,7 @@
                 </div>
                 <div class="column">
                     <div class="ts-pagination is-small is-secondary">
-                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
+                        {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&waste_type="|add:selected_waste_type|add:"&location="|add:selected_location|add:"&dept="|add:selected_dept|add:"&weigher="|add:selected_weigher|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
                             {% if page_obj.has_previous %}<a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>{% endif %}
                             <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
                             {% if page_obj.has_next %}<a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>{% else %}<span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>{% endif %}
@@ -306,23 +375,19 @@
                 <div style="margin-bottom:8px;">目前時間：<span id="modalCurrentTime" style="color:var(--my-text-main);"></span></div>
                 <div>您已選取：<strong id="modalSelectedCount" style="color:#4db8ff;">0</strong> 筆資料</div>
             </div>
-            <form id="settlementForm" method="post" class="ts-form">
+            <form id="settlementForm" method="post" class="ts-form" action="{% url 'dashboard:settlement_process' %}">
                 {% csrf_token %}
                 <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
                 <div class="field">
                     <label>處理公司</label>
                     <select name="process_agency" class="ts-basic is-fluid">
-                        {% for agency in process_agencies %}
-                            <option value="{{ agency.id }}">{{ agency.name }}</option>
-                        {% endfor %}
+                        {% for agency in process_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="field" style="margin-top:15px;">
                     <label>清理公司</label>
                     <select name="clear_agency" class="ts-basic is-fluid">
-                        {% for agency in clear_agencies %}
-                            <option value="{{ agency.id }}">{{ agency.name }}</option>
-                        {% endfor %}
+                        {% for agency in clear_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}
                     </select>
                 </div>
             </form>
@@ -337,9 +402,7 @@
 <dialog id="deleteModal" style="padding:0;border:none;background:transparent;margin:auto;">
     <div>
         <div style="padding:40px 30px 20px;">
-            <div class="delete-icon-circle">
-                <span class="ts-icon is-question-icon" style="font-size: 35px;"></span>
-            </div>
+            <div class="delete-icon-circle"><span class="ts-icon is-question-icon" style="font-size: 35px;"></span></div>
             <div style="font-size:1.5rem;font-weight:bold;margin-bottom:15px;">確認刪除</div>
             <p class="delete-hint-text">確定要刪除這些資料嗎？<br>此動作無法復原。</p>
         </div>
@@ -363,71 +426,196 @@
 
     window.pendingDeleteIds = null;
     window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
-    window.updateUI = function(){let total=0;const checkedBoxes=document.querySelectorAll('.record-checkbox:checked');checkedBoxes.forEach(cb=>{let w=parseFloat(cb.getAttribute('data-weight'));if(!isNaN(w))total+=w;});const display=document.getElementById('displayTotalWeight');if(display)display.innerText=total.toFixed(2);const count=checkedBoxes.length;const btnText=document.getElementById('btnBatchDeleteText');if(btnText){btnText.innerText=count>0?`刪除 (${count})`:"刪除";}}
+    
+    window.updateUI = function(){
+        let total=0;
+        const checkedBoxes=document.querySelectorAll('.record-checkbox:checked');
+        checkedBoxes.forEach(cb=>{
+            let w=parseFloat(cb.getAttribute('data-weight'));
+            if(!isNaN(w))total+=w;
+        });
+        const display=document.getElementById('displayTotalWeight');
+        // 🎯 動態加總小數點後三位設定
+        if(display)display.innerText=total.toFixed(3);
+        const count=checkedBoxes.length;
+        
+        const btnText=document.getElementById('btnBatchDeleteText');
+        if(btnText) btnText.innerText=count>0?`刪除 (${count})`:"刪除";
+
+        const btnExportText = document.getElementById('btnExportText');
+        if (btnExportText) btnExportText.innerText = count > 0 ? `匯出報表 (${count})` : "匯出報表";
+
+        const btnPrintText = document.getElementById('btnPrintText');
+        if (btnPrintText) btnPrintText.innerText = count > 0 ? `直接列印 (${count})` : "直接列印";
+    }
+
     window.getSelectedIds = function(){const checkboxes=document.querySelectorAll('.record-checkbox:checked');return Array.from(checkboxes).map(cb=>cb.value);}
     window.openSettlementModal = function(){let ids=getSelectedIds();if(ids.length===0)return alert('請至少選取一筆資料');document.getElementById('modalSelectedCount').innerText=ids.length;document.getElementById('hiddenSelectedIds').value=ids.join(',');document.getElementById('modalCurrentTime').innerText=new Date().toLocaleString();document.getElementById('settlementModal').showModal();}
     window.openBatchDelete = function(){let ids=getSelectedIds();if(ids.length===0)return alert('請至少選取一筆資料');window.pendingDeleteIds=ids;document.getElementById('deleteModal').showModal();}
     window.deleteRecord = function(id){window.pendingDeleteIds=[id];document.getElementById('deleteModal').showModal();}
     window.closeDeleteModal = function(){window.pendingDeleteIds=null;document.getElementById('deleteModal').close();}
-    // window.confirmDelete = function(){if(window.pendingDeleteIds&&window.pendingDeleteIds.length>0){window.pendingDeleteIds.forEach(id=>{let row=document.getElementById('row_'+id);if(row){row.style.transition="opacity 0.3s";row.style.opacity="0";setTimeout(()=>row.remove(),300);}});setTimeout(()=>{window.updateUI();},300);}window.closeDeleteModal();}
+    
     window.confirmDelete = function() {
-    if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
+        if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
 
-    // 1. 準備要傳給後端的資料
-    const formData = new FormData();
-    // 將陣列轉成字串傳送 (例如 "1,2,5")
-    formData.append('ids', window.pendingDeleteIds.join(','));
+        // 🎯 這裡換成 Django 的動態網址標籤，保證絕對不會 404！
+        const apiUrl = "{% url 'dashboard:api_delete_records' %}";
 
-    // 2. 使用 fetch 發送 POST 請求
-    // 注意：請確認你的 urls.py 有設定這個路徑
-    fetch('/dashboard/delete_records/', { 
-        method: 'POST',
-        headers: {
-            // Django 需要 CSRF Token 才能接受 POST
-            'X-CSRFToken': getCookie('csrftoken'), 
-        },
-        body: formData
-    })
-    .then(response => {
-        if (response.ok) {
-            // 3. 後端刪除成功後，才執行前端移除畫面
-            window.pendingDeleteIds.forEach(id => {
-                let row = document.getElementById('row_' + id);
-                if (row) {
-                    row.style.transition = "opacity 0.3s";
-                    row.style.opacity = "0";
-                    setTimeout(() => row.remove(), 300);
+        fetch(apiUrl, { 
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ ids: window.pendingDeleteIds })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('伺服器回應狀態碼：' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                // 刪除成功，把畫面上的列隱藏並移除
+                window.pendingDeleteIds.forEach(id => {
+                    let row = document.getElementById('row_' + id);
+                    if (row) { 
+                        row.style.transition = "opacity 0.3s"; 
+                        row.style.opacity = "0"; 
+                        setTimeout(() => row.remove(), 300); 
+                    }
+                });
+                // 更新總重與畫面
+                setTimeout(() => { window.updateUI(); }, 300); 
+                window.closeDeleteModal();
+            } else { 
+                alert('刪除失敗：' + (data.message || '未知錯誤')); 
+            }
+        })
+        .catch(error => { 
+            console.error('Error:', error); 
+            alert('發生錯誤，請稍後再試。\n' + error.message); 
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break;
                 }
-            });
-            setTimeout(() => { window.updateUI(); }, 300);
-            window.closeDeleteModal();
-        } else {
-            alert('刪除失敗，請稍後再試。');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('發生錯誤');
-    });
-}
-
-// 輔助函式：取得 CSRF Token (Django 必備)
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
             }
         }
+        return cookieValue;
     }
-    return cookieValue;
-}
+    
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     window.changePageSize = function(size){const urlParams=new URLSearchParams(window.location.search);urlParams.set('page_size',size);urlParams.set('page',1);window.location.search=urlParams.toString();}
-</script>
 
+    // 匯出功能保持不變
+    function createPrintableTable() {
+        const now = new Date(); const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute'; wrapper.style.top = '-9999px'; wrapper.style.left = '-9999px'; wrapper.style.width = '1000px'; wrapper.style.background = '#ffffff'; wrapper.style.color = '#000000'; wrapper.style.padding = '40px'; wrapper.style.fontFamily = 'sans-serif';
+
+        let html = `<h2 style="text-align:center; margin-bottom: 5px; font-size: 24px;">廢棄物結算報表</h2>`;
+        html += `<p style="text-align:center; margin-bottom: 25px; font-size: 16px;">匯出日期：${dateStr}</p>`;
+        html += `<table style="width:100%; border-collapse: collapse; text-align: left; font-size: 16px;"><thead><tr>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">過磅時間</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">重量 (kg)</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">狀態</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">種類</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">部門</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">定點</th>`;
+        html += `<th style="border-bottom: 2px solid #000; padding: 12px 8px;">過磅人員</th></tr></thead><tbody>`;
+
+        const rows = document.querySelectorAll('#dataTable tbody tr');
+        let hasData = false; const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
+
+        rows.forEach(row => {
+            const cb = row.querySelector('.record-checkbox');
+            if(!cb || (selectedCount > 0 && !cb.checked)) return;
+            const cols = row.querySelectorAll('td');
+            if(cols.length >= 8) {
+                hasData = true;
+                let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
+                html += `<tr>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cleanTime}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px; color: #db2828; font-weight: bold;">${cols[2].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[3].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[4].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[5].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[6].innerText.trim()}</td>`;
+                html += `<td style="border-bottom: 1px solid #ddd; padding: 10px 8px;">${cols[7].innerText.trim()}</td></tr>`;
+            }
+        });
+        html += `</tbody></table>`; wrapper.innerHTML = html; return { wrapper, hasData, dateStr };
+    }
+
+    window.exportToPNG = function() {
+        if (typeof html2canvas === 'undefined') { alert("載入圖片套件失敗！"); return; }
+        const { wrapper, hasData, dateStr } = createPrintableTable();
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        document.body.appendChild(wrapper); html2canvas(wrapper, { scale: 2 }).then(canvas => {
+            let link = document.createElement('a'); link.download = `廢棄物結算報表_${dateStr}.png`; link.href = canvas.toDataURL('image/png'); link.click(); document.body.removeChild(wrapper);
+        });
+    }
+
+    window.exportToPDF = function() {
+        if (typeof pdfMake === 'undefined' || typeof html2canvas === 'undefined') { alert("載入 PDF 套件失敗！"); return; }
+        const { wrapper, hasData, dateStr } = createPrintableTable();
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        document.body.appendChild(wrapper); html2canvas(wrapper, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png'); const docDef = { content: [{ image: imgData, width: 515 }], pageSize: 'A4', pageMargins: [40, 40, 40, 40] };
+            pdfMake.createPdf(docDef).download(`廢棄物結算報表_${dateStr}.pdf`); document.body.removeChild(wrapper);
+        });
+    }
+
+    window.exportToExcel = function() {
+        if (typeof XLSX === 'undefined') { alert("載入 Excel 套件失敗！"); return; }
+        const checkboxes = document.querySelectorAll('.record-checkbox'); const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const now = new Date(); const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        let data = [['廢棄物結算報表'], ['匯出日期：', dateStr], [], ['過磅時間', '重量 (kg)', '狀態', '種類', '部門', '定點', '過磅人員', '更新人員', '更新時間']];
+        const rows = document.querySelectorAll('#dataTable tbody tr'); let hasData = false;
+        rows.forEach(row => {
+            const cb = row.querySelector('.record-checkbox'); if (!cb || (selectedCount > 0 && !cb.checked)) return;
+            const cols = row.querySelectorAll('td');
+            if (cols.length >= 10) {
+                hasData = true; let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
+                data.push([cleanTime, parseFloat(cols[2].innerText.trim()), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), cols[6].innerText.trim(), cols[7].innerText.trim(), cols[8].innerText.trim(), cols[9].innerText.trim()]);
+            }
+        });
+        if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
+        const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "結算紀錄"); XLSX.writeFile(wb, `廢棄物結算報表_${dateStr}.xlsx`);
+    }
+
+    // 🎯 更新：智能計算實際列印總重量 (小數點後三位)
+    window.printSelectedReport = function() {
+        const checkboxes = document.querySelectorAll('.record-checkbox');
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        let printWeight = 0;
+
+        if (selectedCount > 0) {
+            checkboxes.forEach(cb => {
+                if (!cb.checked) { cb.closest('tr').classList.add('no-print-row'); }
+                else { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; }
+            });
+        } else {
+            checkboxes.forEach(cb => { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
+        }
+        
+        // 寫入列印專用總重區塊
+        const printTotalEl = document.getElementById('printTotalWeight');
+        if(printTotalEl) printTotalEl.innerText = printWeight.toFixed(3);
+        
+        window.print();
+        
+        if (selectedCount > 0) { checkboxes.forEach(cb => { cb.closest('tr').classList.remove('no-print-row'); }); }
+    }
+</script>
 {% endblock %}

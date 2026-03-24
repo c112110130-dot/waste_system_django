@@ -1,88 +1,99 @@
-from django.shortcuts import render,redirect
-from django.contrib import messages
+import random
+
+from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST,require_GET
-from django.contrib.auth.decorators import login_required
-import json
-from django.db.models import Sum, Count, Q
+from django.views.decorators.http import require_POST
 from Main.models import UserProfile
+# =========================================================
+# 1. 基礎設定與模擬資料
+# =========================================================
 
-from .models import WasteRecord,  LocationPoint,Department, clearAgency, processAgency, TransportRecord,WasteType
+dept_names = ['病理檢驗部', '急診室', '放射科', '住院部', '行政中心']
+loc_names = ['B1 汙物室', '一樓大廳', '二樓護理站', '實驗室', '戶外暫存區']
+user_names = ['王小明', '李大華', '張阿姨', 'Admin']
+agency_names = ['大安環保公司', '綠色清運科技', '永續處理中心']
+type_names = ['一般感染性廢棄物', '病理廢棄物', '尖銳器具', '化學廢棄物']
 
+# 💡 已經幫您優化：讓假資料的 ID 從 1 開始編號，這樣新增時數字就能完美銜接了！
+departments_list = [{'id': i, 'name': n} for i, n in enumerate(dept_names, 1)]
+locations_list = [{'id': i, 'name': n} for i, n in enumerate(loc_names, 1)]
+weighers_list = [{'id': i, 'name': n} for i, n in enumerate(user_names, 1)]
+process_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names, 1)]
+clear_agencies = [{'id': i, 'name': n} for i, n in enumerate(agency_names, 1)]
+waste_types_list = [{'id': i, 'name': n} for i, n in enumerate(type_names, 1)]
 
+all_records = []
+transport_batches = [] 
 
-transport_batches = TransportRecord.objects.filter().order_by('-settle_time')
+def generate_data():
+    global all_records
+    if all_records: return
+    random.seed(42)
+    all_records = [] 
+    for i in range(150): 
+        hours_ago = random.randint(1, 240) 
+        create_time = datetime.now() - timedelta(hours=hours_ago)
+        is_transported = random.choices([True, False], weights=[0.8, 0.2])[0]
+        fake_record = {
+            'id': i + 1,
+            'create_time': create_time,
+            'weight': round(random.uniform(0.5, 25.0), 2),
+            'is_transported': is_transported,
+            'waste_type': waste_types_list[0],
+            'department': departments_list[random.randint(0, 4)],
+            'location':   locations_list[random.randint(0, 4)],
+            'creator':    weighers_list[random.randint(0, 3)],
+            'updater':    {'name': '系統管理員'},
+            'update_time': datetime.now() if is_transported else None,
+        }
+        all_records.append(fake_record)
+    generate_transport_batches()
 
-@require_POST
-@login_required
-def delete_records(request):
-    try:
-        # 從 POST 資料中取得 IDs
-        ids_str = request.POST.get('ids', '')
-        if ids_str:
-            id_list = ids_str.split(',')
-            # 執行資料庫刪除
-            WasteRecord.objects.filter(id__in=id_list).delete()
-            return JsonResponse({'status': 'success'})
-        return JsonResponse({'status': 'error', 'message': 'No IDs provided'}, status=400)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+def generate_transport_batches():
+    global transport_batches
+    transport_batches = []
+    transported_items = [r for r in all_records if r['is_transported']]
+    batch_id_counter = 202601001
+    current_idx = 0
+    while current_idx < len(transported_items):
+        batch_size = random.randint(3, 8)
+        batch_items = transported_items[current_idx : current_idx + batch_size]
+        if not batch_items: break
+        total_weight = sum(item['weight'] for item in batch_items)
+        settle_time = batch_items[0]['create_time'] + timedelta(hours=2)
+        batch_record = {
+            'id': f"TR-{batch_id_counter}",
+            'settle_time': settle_time,
+            'settler': weighers_list[random.randint(0, 3)],
+            'clear_agency': clear_agencies[random.randint(0, 2)],
+            'process_agency': process_agencies[random.randint(0, 2)],
+            'total_weight': round(total_weight, 2),
+            'items': batch_items,
+            'item_count': len(batch_items)
+        }
+        transport_batches.append(batch_record)
+        batch_id_counter += 1
+        current_idx += batch_size
 
+generate_data()
 
-@require_POST
-@login_required
-def settlement_process(request):
-    print("=== 1. 進入 settlement_process ===") 
-    ids_str = request.POST.get('selected_ids')
-    process_agency_id = request.POST.get('process_agency')
-    clear_agency_id = request.POST.get('clear_agency')
-    print(f"=== 2. 接收到的資料: IDs={ids_str}, Process={process_agency_id}, Clear={clear_agency_id} ===")
-    if ids_str and process_agency_id and clear_agency_id:
-        try:
-            print("=== 3. 準備建立 TransportRecord ===")
-            new_transport = TransportRecord.objects.create(
-                settler_id=request.user.id,
-                process_agency_id=process_agency_id,
-                clear_agency_id=clear_agency_id,  
-            )
-            print(f"=== 4. TransportRecord 建立成功 ID: {new_transport.id} ===")
-            id_list = ids_str.split(',')
-            
-            updated_count = WasteRecord.objects.filter(id__in=id_list).update(
-                is_transported=True,
-                transportrecord=new_transport
-            )
-            print("=== 5. WasteRecord 更新成功 ===")
-            messages.success(request, f'成功結算 {updated_count} 筆資料，並建立清運單 #{new_transport.id}！')
-
-        except Exception as e:
-            messages.error(request, f'結算失敗：{str(e)}')
-    else:
-        
-        messages.error(request, '資料不完整，請選擇機構並確認有勾選資料。')
-        
-    return redirect('dashboard:settlement_page') 
-
-
+# =========================================================
+# 2. 結算頁面 View
+# =========================================================
 @login_required
 def settlement_view(request):
-    departments_list = Department.objects.all()
-    locations_list = LocationPoint.objects.all()
-    weighers_list = UserProfile.objects.all()
-    process_agencies = processAgency.objects.all()
-    clear_agencies = clearAgency.objects.all()
-    Waste_types = WasteType.objects.all()
-    all_records =  WasteRecord.objects.filter().order_by('-create_time')
+    if not all_records: generate_data()
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_location = request.GET.get('location', '')
     f_dept = request.GET.get('dept', '')
     f_weigher = request.GET.get('weigher', '')
-    f_waste_type = request.GET.get('waste_type', '')
-    sort_by = request.GET.get('sort_by', 'newest') # 預設排序：最新
+    f_waste_type = request.GET.get('waste_type', '') 
+    
+    sort_by = request.GET.get('sort_by', 'newest')
 
     filtered_records =  []
     
@@ -98,190 +109,109 @@ def settlement_view(request):
             except ValueError: pass
         if f_end_date:
             try:
-                # 結束日期包含當天，所以加一天變成當日 23:59:59 的概念
-                naive_ed = datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1)
-                ed = timezone.make_aware(naive_ed)
-                if r.create_time >= ed: match = False
-            except ValueError: pass
-
-        # 2. 定點/部門/人員篩選 (比對 ID)
-        if f_location and str(r.location_id) != str(f_location): match = False
-        if f_dept and str(r.department_id) != str(f_dept): match = False
-        if f_weigher and str(r.creator_id) != str(f_weigher): match = False
-        if f_waste_type and str(r.waste_type_id) != str(f_waste_type): match = False
-
-        if match:
-            filtered_records.append(r)
-
-    if sort_by == 'newest':
-        # 預設使用當前時間防止 key error (若資料庫欄位名不同請修改)
-        filtered_records.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=True)
-    elif sort_by == 'oldest':
-        filtered_records.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=False)
-    elif sort_by == 'weight_desc':
-        filtered_records.sort(key=lambda x: getattr(x, 'weight', 0), reverse=True)
-    elif sort_by == 'weight_asc':
-        filtered_records.sort(key=lambda x: getattr(x, 'weight', 0), reverse=False)
-
-    page_size_param = request.GET.get('page_size', '10')
-    try:
-        page_size = int(page_size_param)
-    except ValueError:
-        page_size = 10
-
-    paginator = Paginator(filtered_records, page_size)
-    page_number = request.GET.get('page', 1)
-
-    try:
-        page_obj = paginator.page(page_number)
-    except (PageNotAnInteger, EmptyPage):
-        # 若頁數錯誤，預設回傳第一頁
-        page_obj = paginator.page(1)
-
-    context = {
-        'page_obj': page_obj,
-        'current_page_size': page_size,
+                if r['create_time'] >= datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1): match = False
+            except: pass
+        if f_location and str(r['location']['id']) != str(f_location): match = False
+        if f_dept and str(r['department']['id']) != str(f_dept): match = False
+        if f_weigher and str(r['creator']['id']) != str(f_weigher): match = False
+        if f_waste_type and str(r['waste_type']['id']) != str(f_waste_type): match = False
         
-        'start_date': f_start_date,
-        'end_date': f_end_date,
-        'selected_location': f_location,
-        'selected_dept': f_dept,
-        'selected_weigher': f_weigher,
-        'selected_waste_type': f_waste_type,
-        'current_sort': sort_by,
+        if match: filtered_records.append(r)
 
-        'departments': departments_list,
-        'locations': locations_list,
-        'weighers': weighers_list,
-        'waste_types': Waste_types,
-        'process_agencies': process_agencies,
-        'clear_agencies': clear_agencies,
+    if sort_by == 'newest': filtered_records.sort(key=lambda x: x['create_time'], reverse=True)
+    elif sort_by == 'oldest': filtered_records.sort(key=lambda x: x['create_time'], reverse=False)
+    elif sort_by == 'weight_desc': filtered_records.sort(key=lambda x: x['weight'], reverse=True)
+    elif sort_by == 'weight_asc': filtered_records.sort(key=lambda x: x['weight'], reverse=False)
+
+    try: page_size = int(request.GET.get('page_size', '10'))
+    except: page_size = 10
+    
+    paginator = Paginator(filtered_records, page_size)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # 🎯 就在這裡！把 clear_agencies 跟 process_agencies 補上！
+    context = {
+        'page_obj': page_obj, 'departments': departments_list, 'locations': locations_list,
+        'weighers': weighers_list, 
+        'waste_types': waste_types_list, 
+        'clear_agencies': clear_agencies,        # 👈 補上這行
+        'process_agencies': process_agencies,    # 👈 補上這行
+        'start_date': f_start_date, 'end_date': f_end_date,
+        'selected_location': f_location, 'selected_dept': f_dept, 'selected_weigher': f_weigher,
+        'selected_waste_type': f_waste_type, 
+        'current_sort': sort_by, 'current_page_size': page_size,
     }
-
     return render(request, 'dashboard_extension/settlement_fragment.html', context)
 
-
+# =========================================================
+# 3. 廢棄物載運管理紀錄
+# =========================================================
 @login_required
 def transportation_view(request):
-    global transport_batches
+    if not transport_batches: generate_data()
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_agency = request.GET.get('agency', '') 
     sort_by = request.GET.get('sort_by', 'newest')
+    try: page_size = int(request.GET.get('page_size', '10'))
+    except ValueError: page_size = 10
     
-    try: 
-        page_size = int(request.GET.get('page_size', '10'))
-    except ValueError: 
-        page_size = 10
+    filtered_batches = []
+    for batch in transport_batches:
+        match = True
+        if f_start_date:
+            try:
+                if batch['settle_time'] < datetime.strptime(f_start_date, '%Y-%m-%d'): match = False
+            except: pass
+        if f_end_date:
+            try:
+                if batch['settle_time'] >= datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1): match = False
+            except: pass
+        if f_agency:
+            if str(batch['clear_agency']['id']) != f_agency and str(batch['process_agency']['id']) != f_agency:
+                match = False
+        if match: filtered_batches.append(batch)
 
-    batches = TransportRecord.objects.select_related(
-        'clear_agency', 'process_agency', 'settler'
-    ).annotate(
-        db_total_weight=Sum('wasterecord__weight'),  
-        db_item_count=Count('wasterecord')
-    ).prefetch_related('wasterecord_set')
-    
-    if f_start_date:
-        try:
-            start_dt = timezone.make_aware(datetime.strptime(f_start_date, '%Y-%m-%d'))
-            batches = batches.filter(settle_time__gte=start_dt)
-        except ValueError: pass
-        
-    if f_end_date:
-        try:
-            end_dt = timezone.make_aware(datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1))
-            batches = batches.filter(settle_time__lt=end_dt)
-        except ValueError: pass
+    total_weight_sum = sum(batch['total_weight'] for batch in filtered_batches)
 
-    if f_agency:
-        try:
-            agency_type, agency_id = f_agency.split('_')
-            
-            if agency_type == 'clear':
-                batches = batches.filter(clear_agency_id=agency_id)
-                
-            elif agency_type == 'process':
-                batches = batches.filter(process_agency_id=agency_id)
-        except ValueError:
-            pass
+    if sort_by == 'newest': filtered_batches.sort(key=lambda x: x['settle_time'], reverse=True)
+    elif sort_by == 'oldest': filtered_batches.sort(key=lambda x: x['settle_time'], reverse=False)
+    elif sort_by == 'weight_desc': filtered_batches.sort(key=lambda x: x['total_weight'], reverse=True)
+    elif sort_by == 'weight_asc': filtered_batches.sort(key=lambda x: x['total_weight'], reverse=False)
 
-    weight_data = batches.aggregate(weight_sum=Sum('db_total_weight'))
-    raw_weight = weight_data['weight_sum'] or 0
-    total_weight_sum = round(raw_weight, 2)
-    if sort_by == 'newest':
-        batches = batches.order_by('-settle_time')
-    elif sort_by == 'oldest':
-        batches = batches.order_by('settle_time')
-    elif sort_by == 'weight_desc':
-        batches = batches.order_by('-db_total_weight')
-    elif sort_by == 'weight_asc':
-        batches = batches.order_by('db_total_weight')
-    else:
-        batches = batches.order_by('-settle_time')
-
-    paginator = Paginator(batches, page_size) 
+    paginator = Paginator(filtered_batches, page_size) 
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    # 8. 準備下拉選單資料
-    try:
-        process_agencies = processAgency.objects.filter()
-        clear_agencies = clearAgency.objects.filter()
-    except:
-        process_agencies = []
-        clear_agencies = []
-
     context = {
-        'page_obj': page_obj, 
-        'start_date': f_start_date, 
-        'end_date': f_end_date,
-        'selected_agency': f_agency, 
-        'current_page_size': page_size,
+        'page_obj': page_obj, 'clear_agencies': clear_agencies, 
+        'start_date': f_start_date, 'end_date': f_end_date,
+        'selected_agency': f_agency, 'current_page_size': page_size,
         'current_sort': sort_by,
-        'total_weight_sum': round(total_weight_sum, 2),
-        'process_agencies': process_agencies,
-        'clear_agencies': clear_agencies,
+        'total_weight_sum': round(total_weight_sum, 2), 
     }
-    
     return render(request, 'dashboard_extension/transportation.html', context)
 
+# =========================================================
+# 4. 行動工作站 & API 
+# =========================================================
 @login_required
 def mobile_station_view(request):
-    locations_list = list(LocationPoint.objects.values('id', 'name'))
-    context = {
-        # 這裡傳 list 給模板
-        'locations': locations_list,
-    }
+    context = { 'locations': locations_list }
     return render(request, 'dashboard_extension/mobile/mobile_station.html', context)
 
 @require_POST
 @login_required
 def delete_records_api(request):
+    global all_records 
     try:
         # 1. 解析前端傳來的 JSON 資料
         # 因為前端 fetch header 是 'application/json'，資料不在 POST 裡，而在 body 裡
         data = json.loads(request.body)
-        ids = data.get('ids', [])
-
-        if ids:
-            # 2. 找出要刪除的清運單
-            batches_to_delete = TransportRecord.objects.filter(id__in=ids)
-            
-            # === 🔥 關鍵邏輯：釋放廢棄物紀錄 (Safe Delete) ===
-            # 在刪除單據前，先把裡面的廢棄物紀錄狀態還原
-            # 這樣它們就會回到「未結算列表」，而不會憑空消失
-            # 注意：這裡的 filter 條件是 transportRecord__in (反向關聯查找)
-            WasteRecord.objects.filter(transportrecord__in=batches_to_delete).update(
-                is_transported=False,  # 標記為未運送
-                transportrecord=None   # 解除關聯 (變回 NULL)
-            )
-
-            # 3. 安全之後，才執行刪除清運單
-            deleted_count, _ = batches_to_delete.delete()
-            
-            return JsonResponse({'status': 'success', 'deleted': deleted_count})
-        else:
-            return JsonResponse({'status': 'error', 'message': '未提供 ID'}, status=400)
-
+        record_ids = list(map(str, data.get('ids', [])))
+        before_len = len(all_records)
+        all_records = [r for r in all_records if str(r['id']) not in record_ids]
+        generate_transport_batches()
+        return JsonResponse({'status': 'success', 'deleted_count': before_len - len(all_records)})
     except Exception as e:
         print(f"API 刪除錯誤: {str(e)}")  # 建議印出來方便除錯
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
@@ -292,32 +222,56 @@ def delete_records_api(request):
 @require_POST
 @login_required
 def delete_batches_api(request):
+    global transport_batches, all_records  # 🎯 記得這裡要把 all_records 加進來
+    try:
+        data = json.loads(request.body)
+        batch_ids = list(map(str, data.get('ids', [])))
+        
+        # 1. 先找出準備要被刪除的這些載運單 (批次)
+        batches_to_delete = [b for b in transport_batches if str(b['id']) in batch_ids]
+        
+        # 2. 🎯 核心修復：把這些載運單裡面的「單筆垃圾」，狀態通通改回「未載運」
+        for batch in batches_to_delete:
+            for item in batch.get('items', []):
+                # 去總資料庫 (all_records) 裡面把這包垃圾找出來解鎖
+                for r in all_records:
+                    if str(r['id']) == str(item['id']):
+                        r['is_transported'] = False   # 狀態改回未載運
+                        r['update_time'] = datetime.now() # 順便更新一下操作時間
+                        break
+        
+        # 3. 最後再把這些載運單從畫面上刪除
+        before_len = len(transport_batches)
+        transport_batches = [b for b in transport_batches if str(b['id']) not in batch_ids]
+        
+        return JsonResponse({'status': 'success', 'deleted_count': before_len - len(transport_batches)})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@require_POST
+def record_waste_api(request):
+    global all_records
     try:
         # 1. 解析前端傳來的 JSON 資料
         # 因為前端 fetch header 是 'application/json'，資料不在 POST 裡，而在 body 裡
         data = json.loads(request.body)
-        ids = data.get('ids', [])
-
-        if ids:
-            # 2. 找出要刪除的清運單
-            batches_to_delete = TransportRecord.objects.filter(id__in=ids)
-            
-            # === 🔥 關鍵邏輯：釋放廢棄物紀錄 (Safe Delete) ===
-            # 在刪除單據前，先把裡面的廢棄物紀錄狀態還原
-            # 這樣它們就會回到「未結算列表」，而不會憑空消失
-            # 注意：這裡的 filter 條件是 transportRecord__in (反向關聯查找)
-            WasteRecord.objects.filter(transportrecord__in=batches_to_delete).update(
-                is_transported=False,  # 標記為未運送
-                transportrecord=None   # 解除關聯 (變回 NULL)
-            )
-
-            # 3. 安全之後，才執行刪除清運單
-            deleted_count, _ = batches_to_delete.delete()
-            
-            return JsonResponse({'status': 'success', 'deleted': deleted_count})
-        else:
-            return JsonResponse({'status': 'error', 'message': '未提供 ID'}, status=400)
-
+        loc_id = int(data.get('location_id', 0))
+        weight = float(data.get('weight', 0))
+        loc_name = next((loc['name'] for loc in locations_list if loc['id'] == loc_id), "未知地點")
+        new_record = {
+            'id': len(all_records) + 1000,
+            'create_time': datetime.now(),
+            'update_time': datetime.now(),
+            'weight': weight,
+            'is_transported': False,
+            'waste_type': waste_types_list[0],
+            'department': departments_list[0],
+            'location': {'id': loc_id, 'name': loc_name},
+            'creator': weighers_list[0],
+            'updater': {'name': None},
+        }
+        all_records.insert(0, new_record)
+        return JsonResponse({'status': 'success'})
     except Exception as e:
         print(f"API 刪除錯誤: {str(e)}")  # 建議印出來方便除錯
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
@@ -325,58 +279,65 @@ def delete_batches_api(request):
         print(f"刪除失敗: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
-
+# =========================================================
+# 5. 處理結算單送出
+# =========================================================
 @require_POST
 @login_required
-def record_waste_api(request):
-    try:
-        # 解析 JSON 資料
-        data = json.loads(request.body)
-        dept = data.get('dept')
-        waste_type = data.get('waste_type')
-        loc_id = data.get('location_id')
-        weight = data.get('weight')
-
-        if not loc_id or not weight or not dept or not waste_type:
-            return JsonResponse({'status': 'error', 'message': '資料不完整'})
-
-        # 寫入資料庫邏輯
-        loc_id = LocationPoint.objects.get(id=loc_id)
-        dept_id = Department.objects.get(name=dept)
-        waste_type = WasteType.objects.get(name=waste_type)
-        WasteRecord.objects.create(
-            location=loc_id,
-            department=dept_id,
-            weight=weight,
-            waste_type=waste_type,
-            creator=request.user,
-            updater=request.user
-        )
+def settlement_process_view(request):
+    global all_records, transport_batches
+    
+    # 1. 取得前端表單傳來的資料
+    selected_ids_str = request.POST.get('selected_ids', '')
+    process_agency_id = request.POST.get('process_agency')
+    clear_agency_id = request.POST.get('clear_agency')
+    
+    if not selected_ids_str:
+        return redirect('dashboard:settlement_view')
         
-        return JsonResponse({'status': 'success'})
-
-    except LocationPoint.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': '地點不存在'})
-    except Department.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': '部門不存在'})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)})
+    selected_ids = selected_ids_str.split(',')
     
-@require_GET
-@login_required
-def locations_api(request):
-    locations_list = LocationPoint.objects.all()
-    try:
-        return JsonResponse({'locations': locations_list})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    # 2. 找出被選取的單筆廢棄物，並將狀態改為 "已載運"
+    batch_items = []
+    for r in all_records:
+        if str(r['id']) in selected_ids and not r['is_transported']:
+            r['is_transported'] = True
+            r['update_time'] = datetime.now()
+            batch_items.append(r)
+            
+    # 3. 如果有成功選取並更新項目，就產生一筆「載運批次紀錄」
+    if batch_items:
+        total_weight = sum(item['weight'] for item in batch_items)
+        
+        # 找出對應的機構名稱，如果找不到就預設第一間
+        p_agency = next((a for a in process_agencies if str(a['id']) == process_agency_id), process_agencies[0])
+        c_agency = next((a for a in clear_agencies if str(a['id']) == clear_agency_id), clear_agencies[0])
+        
+        # 動態產生載運單號 (例如 TR-20260223001)
+        new_batch_id = f"TR-{datetime.now().strftime('%Y%m%d%H%M')}{random.randint(10, 99)}"
+        
+        batch_record = {
+            'id': new_batch_id,
+            'settle_time': datetime.now(),
+            'settler': weighers_list[3], # 假設目前結算人員是 Admin
+            'clear_agency': c_agency,
+            'process_agency': p_agency,
+            'total_weight': round(total_weight, 2),
+            'items': batch_items,
+            'item_count': len(batch_items)
+        }
+        
+        # 將新單據插入到陣列最前面 (最新的在最上面)
+        transport_batches.insert(0, batch_record)
+        
+    # 4. 處理完成後，重新導向回結算頁面
+    return redirect('dashboard:settlement_view')
 
-    
+# =========================================================
+# 6. 定點機構管理 (畫面)
+# =========================================================
 @login_required
 def location_management_view(request):
-    locations_list = LocationPoint.objects.all()
-    clear_agencies = clearAgency.objects.all()
-    process_agencies = processAgency.objects.all()
     context = {
         'locations': locations_list,
         'clear_agencies': clear_agencies,
@@ -384,31 +345,31 @@ def location_management_view(request):
     }
     return render(request, 'dashboard_extension/location_management.html', context)
 
-
 # =========================================================
 # 6-1. API：儲存/編輯/新增 定點
 # =========================================================
 @require_POST
 @login_required
 def api_save_location(request):
-    locations_list = LocationPoint.objects.all()
+    global locations_list
     try:
         data = json.loads(request.body)
         loc_id = data.get('id')
         name = data.get('name', '').strip()
-            
+        
         if not name: return JsonResponse({'success': False, 'error': '定點名稱不能為空'})
-                
+            
         if loc_id and loc_id != 'new':
             # 編輯現有資料
             for loc in locations_list:
-                if str(loc.id) == str(loc_id):
-                    loc.name = name
-                    loc.save()
+                if str(loc['id']) == str(loc_id):
+                    loc['name'] = name
                     break
         else:
             # 新增資料
-            LocationPoint.objects.create(name=name)      
+            new_id = len(locations_list) + 1
+            locations_list.insert(0, {'id': new_id, 'name': name})
+            
         return JsonResponse({'success': True, 'message': '定點儲存成功'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -419,12 +380,13 @@ def api_save_location(request):
 @require_POST
 @login_required
 def api_delete_location(request):
+    global locations_list
     try:
         data = json.loads(request.body)
-        ids_to_delete = data.get('ids', [])
+        ids_to_delete = [str(i) for i in data.get('ids', [])]
         
-        # 刪除所有被選中的 LocationPoint 物件
-        LocationPoint.objects.filter(id__in=[int(i) for i in ids_to_delete]).delete()
+        # 過濾掉被勾選刪除的 ID
+        locations_list = [loc for loc in locations_list if str(loc['id']) not in ids_to_delete]
         
         return JsonResponse({'success': True})
     except Exception as e:
@@ -436,36 +398,39 @@ def api_delete_location(request):
 @require_POST
 @login_required
 def api_save_agency(request):
+    global clear_agencies, process_agencies
     try:
         data = json.loads(request.body)
-        raw_id = data.get('id') 
+        raw_id = data.get('id') # 可能是 'new' 或是 'clear_1', 'process_2'
         name = data.get('name', '').strip()
         new_type = data.get('type', '')
         
         if not name: return JsonResponse({'success': False, 'error': '機構名稱不能為空'})
             
         if raw_id and raw_id != 'new':
+            # 編輯現有資料：先將舊資料從原陣列抽出，再塞進新的分類陣列中
             old_type, actual_id = raw_id.split('_')[0], raw_id.split('_')[1]
-            if old_type == 'clear':
-                if new_type == 'process':
-                    # 從 clear 變 process
-                    clearAgency.objects.filter(id=actual_id).delete()
-                    processAgency.objects.create(name=name)
-                elif new_type == 'clear':
-                    clearAgency.objects.filter(id=actual_id).update(name=name)
-            else:
-                if new_type == 'clear':
-                    # 從 process 變 clear
-                    processAgency.objects.filter(id=actual_id).delete()
-                    clearAgency.objects.create(name=name)
-                elif new_type == 'process':
-                    processAgency.objects.filter(id=actual_id).update(name=name)
+            target_list = clear_agencies if old_type == 'clear' else process_agencies
+            item_to_move = None
+            
+            for i, item in enumerate(target_list):
+                if str(item['id']) == actual_id:
+                    item_to_move = target_list.pop(i)
+                    break
+            
+            if item_to_move:
+                item_to_move['name'] = name
+                # 根據選擇的新類型放入對應陣列
+                if new_type == 'clear': clear_agencies.insert(0, item_to_move)
+                else: process_agencies.insert(0, item_to_move)
         else:
             # 新增資料
             if new_type == 'clear':
-                clearAgency.objects.create(name=name)
+                new_id = len(clear_agencies) + 1
+                clear_agencies.insert(0, {'id': new_id, 'name': name})
             else:
-                processAgency.objects.create(name=name)
+                new_id = len(process_agencies) + 1
+                process_agencies.insert(0, {'id': new_id, 'name': name})
                 
         return JsonResponse({'success': True, 'message': '機構儲存成功'})
     except Exception as e:
@@ -477,6 +442,7 @@ def api_save_agency(request):
 @require_POST
 @login_required
 def api_delete_agency(request):
+    global clear_agencies, process_agencies
     try:
         data = json.loads(request.body)
         raw_ids = data.get('ids', []) # ex: ['clear_1', 'process_2']
@@ -485,10 +451,28 @@ def api_delete_agency(request):
         clear_ids = [i.split('_')[1] for i in raw_ids if i.startswith('clear_')]
         process_ids = [i.split('_')[1] for i in raw_ids if i.startswith('process_')]
         
-        # 刪除清理機構和處理機構
-        clearAgency.objects.filter(id__in=clear_ids).delete()
-        processAgency.objects.filter(id__in=process_ids).delete()
+        clear_agencies = [a for a in clear_agencies if str(a['id']) not in clear_ids]
+        process_agencies = [a for a in process_agencies if str(a['id']) not in process_ids]
         
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})        
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+# =========================================================
+# 7. QR Code 列印頁面
+# =========================================================
+# @login_required
+def qrcode_print_view(request):
+    if request.user.is_authenticated:
+        # 🟢 順序對調：先抓 first_name (在中文通常被當作姓氏) 再抓 last_name (名字)
+        full_name = f"{request.user.first_name}{request.user.last_name}".strip()
+        current_user = full_name if full_name else request.user.username
+    else:
+        current_user = '測試人員'
+        
+    context = {
+        'departments': departments_list,
+        'waste_types': waste_types_list,
+        'current_user': current_user
+    }
+    return render(request, 'dashboard_extension/qrcode_print.html', context)

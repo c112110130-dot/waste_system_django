@@ -162,7 +162,7 @@
         background-quaternary
     " data-theme="{% current_theme %}">
         <!-- Navigation Bar -->
-        <div class="ts-app-topbar background-secondary is-large is-bold">
+        <div class="ts-app-topbar background-secondary is-large is-bold" style="position: relative; z-index: 99;">
             <!-- Start: Navigation -->
             <div class="start">
                 {% block navbar-start %}
@@ -171,47 +171,48 @@
                             <span class="ts-icon is-house-icon"></span>
                             <span class="ts-text is-bold">主頁面</span>
                         </a>
-                        {% if user_is_over_imp %}
-                            <a class="item tab-item {% if request.path == '/transportation/' %}is-active{% endif %}" href="{% url 'transportation:transportation_index' %}">
-                                <span class="ts-icon is-table-list-icon"></span>
-                                <span class="ts-text is-bold">聯單管理</span>
-                            </a>
-                        {% endif %}
-                        {% if user_is_over_reg %}
-                            <a class="item tab-item {% if request.path == '/management/database/' %}is-active{% endif %}" href="{% url 'management:database_index' %}">
-                                <span class="ts-icon is-table-icon"></span>
-                                <span class="ts-text is-bold">廢棄物管理(院內)</span>
-                            </a>
-                            <a class="item tab-item {% if request.path == '/management/department/' %}is-active{% endif %}" href="{% url 'management:db_department_index' %}">
-                                <span class="ts-icon is-hospital-icon"></span>
-                                <span class="ts-text is-bold">廢棄物管理(部門)</span>
-                            </a>
-                        {% endif %}
-                        <a class="item tab-item {% if request.path == '/management/visualize/' %}is-active{% endif %}" href="{% url 'management:visualize_index' %}">
-                            <span class="ts-icon is-wand-magic-sparkles-icon"></span>
-                            <span class="ts-text is-bold">廢棄物報表管理(院內)</span>
+                        <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-management">
+                            <span class="ts-icon is-folder-open-icon"></span>
+                            <span class="ts-text is-bold">廢棄物管理</span>
+                            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
                         </a>
-                        <a class="item tab-item {% if request.path == '/management/visualize_dept/' %}is-active{% endif %}" href="{% url 'management:visualize_department_index' %}">
-                            <span class="ts-icon is-wand-magic-sparkles-icon"></span>
-                            <span class="ts-text is-bold">廢棄物報表管理(部門)</span>
+                        <div class="ts-dropdown" id="dropdown-management" data-position="bottom-start" style="z-index: 9999;">        
+                            <button class="item" data-href="{% url 'transportation:transportation_index' %}">聯單管理</button>
+                            <button class="item" data-href="{% url 'management:database_index' %}">廢棄物管理(院內)</button>
+                            <button class="item" data-href="{% url 'management:db_department_index' %}">廢棄物管理(部門)</button>
+                        </div>
+                        <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-report">
+                            <span class="ts-icon is-chart-pie-icon"></span>
+                            <span class="ts-text is-bold">報表與紀錄</span>
+                            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
                         </a>
-                        <a class="item tab-item {% if request.path == '/prediction/' %}is-active{% endif %}" href="{% url 'prediction:prediction_index' %}">
+                        <div class="ts-dropdown" id="dropdown-report" data-position="bottom-start" style="z-index: 9999;">
+                            <button class="item" data-href="{% url 'management:visualize_index' %}">廢棄物報表管理(院內)</button>
+                            <button class="item" data-href="{% url 'management:visualize_department_index' %}">廢棄物報表管理(部門)</button>
+                            <button class="item" data-href="{% url 'dashboard:settlement_view' %}">廢棄物過磅記錄檢視</button>
+                            <button class="item" data-href="{% url 'dashboard:transportation_view' %}">廢棄物載運紀錄檢視</button>
+                        </div>
+                        <a class="item tab-item {% if '/prediction' in request.path %}is-active{% endif %}" href="/prediction/">
                             <span class="ts-icon is-chart-line-icon"></span>
                             <span class="ts-text is-bold">廢棄物預測</span>
                         </a>
-                        <a class="item tab-item {% if '/dashboard/mobile/' in request.path %}is-active{% endif %}" href="/dashboard/mobile/">
+                        <a class="item tab-item {% if 'dashboard:mobile' in request.path %}is-active{% endif %}" href="{% url 'dashboard:mobile_station' %}">
                             <span class="ts-icon is-mobile-screen-icon"></span>
-                            <span class="ts-text is-bold">行動工作站 (我們的)</span>
+                            <span class="ts-text is-bold">行動裝置登記</span>
                         </a>
-                        <a class="item tab-item {% if '/dashboard/settlement/' in request.path %}is-active{% endif %}" href="/dashboard/settlement/">
-                            <span class="ts-icon is-calculator-icon"></span>
-                            <span class="ts-text is-bold">廢棄物結算 (我們的)</span>
-                        </a>
-                        <a class="item tab-item {% if '/dashboard/transportation/' in request.path %}is-active{% endif %}" href="{% url 'dashboard:transportation_view' %}">
-                            <span class="ts-icon is-truck-icon"></span>
-                            <span class="ts-text is-bold">廢棄物載運紀錄 (我們的)</span>
+                        <a class="item tab-item {% if 'dashboard:qrcode' in request.path %}is-active{% endif %}" href="{% url 'dashboard:qrcode_print' %}">
+                            <span class="ts-icon is-qrcode-icon"></span>
+                            <span class="ts-text is-bold">QR code列印</span>
                         </a>
                     </div>
+                    <style>
+                        /* 抓取 class 含有 'is-qrcode-icon' 的圖示 */
+                        .ts-tab .item.tab-item .ts-icon.is-qrcode-icon {
+                            transform: scale(0.95) !important; /* 稍微縮小 5%，騰出邊距空間 */
+                            transform-origin: center center;    /* 確保縮小時保持在正中央 */
+                            vertical-align: -3px !important;   /* 稍微向下修正位置，讓圖示跟文字對齊在中線 */
+                        }
+                    </style>
                 {% endblock %}
             </div>
             <!-- End space: Submenu -->
