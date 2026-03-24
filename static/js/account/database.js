@@ -833,7 +833,7 @@ class DatabaseManager {
         rows.forEach(row => {
             if (row.dataset.id === 'new') return; // Skip editing row
             
-            const nameCell = row.querySelector('td:nth-child(2)');
+            const nameCell = row.querySelector('td:nth-child(3)');
             if (!nameCell) return;
             
             const name = nameCell.textContent.toLowerCase();

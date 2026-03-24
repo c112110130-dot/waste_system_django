@@ -109,7 +109,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('基本資訊', {
-            'fields': ('name', 'display_order', 'is_active')
+            'fields': ('name', 'code', 'display_order', 'is_active')
         }),
         ('系統資訊', {
             'fields': ('created_at',),

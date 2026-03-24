@@ -55,10 +55,13 @@ def get_visualize_config(request):
     y_axis_options = [
         {'value': 'metric_ton', 'text': '以重量劃分 - 公噸', 'unit_type': 'weight', 'base_unit': 'metric_ton'},
         {'value': 'kilogram', 'text': '以重量劃分 - 公斤', 'unit_type': 'weight', 'base_unit': 'kilogram'},
+        {'value': 'gram', 'text': '以重量劃分 - 克', 'unit_type': 'weight', 'base_unit': 'gram'},
         {'value': 'weight_percentage_metric_ton', 'text': '以重量劃分 - 百分比(公噸)', 'unit_type': 'weight_percentage',
          'base_unit': 'metric_ton'},
         {'value': 'weight_percentage_kilogram', 'text': '以重量劃分 - 百分比(公斤)', 'unit_type': 'weight_percentage',
          'base_unit': 'kilogram'},
+        {'value': 'weight_percentage_gram', 'text': '以重量劃分 - 百分比(克)', 'unit_type': 'weight_percentage',
+         'base_unit': 'gram'},
         {'value': 'new_taiwan_dollar', 'text': '以金額劃分 - 新台幣', 'unit_type': 'currency',
          'base_unit': 'new_taiwan_dollar'},
         {'value': 'cost_percentage_new_taiwan_dollar', 'text': '以金額劃分 - 百分比(新台幣)',
@@ -90,6 +93,7 @@ def get_visualize_config(request):
     unit_display = {
         'metric_ton': '公噸',
         'kilogram': '公斤',
+        'gram': '克',
         'new_taiwan_dollar': '新台幣'
     }
 
@@ -1735,7 +1739,8 @@ def visualize_department_config(request):
         # Y-axis options with unit mapping
         y_axis_options = [
             {'value': 'metric_ton', 'label': '以重量劃分 - 公噸'},
-            {'value': 'kilogram', 'label': '以重量劃分 - 公斤'}
+            {'value': 'kilogram', 'label': '以重量劃分 - 公斤'},
+            {'value': 'gram', 'label': '以重量劃分 - 克'}
         ]
         
         # X-axis time options
@@ -1885,6 +1890,7 @@ def visualize_department_data(request):
                         amount = amount / 1000  # kg to metric ton
                     elif y_axis == 'kilogram' and waste_type.unit == 'metric_ton':
                         amount = amount * 1000  # metric ton to kg
+                    
 
                     series_data.append(amount)
                     # Keep full department names - no truncation in backend
@@ -1977,6 +1983,8 @@ def visualize_department_data(request):
             y_axis_unit = '公噸'
         elif y_axis == 'kilogram':
             y_axis_unit = '公斤'
+        elif y_axis == 'gram':
+            y_axis_unit = '克'
         elif y_axis == 'new_taiwan_dollar':
             y_axis_unit = '新台幣'
 

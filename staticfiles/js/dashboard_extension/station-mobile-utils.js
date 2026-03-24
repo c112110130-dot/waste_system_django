@@ -1,4 +1,3 @@
-
 const StationMobile = (function () {
   const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
   const CHARACTERISTIC_UUID = 'abcdef12-3456-7890-abcd-ef1234567890';
@@ -22,19 +21,14 @@ const StationMobile = (function () {
   let btnRecord = null;
   let btnSubmit = null;
   let btnResetFactor = null;
-  let btnZero = null;
-  let btnUnit = null;
-  let btnResetName = null;
-  let currentUnit = null;
-  let calibrationFactorInput = null;
-  let btnResetFactorText = null;
   let statusDisplay = null;
   let inputUnit = null;
   let inputWasteType = null;
   let inputCleaner = null;
   let inputTime = null;
   let inputWeight = null;
-  let scaleNameInput = null;
+  let caliProgressContainer = null;
+  let caliProgressBar = null;
   let toastContainer = null;
 
   function init(options) {
@@ -60,16 +54,12 @@ const StationMobile = (function () {
     btnSubmit = document.getElementById('btn-submit-record');
     btnConnect = document.getElementById('btn-bt-connect');
     btText = document.getElementById('bt-text');
-    btnResetFactorText = document.getElementById('btn-reset-factor-text');
-    btnZero = document.getElementById('btn-zero');
-    btnUnit = document.getElementById('btn-unit');
-    scaleNameInput = document.getElementById('scale-name-input');
-    currentUnit = document.getElementById('current-unit');
     statusDisplay = document.getElementById('bt-status');
     toastContainer = document.getElementById('toast-container');
+    caliProgressContainer = document.getElementById('cali-progress-container');
+    caliProgressBar = document.getElementById('cali-progress-bar');
     btnResetFactor = document.getElementById('btn-reset-factor');
-    calibrationFactorInput = document.getElementById('calibration-factor-input');
-    btnResetName = document.getElementById('btn-reset-name');
+
     // Setup event listeners
     setupEventListeners();
   }
@@ -110,6 +100,8 @@ const StationMobile = (function () {
 
           // Send read command
           sendCommandToESP32('R');
+
+          isNotificationActive = true;
           displayMessage('⏳ 等待重量數據...', 'info');
 
         } catch (error) {
@@ -136,13 +128,8 @@ const StationMobile = (function () {
     if (btnResetFactor) {
       btnResetFactor.addEventListener('click', function () {
         if (isBluetoothConnected && bluetoothDevice && bluetoothDevice.gatt.connected) {
-          if (!calibrationFactorInput || !calibrationFactorInput.value.trim()) {
-            displayMessage('請輸入校正參數', 'warning');
-            return;
-          }
-          const value = calibrationFactorInput.value.trim();
-          sendCommandToESP32('C'+value);
-          displayMessage('開始校正...', 'info');
+          sendCommandToESP32('C');
+          displayMessage('開始校正 (100g)...', 'info');
         } else {
           displayMessage('請先連接藍芽裝置', 'warning');
         }
@@ -152,47 +139,6 @@ const StationMobile = (function () {
     // Submit record button
     if (btnSubmit) {
       btnSubmit.addEventListener('click', submitRecord);
-    }
-
-    if(btnZero) {
-      btnZero.addEventListener('click', function() {
-        if (isBluetoothConnected && bluetoothDevice && bluetoothDevice.gatt.connected) {
-          sendCommandToESP32('T');
-          displayMessage('正在歸零...', 'info', 600);
-        } else {
-          displayMessage('請先連接藍芽裝置', 'warning');
-        }
-      });
-    }
-
-    if(btnUnit) {
-      btnUnit.addEventListener('click', function() {
-        { 
-          if(currentUnit.innerText === 'G') {
-            inputWeight.value = inputWeight.value === '' ? '' : (inputWeight.value / 1000).toFixed(3);
-          }
-          else {
-            inputWeight.value = inputWeight.value === '' ? '' : (inputWeight.value * 1000).toFixed(0);
-          }
-          currentUnit.innerText = currentUnit.innerText === 'G' ? 'KG' : 'G';
-        }
-      });
-    }
-    
-    if(btnResetName) {
-      btnResetName.addEventListener('click', function() {
-        if (isBluetoothConnected && bluetoothDevice && bluetoothDevice.gatt.connected) {
-          if (!scaleNameInput || !scaleNameInput.value.trim()) {
-            displayMessage('請輸入磅秤名稱', 'warning');
-            return;
-          }
-          const value = scaleNameInput.value.trim();
-          sendCommandToESP32('N'+value);
-          displayMessage('正在設定磅秤名稱...', 'info', 600);
-        } else {
-          displayMessage('請先連接藍芽裝置', 'warning');
-        }
-      });
     }
   }
 
@@ -334,7 +280,7 @@ const StationMobile = (function () {
     }
 
     const messageHtml = `
-      <div style="background: ${bgColor}; color: ${textColor}; position: fixed; top: 20px; right: 20px; z-index: 99999; min-width: 250px; max-width: 400px; animation: slideIn 0.3s ease-out; padding: 12px 16px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+      <div style="background: ${bgColor}; color: ${textColor}; position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 250px; max-width: 400px; animation: slideIn 0.3s ease-out; padding: 12px 16px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
         <div style="flex: 1;">
           <div style="font-weight: 500; line-height: 1.4;">${msg}</div>
         </div>
@@ -370,22 +316,32 @@ const StationMobile = (function () {
     // Calibration logic
     if (receivedString === "CALI_START") {
       console.log("ESP32: 開始迭代校正邏輯");
+      if (caliProgressContainer) caliProgressContainer.style.display = 'block';
       if (btnResetFactor) {
         btnResetFactor.disabled = true;
-        btnResetFactorText.innerText = "校正中...";
+        btnResetFactor.innerText = "校正中...";
       }
       return;
     }
 
     if (receivedString.startsWith("DONE:")) {
       const finalFactor = receivedString.split(':')[1];
-
+      if (caliProgressBar) {
+        caliProgressBar.style.width = '100%';
+        caliProgressBar.classList.replace('bg-primary', 'bg-success');
+        caliProgressBar.innerText = "校正完成！";
+      }
       displayMessage(`✅ 校正成功！新因子：${finalFactor}`, "success", 4000);
 
       setTimeout(() => {
         if (btnResetFactor) {
           btnResetFactor.disabled = false;
-          btnResetFactorText.innerText = "校正完成";
+          btnResetFactor.innerText = "重新校正 (100g)";
+        }
+        if (caliProgressContainer) caliProgressContainer.style.display = 'none';
+        if (caliProgressBar) {
+          caliProgressBar.classList.replace('bg-success', 'bg-primary');
+          caliProgressBar.style.width = '0%';
         }
       }, 2000);
       return;
@@ -394,11 +350,6 @@ const StationMobile = (function () {
     // General commands
     if (receivedString === "TARE_OK") {
       displayMessage("✅ 秤盤已歸零", "success", 1500);
-      return;
-    }
-
-    if (receivedString === "NAME_OK") {
-      displayMessage("✅ 磅秤名稱設定成功", "success", 1500);
       return;
     }
 
@@ -413,14 +364,7 @@ const StationMobile = (function () {
 
     const weightValue = parseFloat(receivedString);
     if (!isNaN(weightValue)) {
-      if (inputWeight){ 
-        if(currentUnit.innerText === 'G') {
-        inputWeight.value = weightValue.toFixed(0);
-        }
-        else {
-          inputWeight.value = (weightValue / 1000).toFixed(3);
-        }
-      }
+      if (inputWeight) inputWeight.value = weightValue.toFixed(2);
       if (btnRecord) {
         btnRecord.textContent = '✅ 重量記錄';
         btnRecord.classList.replace('btn-secondary', 'btn-success');
@@ -454,6 +398,7 @@ const StationMobile = (function () {
       });
 
       displayMessage('正在連接到裝置...', 'info');
+
       // Connect to GATT server
       const server = await bluetoothDevice.gatt.connect();
 
@@ -472,11 +417,11 @@ const StationMobile = (function () {
       isBluetoothConnected = true;
 
       if (statusDisplay) {
-        statusDisplay.textContent = `磅秤名稱： ${bluetoothDevice.name || '裝置'}`;
+        statusDisplay.textContent = `✅ 已連線到 ${bluetoothDevice.name || '裝置'}`;
         statusDisplay.classList.replace('text-danger', 'text-success');
       }
       if (btnConnect) {
-        btText.textContent = '解除連線';
+        btText.textContent = '✅ 藍芽已連線';
         btnConnect.disabled = false;
       }
 
@@ -487,7 +432,8 @@ const StationMobile = (function () {
       isBluetoothConnected = false;
 
       if (statusDisplay) {
-        statusDisplay.textContent = '磅秤名稱：連線失敗';
+        statusDisplay.textContent = '連線失敗';
+        statusDisplay.classList.replace('text-success', 'text-danger');
       }
       if (btnConnect) {
         btText.textContent = '藍芽連線';
@@ -503,9 +449,8 @@ const StationMobile = (function () {
     if (bluetoothDevice && bluetoothDevice.gatt.connected) {
       bluetoothDevice.gatt.disconnect();
       isBluetoothConnected = false;
-      bluetoothDevice = null;
       if (statusDisplay) {
-        statusDisplay.textContent = '磅秤名稱：未連線';
+        statusDisplay.textContent = '未連線';
         statusDisplay.classList.replace('text-success', 'text-danger');
       }
       if (btnConnect) {
@@ -515,7 +460,20 @@ const StationMobile = (function () {
     }
   }
 
-  // Reset form and state 
+  // Reset calibration UI
+  function resetCaliUI() {
+    if (btnResetFactor) {
+      btnResetFactor.disabled = false;
+      btnResetFactor.innerText = "重新校正 (100g)";
+    }
+    if (caliProgressContainer) caliProgressContainer.style.display = 'none';
+    if (caliProgressBar) {
+      caliProgressBar.style.width = '0%';
+      caliProgressBar.classList.replace('bg-success', 'bg-primary');
+    }
+  }
+
+  // Reset form and state (from app.js)
   function resetFormAndState(keepBluetooth = true) {
     if (inputUnit) inputUnit.innerText = '---';
     if (inputWasteType) inputWasteType.innerText = '---';
@@ -523,6 +481,8 @@ const StationMobile = (function () {
     if (inputTime) inputTime.innerText = '---';
     const sel = document.getElementById('select_loc_id');
     if (sel) sel.selectedIndex = 0;
+
+    isQRScanned = false;
 
     if (btnScan) {
       btnScan.textContent = '掃描 QR code';
@@ -549,21 +509,19 @@ const StationMobile = (function () {
       }
       isBluetoothConnected = false;
       if (statusDisplay) {
-        statusDisplay.textContent = '磅秤名稱：未連線';
+        statusDisplay.textContent = '未連線';
         statusDisplay.classList.replace('text-success', 'text-danger');
-        bluetoothDevice.name = null;
       }
       if (btnConnect) {
         btText.textContent = '藍芽連線';
       }
     } else {
       if (statusDisplay) {
-        statusDisplay.textContent = `磅秤名稱： ${bluetoothDevice.name || '裝置'}`;
+        statusDisplay.textContent = `✅ 已連線到 ${bluetoothDevice.name || '裝置'}`;
         statusDisplay.classList.replace('text-danger', 'text-success');
-
       }
       if (btnConnect) {
-        btText.textContent = '藍芽已連線';
+        btText.textContent = '✅ 藍芽已連線';
       }
     }
   }
@@ -677,6 +635,7 @@ const StationMobile = (function () {
     onScanSuccess: onScanSuccess,
     displayMessage: displayMessage,
     handleWeightNotification: handleWeightNotification,
+    resetCaliUI: resetCaliUI,
     resetFormAndState: resetFormAndState,
     checkSubmitReady: checkSubmitReady,
     submitRecord: submitRecord,
@@ -693,9 +652,6 @@ window.StationMobile = StationMobile;
 window.startScanner = function () { StationMobile.startScanner(); };
 window.stopScanner = function () { StationMobile.stopScanner(); };
 window.submitRecord = function () { StationMobile.submitRecord(); };
-window.checkSubmitReady = function () { StationMobile.checkSubmitReady(); };
-window.sendCommandToESP32 = function (command) { StationMobile.sendCommandToESP32(command); };
-window.disconnectBluetooth = function () { StationMobile.disconnectBluetooth(); };
 window.resetFormAndState = function (keepBluetooth) { StationMobile.resetFormAndState(keepBluetooth); };
 window.submitData = function () { StationMobile.submitData(); };
 window.connectToBluetoothDevice = function () { StationMobile.connectToBluetoothDevice(); };

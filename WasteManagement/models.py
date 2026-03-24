@@ -168,6 +168,7 @@ class Department(models.Model):
     """Department entity - Dynamic management of hospital departments"""
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, unique=True)
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True)  # Optional code field for integration
     display_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -175,11 +176,12 @@ class Department(models.Model):
 
     class Meta:
         db_table = 'departments'
-        ordering = ['display_order', 'name']
+        ordering = ['display_order', 'name','code']
         verbose_name = "部門"
         verbose_name_plural = "部門"
         indexes = [
             models.Index(fields=['name']),
+            models.Index(fields=['code']),  
             models.Index(fields=['is_active'])
         ]
 
@@ -225,8 +227,8 @@ class WasteRecord(models.Model):
     """Waste record entity - Core transaction table (depends on Department and WasteType)"""
     id = models.AutoField(primary_key=True)
     date = models.CharField(max_length=7)  # YYYY-MM format
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
-    waste_type = models.ForeignKey(WasteType, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='management_records')
+    waste_type = models.ForeignKey(WasteType, on_delete=models.CASCADE, related_name='management_types')
     amount = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

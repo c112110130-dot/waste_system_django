@@ -16,6 +16,17 @@
                 },
                 parser: (value) => value ? parseFloat(value) : null
             },
+            gram: {
+                display: '克',
+                symbol: 'g',
+                inputType: 'number',
+                inputAttributes: { step: 'any' },
+                formatter: (value) => {
+                    if (value === null || value === undefined || value === '') return '';
+                    return parseFloat(value).toString().replace(/\.0$/, '');
+                },
+                parser: (value) => value ? parseFloat(value) : null
+            },
             kilogram: {
                 display: '公斤',
                 symbol: 'kg',

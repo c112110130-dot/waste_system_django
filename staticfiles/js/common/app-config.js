@@ -181,6 +181,7 @@ window.AppConfig = (function() {
         
         // 單位
         UNITS: {
+            G: '克',
             KG: '公斤',
             TONS: '公噸',
             PIECES: '件',
@@ -274,6 +275,7 @@ window.AppConfig = (function() {
         },
         
         UNITS: {
+            G: 'g',
             KG: 'kg',
             TON: 'ton',
             PIECE: 'pcs'
