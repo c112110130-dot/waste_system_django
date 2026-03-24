@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/department/export/', views.export_department_data, name='export_department_data'),
     path('api/visualize_dept/config/', views.visualize_department_config, name='visualize_department_config'),
     path('api/visualize_dept/data/', views.visualize_department_data, name='visualize_department_data'),
+    path('api/visualize_transport/data/', views.api_visualize_transport_data, name='visualize_transport_data'), # 新增：載運視覺化資料 API
     
     # User Interface URLs (static/template)
     path('database/', views.database_index, name='database_index'),
