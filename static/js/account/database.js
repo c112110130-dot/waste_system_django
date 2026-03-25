@@ -116,7 +116,7 @@ class DatabaseManager {
                     <input type="checkbox" value="${wasteType.id}">
                 </label>
             </td>
-            <td>${DOMUtils.escapeHtml(wasteType.name)}</td>
+            <td class="name-cell">${DOMUtils.escapeHtml(wasteType.name)}</td>
             <td class="unit-cell">${wasteType.unit_display}</td>
             <td class="action-cell">
                 <button class="ts-button is-warning is-start-icon btn-edit-waste-type" data-id="${wasteType.id}">
@@ -210,8 +210,8 @@ class DatabaseManager {
                     <input type="checkbox" value="${department.id}">
                 </label>
             </td>
-            <td>${DOMUtils.escapeHtml(department.code)}</td>
-            <td>${DOMUtils.escapeHtml(department.name)}</td>
+            <td class="code-cell">${DOMUtils.escapeHtml(department.code)}</td>
+            <td class="name-cell">${DOMUtils.escapeHtml(department.name)}</td>
             <td class="action-cell">
                 <button class="ts-button is-warning is-start-icon btn-edit-department" data-id="${department.id}">
                     <span class="ts-icon is-pencil-icon"></span>
@@ -355,7 +355,7 @@ class DatabaseManager {
         option2.textContent = '公斤';
         const option3 = document.createElement('option');
         option3.value = 'gram';
-        option3.textContent = '克';
+        option3.textContent = '公克';
         
         unitSelect.appendChild(option1);
         unitSelect.appendChild(option2);
@@ -550,6 +550,7 @@ class DatabaseManager {
         const codeCell = document.createElement('td');
         const codeDiv = document.createElement('div');
         codeDiv.className = 'ts-input is-solid is-fluid';
+        codeDiv.style.width = '140px'; // Set a fixed width for code input to prevent layout issues
         const codeInput = document.createElement('input');
         codeInput.type = 'text';
         codeInput.className = 'edit-code';

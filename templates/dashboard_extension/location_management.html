@@ -65,8 +65,8 @@
                                 <td><label class="ts-checkbox is-solo is-large"><input type="checkbox" value="{{ loc.id }}"></label></td>
                                 <td>{{ loc.code }}</td>
                                 <td>{{ loc.name }}</td>
-                                <td style="text-align: right;">
-                                    <button type="button" class="ts-button is-icon is-warning is-small btn-edit-location" data-id="{{ loc.id }}"><span class="ts-icon is-pencil-icon"></span></button>
+                                <td class="action-cell" style="text-align: center;">
+                                    <button type="button" class="ts-button is-icon is-warning is-start-icon btn-edit-location" style="width: 100px;" data-id="{{ loc.id }}"><span class="ts-icon is-pencil-icon"></span>編輯</button>
                                 </td>
                             </tr>
                             {% empty %}
@@ -111,7 +111,7 @@
                                 <th>代碼</th>
                                 <th>機構名稱</th>
                                 <th>類型</th>
-                                <th class="action-column" style="text-align: right;">操作</th>
+                                <th class="action-column" style="text-align: center;">操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -121,8 +121,8 @@
                                 <td>{{ agency.code }}</td>
                                 <td>{{ agency.name }}</td>
                                 <td>清理</td>
-                                <td style="text-align: right;">
-                                    <button type="button" class="ts-button is-icon is-warning is-small btn-edit-agency" data-id="clear_{{ agency.id }}"><span class="ts-icon is-pencil-icon"></span></button>
+                                <td class="action-cell" style="text-align: right;">
+                                    <button type="button" class="ts-button is-icon is-warning btn-edit-agency" style="width: 100px;" data-id="clear_{{ agency.id }}"><span class="ts-icon is-pencil-icon"></span>編輯</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -133,8 +133,8 @@
                                 <td>{{ agency.code }}</td>
                                 <td>{{ agency.name }}</td>
                                 <td>處理</td>
-                                <td style="text-align: right;">
-                                    <button type="button" class="ts-button is-icon is-warning is-small btn-edit-agency" data-id="process_{{ agency.id }}"><span class="ts-icon is-pencil-icon"></span></button>
+                                <td class="action-cell" style="text-align: right;">
+                                    <button type="button" class="ts-button is-icon is-warning btn-edit-agency" style="width: 100px;" data-id="process_{{ agency.id }}"><span class="ts-icon is-pencil-icon"></span>編輯</button>
                                 </td>
                             </tr>
                             {% endfor %}

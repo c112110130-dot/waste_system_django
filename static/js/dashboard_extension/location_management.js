@@ -79,8 +79,8 @@ class LocationManager {
                 </div>
             </td>
             <td class="action-cell" style="text-align: right;">
-                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>
                 <button type="button" class="ts-button is-positive is-icon is-small btn-save-location"><span class="ts-icon is-check-icon"></span></button>
+                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
             </td>
         `;
         tbody.insertBefore(newRow, tbody.firstChild);
@@ -110,8 +110,8 @@ class LocationManager {
                 <input type="text" class="edit-name" value="${row.dataset.originalName}">
             </div>`;
         actionCell.innerHTML = `
-            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>
             <button type="button" class="ts-button is-positive is-icon is-small btn-save-location"><span class="ts-icon is-check-icon"></span></button>
+            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>          
         `;
         
         
@@ -147,7 +147,10 @@ class LocationManager {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                 body: JSON.stringify({ id: row.dataset.id, code: codeInput.value.trim(), name: nameInput.value.trim() })
             });
-            if ((await response.json()).success) window.location.reload();
+            if ((await response.json()).success) {
+                await NotificationUtils.showAlert('成功', `成功儲存定點資料`, 'success');
+                window.location.reload();
+            }
             else alert('儲存失敗');
         } catch (error) { alert(`發生錯誤: ${error.message}`); }
     }
@@ -155,17 +158,25 @@ class LocationManager {
     async deleteSelectedLocations() {
         const checkboxes = document.querySelectorAll('.location-table tbody input[type="checkbox"]:checked:not([disabled])');
         const ids = Array.from(checkboxes).map(cb => cb.value);
-        if (!ids.length || !confirm(`確定要刪除選定的 ${ids.length} 個定點嗎？`)) return;
-        
-        try {
-            const response = await fetch('/dashboard/api/location/delete/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
-                body: JSON.stringify({ ids: ids })
-            });
-            if ((await response.json()).success) window.location.reload();
-            else alert('刪除失敗');
-        } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        if (ids.length === 0) {
+            NotificationUtils.showAlert('錯誤', '請選擇要刪除的定點', 'error');
+            return;
+        }
+        NotificationUtils.showConfirm('確認刪除', `確定要刪除選定的 ${ids.length} 個定點嗎？此操作無法復原。`, async () => {
+            try {
+                const response = await fetch('/dashboard/api/location/delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
+                    body: JSON.stringify({ ids: ids })
+                });
+                if ((await response.json()).success) {
+                    await NotificationUtils.showAlert('成功', `成功刪除 ${ids.length} 筆定點資料`, 'success');
+                    window.location.reload();     
+                } else {
+                    alert('刪除失敗');
+                }
+            } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        });
     }
 
     // ==========================================
@@ -190,8 +201,8 @@ class LocationManager {
                 </div>
             </td>
             <td class="action-cell" style="text-align: right; white-space: nowrap;">
-                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
-                <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>
+                <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>    
+                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button> 
             </td>
         `;
         tbody.insertBefore(newRow, tbody.firstChild);
@@ -236,8 +247,9 @@ class LocationManager {
             </div>
         `;
         actionCell.innerHTML = `
-            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
             <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>
+            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
+            
         `;
         const codeInput = row.querySelector('.edit-code');
         if (codeInput) codeInput.focus();
@@ -277,7 +289,11 @@ class LocationManager {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                 body: JSON.stringify({ id: row.dataset.id, code: codeInput.value.trim(), name: nameInput.value.trim(), type: typeSelect.value })
             });
-            if ((await response.json()).success) window.location.reload();
+            if ((await response.json()).success) {
+                await NotificationUtils.showAlert('成功', '成功儲存機構資料', 'success');
+                window.location.reload();
+                
+                }
             else alert('儲存失敗');
         } catch (error) { alert(`發生錯誤: ${error.message}`); }
     }
@@ -285,17 +301,24 @@ class LocationManager {
     async deleteSelectedAgencies() {
         const checkboxes = document.querySelectorAll('.agency-table tbody input[type="checkbox"]:checked:not([disabled])');
         const ids = Array.from(checkboxes).map(cb => cb.value);
-        if (!ids.length || !confirm(`確定要刪除選定的 ${ids.length} 個機構嗎？`)) return;
-        
-        try {
-            const response = await fetch('/dashboard/api/agency/delete/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
-                body: JSON.stringify({ ids: ids })
-            });
-            if ((await response.json()).success) window.location.reload();
-            else alert('刪除失敗');
-        } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        if (ids.length === 0) {
+            NotificationUtils.showAlert('錯誤', '請選擇要刪除的機構', 'error');
+            return;
+        }
+        NotificationUtils.showConfirm('確認刪除', `確定要刪除選定的 ${ids.length} 個機構嗎？此操作無法復原。`, async () => {
+            try {
+                const response = await fetch('/dashboard/api/agency/delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
+                    body: JSON.stringify({ ids: ids })
+                });
+                if ((await response.json()).success) {
+                    await NotificationUtils.showAlert('成功', `成功刪除 ${ids.length} 筆機構資料`, 'success'); 
+                    window.location.reload();
+                }
+                else alert('刪除失敗');
+            } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        });
     }
 
     // ==========================================

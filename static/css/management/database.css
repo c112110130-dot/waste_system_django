@@ -126,3 +126,14 @@
     font-style: italic;
     opacity: 0.7;
 }
+
+
+.table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+@media (max-width: 1024px) {
+    .ts-container {
+        padding: 0 15px !important;
+    }
+}
