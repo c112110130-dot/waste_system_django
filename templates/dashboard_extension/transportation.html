@@ -114,6 +114,11 @@
         .rwd-group-divider { display: none; }
     }
 
+    /* 隱藏跳頁輸入框的原生上下箭頭 */
+    .page-jump-input::-webkit-outer-spin-button,
+    .page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .page-jump-input[type=number] { -moz-appearance: textfield; }
+
     /* ========================================= */
     /* 🟢 4. 網頁直接列印專屬淨化樣式            */
     /* ========================================= */
@@ -259,20 +264,28 @@
                 </select>
             </div>
             
-            <div class="ts-pagination is-small is-secondary rwd-group" style="justify-content: flex-end;">
-                {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&agency="|add:selected_agency|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
-                    {% if page_obj.has_previous %}
-                        <a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>
-                    {% else %}
-                        <span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>
-                    {% endif %}
-                    <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
-                    {% if page_obj.has_next %}
-                        <a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>
-                    {% else %}
-                        <span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>
-                    {% endif %}
-                {% endwith %}
+            <div class="ts-pagination is-small is-secondary rwd-group" style="justify-content: flex-end; align-items: center;">
+                {% if page_obj.has_previous %}
+                    <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
+                    <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+                {% else %}
+                    <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                    <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+                {% endif %}
+
+                <span class="item is-text" style="padding: 0 8px;">
+                    第
+                    <input type="number" class="page-jump-input" id="jump-page-input-top" value="{{ page_obj.number }}" min="1" max="{{ page_obj.paginator.num_pages|default:1 }}" title="輸入頁碼後按 Enter 跳轉" onkeypress="if(event.key === 'Enter') jumpToPage('top')" style="width: 50px; height: 28px; text-align: center; margin: 0 8px; border: 1px solid var(--tp-border); background: var(--tp-bg-input); color: var(--tp-text-main); border-radius: 4px; outline: none; box-sizing: border-box;">
+                    / {{ page_obj.paginator.num_pages|default:1 }} 頁
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+                    <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+                {% else %}
+                    <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                    <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+                {% endif %}
             </div>
         </div>
         
@@ -349,20 +362,28 @@
                     <span style="color: var(--tp-text-sub); font-size: 0.9rem;">kg</span>
                 </div>
                 
-                <div class="ts-pagination is-small is-secondary">
-                    {% with params="start_date="|add:start_date|add:"&end_date="|add:end_date|add:"&agency="|add:selected_agency|add:"&sort_by="|add:current_sort|add:"&page_size="|add:current_page_size %}
-                        {% if page_obj.has_previous %}
-                            <a class="item" href="?{{ params }}&page={{ page_obj.previous_page_number }}"><span class="ts-icon is-chevron-left-icon"></span></a>
-                        {% else %}
-                            <span class="item is-disabled"><span class="ts-icon is-chevron-left-icon"></span></span>
-                        {% endif %}
-                        <span class="item is-text">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
-                        {% if page_obj.has_next %}
-                            <a class="item" href="?{{ params }}&page={{ page_obj.next_page_number }}"><span class="ts-icon is-chevron-right-icon"></span></a>
-                        {% else %}
-                            <span class="item is-disabled"><span class="ts-icon is-chevron-right-icon"></span></span>
-                        {% endif %}
-                    {% endwith %}
+                <div class="ts-pagination is-small is-secondary" style="align-items: center;">
+                    {% if page_obj.has_previous %}
+                        <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
+                        <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+                    {% else %}
+                        <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                        <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+                    {% endif %}
+
+                    <span class="item is-text" style="padding: 0 8px;">
+                        第
+                        <input type="number" class="page-jump-input" id="jump-page-input-bottom" value="{{ page_obj.number }}" min="1" max="{{ page_obj.paginator.num_pages|default:1 }}" title="輸入頁碼後按 Enter 跳轉" onkeypress="if(event.key === 'Enter') jumpToPage('bottom')" style="width: 50px; height: 28px; text-align: center; margin: 0 8px; border: 1px solid var(--tp-border); background: var(--tp-bg-input); color: var(--tp-text-main); border-radius: 4px; outline: none; box-sizing: border-box;">
+                        / {{ page_obj.paginator.num_pages|default:1 }} 頁
+                    </span>
+
+                    {% if page_obj.has_next %}
+                        <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+                        <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+                    {% else %}
+                        <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                        <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -427,27 +448,20 @@
 {% endfor %}
 
 <script>
+    // 🌟 引入全資料以供匯出使用
     const allFilteredData = JSON.parse('{{ all_filtered_data|escapejs }}' || '[]');
 
     document.addEventListener("DOMContentLoaded", function() {
         flatpickr("#start_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
         flatpickr("#end_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
         
-        // 載入時同步選單寬度
         syncDropdownWidth();
-        // 綁定視窗縮放事件
         window.addEventListener('resize', syncDropdownWidth);
     });
 
     window.submitWithSort = function(val) { document.getElementById('hiddenSortInput').value = val; document.getElementById('searchForm').submit(); }
-    window.changePageSize = function(size) {
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('page_size', size); urlParams.set('page', 1);
-        window.location.search = urlParams.toString();
-    }
     window.toggleAll = function(src) { document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); updateUI(); }
     
-    // 🎯 動態同步下拉選單寬度
     function syncDropdownWidth() {
         const btn = document.getElementById('exportBtn');
         const menu = document.getElementById('export-menu');
@@ -459,7 +473,6 @@
         }
     }
 
-    // 🎯 更新 UI 並同步上下總重
     window.updateUI = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox:checked');
         const count = checkboxes.length;
@@ -468,7 +481,6 @@
         document.getElementById('btnPrintText').innerText = count > 0 ? `直接列印 (${count})` : "直接列印";
         document.getElementById('btnExportText').innerText = count > 0 ? `匯出報表 (${count})` : "匯出報表";
         
-        // 呼叫選單對齊魔法
         setTimeout(syncDropdownWidth, 10);
 
         const weightLabelTop = document.getElementById('weightLabelTop');
@@ -493,7 +505,33 @@
         }
     }
 
-    // 🎯 建立匯出專用的獨立 HTML 元素
+    // 🌟 核心防呆跳頁邏輯
+    window.changePageSize = function(size) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page_size', size); urlParams.set('page', 1);
+        window.location.search = urlParams.toString();
+    }
+
+    window.goToPage = function(pageNum) {
+        if (!pageNum) return;
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page', pageNum);
+        window.location.search = urlParams.toString();
+    }
+
+    window.jumpToPage = function(pos) {
+        const input = document.getElementById('jump-page-input-' + pos);
+        let pageNum = parseInt(input.value);
+        const maxPage = parseInt("{{ page_obj.paginator.num_pages|default:1 }}");
+        if (isNaN(pageNum) || pageNum < 1) {
+            pageNum = 1;
+        } else if (pageNum > maxPage) {
+            pageNum = maxPage;
+        }
+        window.goToPage(pageNum);
+    }
+
+    // 🌟 全資料匯出邏輯
     function createPrintableElement(titleText) {
         const now = new Date(); 
         const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -575,7 +613,6 @@
         return { wrapper, hasData, dateStr };
     }
 
-    // 🎯 PDF 匯出
     window.exportToPDF = function() {
         if (typeof html2pdf === 'undefined') {
             const script = document.createElement('script');
@@ -612,7 +649,6 @@
         });
     }
 
-    // 🎯 PNG 匯出
     window.exportToPNG = function() {
         if (typeof html2canvas === 'undefined') { alert("載入圖片套件失敗！"); return; }
         const { wrapper, hasData, dateStr } = createPrintableElement('廢棄物載運紀錄報表');
@@ -632,7 +668,6 @@
         });
     }
 
-    // 🎯 Excel 匯出
     window.exportToExcel = function() {
         if (typeof XLSX === 'undefined') { alert("載入 Excel 套件失敗！"); return; }
         const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
@@ -664,7 +699,6 @@
         XLSX.utils.book_append_sheet(wb, ws, "載運紀錄"); XLSX.writeFile(wb, `廢棄物載運紀錄報表_${dateStr}.xlsx`);
     }
 
-    // 🎯 網頁直接列印
     window.printSelectedReport = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
