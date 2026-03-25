@@ -98,7 +98,7 @@
     #deleteModal .btn-confirm { background: #db2828 !important; color: #ffffff !important; }
 
     /* ========================================= */
-    /* 🟢 3. RWD 全面響應式適應 (重點升級)       */
+    /* 🟢 3. RWD 全面響應式適應                 */
     /* ========================================= */
     .rwd-toolbar {
         display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;
@@ -203,7 +203,7 @@
                     <select name="weigher" class="ts-select is-fluid">
                         <option value="">全部人員</option>
                         {% for w in weighers %}
-                            <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>{{ w.user }}</option>
+                            <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>{{ w.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -353,8 +353,10 @@
                         <td>{{ record.waste_type.name }}</td>
                         <td>{{ record.department.name }}</td>
                         <td>{{ record.location.name }}</td>
-                        <td>{{ record.creator.username|default:"-" }}</td>
-                        <td>{{ record.updater.username|default:"-" }}</td>
+                        
+                        <td>{{ record.creator.name|default:"-" }}</td>
+                        <td>{{ record.updater.name|default:"-" }}</td>
+                        
                         <td>{{ record.update_time|date:"Y-m-d H:i"|default:"-" }}</td>
                         <td>
                             {% if not record.is_expired and not record.is_transported %}
@@ -477,7 +479,6 @@
 </dialog>
 
 <script>
-    // 🌟 加入全資料匯出必備的 JSON 資料
     const allFilteredData = JSON.parse('{{ all_filtered_data|escapejs }}' || '[]');
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -485,7 +486,6 @@
         flatpickr("#start_date", config);
         flatpickr("#end_date", config);
         
-        // 載入時同步選單寬度
         syncDropdownWidth();
         window.addEventListener('resize', syncDropdownWidth);
     });
@@ -498,7 +498,6 @@
     window.pendingDeleteIds = null;
     window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
     
-    // 🎯 動態同步下拉選單寬度
     function syncDropdownWidth() {
         const btn = document.getElementById('exportBtn');
         const menu = document.getElementById('export-menu');
@@ -584,7 +583,6 @@
     
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     
-    // 🌟 核心防呆跳頁與重設頁數邏輯 
     window.changePageSize = function(size){
         const urlParams=new URLSearchParams(window.location.search);
         urlParams.set('page_size',size);
@@ -611,7 +609,6 @@
         window.goToPage(pageNum);
     }
 
-    // 🌟 更新版匯出邏輯 (支援跨頁匯出)
     function createPrintableElement(titleText) {
         const now = new Date(); 
         const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
