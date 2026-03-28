@@ -55,12 +55,12 @@ def get_visualize_config(request):
     y_axis_options = [
         {'value': 'metric_ton', 'text': '以重量劃分 - 公噸', 'unit_type': 'weight', 'base_unit': 'metric_ton'},
         {'value': 'kilogram', 'text': '以重量劃分 - 公斤', 'unit_type': 'weight', 'base_unit': 'kilogram'},
-        {'value': 'gram', 'text': '以重量劃分 - 克', 'unit_type': 'weight', 'base_unit': 'gram'},
+        {'value': 'gram', 'text': '以重量劃分 - 公克', 'unit_type': 'weight', 'base_unit': 'gram'},
         {'value': 'weight_percentage_metric_ton', 'text': '以重量劃分 - 百分比(公噸)', 'unit_type': 'weight_percentage',
          'base_unit': 'metric_ton'},
         {'value': 'weight_percentage_kilogram', 'text': '以重量劃分 - 百分比(公斤)', 'unit_type': 'weight_percentage',
          'base_unit': 'kilogram'},
-        {'value': 'weight_percentage_gram', 'text': '以重量劃分 - 百分比(克)', 'unit_type': 'weight_percentage',
+        {'value': 'weight_percentage_gram', 'text': '以重量劃分 - 百分比(公克)', 'unit_type': 'weight_percentage',
          'base_unit': 'gram'},
         {'value': 'new_taiwan_dollar', 'text': '以金額劃分 - 新台幣', 'unit_type': 'currency',
          'base_unit': 'new_taiwan_dollar'},
@@ -1984,7 +1984,7 @@ def visualize_department_data(request):
         elif y_axis == 'kilogram':
             y_axis_unit = '公斤'
         elif y_axis == 'gram':
-            y_axis_unit = '克'
+            y_axis_unit = '公克'
         elif y_axis == 'new_taiwan_dollar':
             y_axis_unit = '新台幣'
 

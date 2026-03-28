@@ -733,11 +733,17 @@ class DatabaseManager {
         const canManageWasteTypes = !this.editingWasteTypeId;
         
         document.querySelectorAll('.btn-add-waste-type').forEach(btn => {
-            btn.style.display = canManageWasteTypes && !hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageWasteTypes && !hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (!hasSelection) ? 'inline-flex' : 'none';
         });
         
         document.querySelectorAll('.btn-delete-waste-types').forEach(btn => {
-            btn.style.display = canManageWasteTypes && hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageWasteTypes && hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (hasSelection) ? 'inline-flex' : 'none';
         });
     }
     
@@ -749,11 +755,17 @@ class DatabaseManager {
         const canManageDepartments = !this.editingDepartmentId;
         
         document.querySelectorAll('.btn-add-department').forEach(btn => {
-            btn.style.display = canManageDepartments && !hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageDepartments && !hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (!hasSelection) ? 'inline-flex' : 'none';
         });
         
         document.querySelectorAll('.btn-delete-departments').forEach(btn => {
-            btn.style.display = canManageDepartments && hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageDepartments && hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (hasSelection) ? 'inline-flex' : 'none';
         });
     }
     

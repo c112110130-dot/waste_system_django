@@ -185,3 +185,12 @@ admin.site.register(DialysisBucketSoftBagProductionAndDisposalCosts,
 admin.site.register(PharmaceuticalGlassProductionAndDisposalCosts, PharmaceuticalGlassProductionAndDisposalCostsAdmin)
 admin.site.register(PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenue,
                     PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenueAdmin)
+
+admin.site.register(WasteRecord_New)
+
+admin.site.register(LocationPoint)
+
+
+admin.site.register(clearAgency)
+admin.site.register(processAgency)
+admin.site.register(TransportRecord)

@@ -83,3 +83,10 @@
     max-width: 140px !important;
     text-align: left !important;
  }
+
+ /* 讓禁用按鈕看起來更「灰」一點，並改變游標 */
+.ts-button.is-disabled, .ts-button[disabled] {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    pointer-events: none; /* 確保徹底無法觸發點擊事件 */
+}

@@ -10,7 +10,7 @@ import json
 from django.db.models import Sum, Count, Q
 from Main.models import UserProfile
 
-from .models import WasteRecord,  LocationPoint, Department, clearAgency, processAgency, TransportRecord,WasteType
+from WasteManagement.models import WasteRecord_New,  LocationPoint, Department, clearAgency, processAgency, TransportRecord,WasteType
 
 
 
@@ -25,7 +25,7 @@ def delete_records(request):
         if ids_str:
             id_list = ids_str.split(',')
             # 執行資料庫刪除
-            WasteRecord.objects.filter(id__in=id_list).delete()
+            WasteRecord_New.objects.filter(id__in=id_list).delete()
             return JsonResponse({'status': 'success'})
         return JsonResponse({'status': 'error', 'message': 'No IDs provided'}, status=400)
     except Exception as e:
@@ -51,7 +51,7 @@ def settlement_process(request):
             print(f"=== 4. TransportRecord 建立成功 ID: {new_transport.id} ===")
             id_list = ids_str.split(',')
             
-            updated_count = WasteRecord.objects.filter(id__in=id_list).update(
+            updated_count = WasteRecord_New.objects.filter(id__in=id_list).update(
                 is_transported=True,
                 transportrecord=new_transport
             )
@@ -75,7 +75,7 @@ def settlement_view(request):
     process_agencies = processAgency.objects.all()
     clear_agencies = clearAgency.objects.all()
     Waste_types = WasteType.objects.all()
-    all_records =  WasteRecord.objects.filter().order_by('-create_time')
+    all_records =  WasteRecord_New.objects.filter().order_by('-create_time')
     f_start_date = request.GET.get('start_date', '')
     f_end_date = request.GET.get('end_date', '')
     f_location = request.GET.get('location', '')
@@ -177,9 +177,9 @@ def transportation_view(request):
     batches = TransportRecord.objects.select_related(
         'clear_agency', 'process_agency', 'settler'
     ).annotate(
-        db_total_weight=Sum('wasterecord__weight'),  
-        db_item_count=Count('wasterecord')
-    ).prefetch_related('wasterecord_set')
+        db_total_weight=Sum('wasterecord_new__weight'),  
+        db_item_count=Count('wasterecord_new')
+    ).prefetch_related('wasterecord_new_set')
     
     if f_start_date:
         try:
@@ -272,7 +272,7 @@ def delete_records_api(request):
             # 在刪除單據前，先把裡面的廢棄物紀錄狀態還原
             # 這樣它們就會回到「未結算列表」，而不會憑空消失
             # 注意：這裡的 filter 條件是 transportRecord__in (反向關聯查找)
-            WasteRecord.objects.filter(transportrecord__in=batches_to_delete).update(
+            WasteRecord_New.objects.filter(transportrecord__in=batches_to_delete).update(
                 is_transported=False,  # 標記為未運送
                 transportrecord=None   # 解除關聯 (變回 NULL)
             )
@@ -308,7 +308,7 @@ def delete_batches_api(request):
             # 在刪除單據前，先把裡面的廢棄物紀錄狀態還原
             # 這樣它們就會回到「未結算列表」，而不會憑空消失
             # 注意：這裡的 filter 條件是 transportRecord__in (反向關聯查找)
-            WasteRecord.objects.filter(transportrecord__in=batches_to_delete).update(
+            WasteRecord_New.objects.filter(transportrecord__in=batches_to_delete).update(
                 is_transported=False,  # 標記為未運送
                 transportrecord=None   # 解除關聯 (變回 NULL)
             )
@@ -346,7 +346,7 @@ def record_waste_api(request):
         loc_id = LocationPoint.objects.get(id=loc_id)
         dept_id = Department.objects.get(name=dept)
         waste_type = WasteType.objects.get(name=waste_type)
-        WasteRecord.objects.create(
+        WasteRecord_New.objects.create(
             location=loc_id,
             department=dept_id,
             weight=weight,

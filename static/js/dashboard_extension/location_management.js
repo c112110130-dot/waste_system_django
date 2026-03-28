@@ -340,14 +340,36 @@ class LocationManager {
     updateLocationButtons() {
         const hasSelection = document.querySelectorAll('.location-table tbody input[type="checkbox"]:checked').length > 0;
         const canManage = !this.editingLocationId;
-        document.querySelectorAll('.btn-add-location').forEach(btn => btn.style.display = (canManage && !hasSelection) ? 'inline-flex' : 'none');
-        document.querySelectorAll('.btn-delete-locations').forEach(btn => btn.style.display = (canManage && hasSelection) ? 'inline-flex' : 'none');
+        document.querySelectorAll('.btn-add-location').forEach(btn => {
+            const isEnabled = canManage && !hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (!hasSelection) ? 'inline-flex' : 'none'; 
+        });
+
+        document.querySelectorAll('.btn-delete-locations').forEach(btn => {
+            const isEnabled = canManage && hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (hasSelection) ? 'inline-flex' : 'none';
+        });
     }
 
     updateAgencyButtons() {
         const hasSelection = document.querySelectorAll('.agency-table tbody input[type="checkbox"]:checked').length > 0;
         const canManage = !this.editingAgencyId;
-        document.querySelectorAll('.btn-add-agency').forEach(btn => btn.style.display = (canManage && !hasSelection) ? 'inline-flex' : 'none');
-        document.querySelectorAll('.btn-delete-agencies').forEach(btn => btn.style.display = (canManage && hasSelection) ? 'inline-flex' : 'none');
+        document.querySelectorAll('.btn-add-agency').forEach(btn => {
+            const isEnabled = canManage && !hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (!hasSelection) ? 'inline-flex' : 'none';
+        });
+
+        document.querySelectorAll('.btn-delete-agencies').forEach(btn => {
+            const isEnabled = canManage && hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (hasSelection) ? 'inline-flex' : 'none';
+        });
     }
 }
