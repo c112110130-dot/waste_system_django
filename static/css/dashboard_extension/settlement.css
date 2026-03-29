@@ -1,0 +1,453 @@
+ /* ========================================= */
+ /* 1. 智慧顏色變數 (深色/淺色模式支援)       */
+ /* ========================================= */
+ :root {
+     --my-bg-panel: #363636;
+     --my-bg-input: #222222;
+     --my-text-main: #ffffff;
+     --my-text-sub: #cccccc;
+     --my-border: #555555;
+     --my-hover: rgba(255, 255, 255, 0.05);
+     --my-modal-bg: #2b2b2b;
+     --del-icon-bg: #ffffff;
+     --del-icon-fg: #000000;
+     --del-cancel-bg: #e0e0e0;
+     --del-cancel-fg: #333333;
+ }
+
+ html.is-light {
+     --my-bg-panel: #f7f7f7;
+     --my-bg-input: #ffffff;
+     --my-text-main: #333333;
+     --my-text-sub: #555555;
+     --my-border: #dddddd;
+     --my-hover: rgba(0, 0, 0, 0.05);
+     --my-modal-bg: #ffffff;
+     --del-icon-bg: #000000;
+     --del-icon-fg: #ffffff;
+     --del-cancel-bg: #333333;
+     --del-cancel-fg: #ffffff;
+ }
+
+ /* ========================================= */
+ /* 2. 基礎樣式調整                           */
+ /* ========================================= */
+ .ts-select,
+ .ts-input input,
+ .flatpickr-input {
+     height: 45px !important;
+     font-size: 1rem !important;
+     background-color: var(--my-bg-input) !important;
+     border: 1px solid var(--my-border) !important;
+     color: var(--my-text-main) !important;
+     border-radius: 4px !important;
+     box-sizing: border-box !important;
+ }
+
+ .ts-select option {
+     background-color: var(--my-bg-panel);
+     color: var(--my-text-main);
+ }
+
+ .control-panel .ts-select,
+ .control-panel .ts-input input,
+ .control-panel .flatpickr-input,
+ #settlementModal .ts-select {
+     width: 100% !important;
+ }
+
+ .date-picker-wrapper {
+     position: relative;
+     width: 100%;
+ }
+
+ .calendar-icon {
+     position: absolute;
+     right: 12px;
+     top: 50%;
+     transform: translateY(-50%);
+     pointer-events: none;
+     opacity: 0.6;
+     width: 20px;
+     height: 20px;
+     stroke: var(--my-text-main);
+ }
+
+ .ts-button {
+     height: 45px !important;
+     border-radius: 6px !important;
+     font-size: 1rem !important;
+ }
+
+ .ts-button.is-secondary {
+     background-color: var(--my-bg-input) !important;
+     border: 1px solid var(--my-border) !important;
+     color: var(--my-text-main) !important;
+ }
+
+ .btn-print-custom {
+     height: 45px !important;
+     background-color: transparent !important;
+     border: 1px solid var(--my-border) !important;
+     color: var(--my-text-main) !important;
+     border-radius: 6px !important;
+     padding: 0 15px !important;
+     display: inline-flex !important;
+     align-items: center !important;
+     justify-content: center !important;
+     cursor: pointer;
+     font-size: 1rem !important;
+     font-weight: bold;
+     transition: background-color 0.2s;
+ }
+
+ .btn-print-custom:hover {
+     background-color: var(--my-hover) !important;
+ }
+
+ .dashboard-panel {
+     background-color: var(--my-bg-panel);
+     border: 1px solid var(--my-border);
+     border-radius: 5px;
+     margin-bottom: 25px;
+ }
+
+ .control-panel {
+     padding: 30px;
+ }
+
+ .data-panel {
+     padding: 0;
+     border-left: 4px solid #fbbd08;
+     min-height: 400px;
+ }
+
+ label {
+     color: var(--my-text-sub);
+     font-size: 1rem;
+     margin-bottom: 8px;
+     display: block;
+     font-weight: 500;
+ }
+
+ .ts-table {
+     background: transparent !important;
+     color: var(--my-text-main) !important;
+ }
+
+ .ts-table thead th {
+     background-color: var(--my-bg-panel) !important;
+     color: var(--my-text-main) !important;
+     border-bottom: 1px solid var(--my-border) !important;
+ }
+
+ .ts-table tbody td {
+     border-bottom: 1px solid var(--my-border) !important;
+     vertical-align: middle !important;
+ }
+
+ .ts-table tbody tr:hover {
+     background-color: var(--my-hover) !important;
+ }
+
+ .tr-locked {
+     background-color: rgba(128, 128, 128, 0.15) !important;
+ }
+
+ .sort-select {
+     background-color: transparent !important;
+     color: var(--my-text-main) !important;
+     border: 1px solid var(--my-border) !important;
+     height: 36px !important;
+     padding: 0 15px !important;
+     border-radius: 4px;
+     cursor: pointer;
+     width: auto !important;
+ }
+
+ .sort-select option {
+     background: var(--my-bg-panel);
+     color: var(--my-text-main);
+ }
+
+ #settlementModal>div,
+ #deleteModal>div {
+     background: var(--my-modal-bg) !important;
+     color: var(--my-text-main) !important;
+     border: 1px solid var(--my-border);
+     border-radius: 5px;
+     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+ }
+
+ #settlementModal>div {
+     width: 500px;
+     max-width: 95vw;
+     display: flex;
+     flex-direction: column;
+ }
+
+ #deleteModal>div {
+     width: 450px;
+     max-width: 90vw;
+     border-radius: 10px;
+     text-align: center;
+ }
+
+ #settlementModal label {
+     text-align: center;
+     width: 100%;
+     display: block;
+     margin-bottom: 10px;
+     color: var(--my-text-main);
+     font-weight: bold;
+     font-size: 1.1rem;
+ }
+
+ #settlementModal select {
+     width: 100% !important;
+     height: 55px !important;
+     font-size: 1.1rem !important;
+     padding-left: 15px !important;
+     box-sizing: border-box;
+ }
+
+ .modal-info-box {
+     background: var(--my-bg-panel);
+     border: 1px solid var(--my-border);
+     padding: 15px;
+     border-radius: 5px;
+     margin-bottom: 20px;
+     color: var(--my-text-sub);
+ }
+
+ .delete-icon-circle {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     width: 70px;
+     height: 70px;
+     border-radius: 50%;
+     margin-bottom: 20px;
+     background: var(--del-icon-bg) !important;
+     color: var(--del-icon-fg) !important;
+ }
+
+ .delete-hint-text {
+     color: var(--my-text-sub) !important;
+     background: var(--my-hover);
+     padding: 10px;
+     border-radius: 5px;
+ }
+
+ #deleteModal button {
+     border-radius: 6px !important;
+     height: 45px;
+     font-weight: bold;
+     cursor: pointer;
+     border: none;
+ }
+
+ #deleteModal .btn-cancel {
+     background: var(--del-cancel-bg) !important;
+     color: var(--del-cancel-fg) !important;
+ }
+
+ #deleteModal .btn-confirm {
+     background: #db2828 !important;
+     color: #ffffff !important;
+ }
+
+ /* ========================================= */
+ /* 🟢 3. RWD 全面響應式適應 (重點升級)       */
+ /* ========================================= */
+
+ .rwd-toolbar {
+     display: flex;
+     flex-wrap: wrap;
+     justify-content: space-between;
+     align-items: center;
+     gap: 15px;
+ }
+
+ .rwd-group {
+     display: flex;
+     flex-wrap: wrap;
+     align-items: center;
+     gap: 10px;
+ }
+
+ .rwd-group-divider {
+     width: 1px;
+     height: 24px;
+     background: var(--my-border);
+     margin: 0 5px;
+ }
+
+ .page-size-wrap {
+     display: inline-flex !important;
+     flex-direction: row !important;
+     align-items: center !important;
+     white-space: nowrap !important;
+ }
+
+ @media (max-width: 991px) {
+     .rwd-toolbar {
+         flex-direction: column;
+         align-items: stretch;
+         gap: 15px;
+     }
+
+     .rwd-group {
+         justify-content: space-between;
+         width: 100%;
+     }
+
+     /* 搜尋區塊：改為單行堆疊 */
+     .ts-grid.is-5-columns .column,
+     .ts-grid.is-6-wide {
+         width: 100% !important;
+         margin-bottom: 10px;
+     }
+
+     /* 按鈕小螢幕滿版 */
+     .rwd-group .ts-button,
+     .rwd-group .btn-print-custom {
+         width: 100%;
+         justify-content: center;
+     }
+
+     .sort-select {
+         flex: 1;
+         min-width: 0;
+     }
+
+     .rwd-group-divider {
+         display: none;
+     }
+ }
+
+ /* ========================================= */
+ /* 🟢 4. 網頁直接列印專屬淨化樣式            */
+ /* ========================================= */
+ @media print {
+
+     nav,
+     header,
+     footer,
+     aside,
+     .ts-app-navbar,
+     .ts-app-sidebar,
+     .ts-app-topbar,
+     .ts-topbar,
+     .topbar,
+     .navbar,
+     .sidebar,
+     [class*="topbar"],
+     [class*="navbar"],
+     [class*="header"],
+     .user-greeting,
+     #greeting,
+     .control-panel,
+     .ts-pagination,
+     .dashboard-panel:not(.data-panel),
+     .data-panel>.ts-content.is-secondary,
+     .top-pagination-bar,
+     .bottom-pagination-bar {
+         display: none !important;
+     }
+
+     @page {
+         size: A4 landscape;
+         margin: 15mm;
+     }
+
+     body,
+     html {
+         background: white !important;
+         color: black !important;
+         margin: 0 !important;
+         padding: 0 !important;
+     }
+
+     .ts-container,
+     .ts-content,
+     .data-panel,
+     .dashboard-panel {
+         padding: 0 !important;
+         margin: 0 !important;
+         border: none !important;
+         box-shadow: none !important;
+         max-width: 100% !important;
+         width: 100% !important;
+         background: transparent !important;
+     }
+
+     .ts-table th.collapsing,
+     .ts-table td.collapsing,
+     .ts-table th:last-child,
+     .ts-table td:last-child {
+         display: none !important;
+     }
+
+     .no-print-row {
+         display: none !important;
+     }
+
+     .print-header-title {
+         display: block !important;
+         text-align: center;
+         font-size: 1.8rem;
+         font-weight: bold;
+         margin-top: 0;
+         margin-bottom: 20px;
+         color: black !important;
+     }
+
+     .ts-table {
+         width: 100% !important;
+         border-collapse: collapse !important;
+         border: none !important;
+         table-layout: auto !important;
+     }
+
+     .ts-table thead {
+         display: table-header-group;
+     }
+
+     .ts-table tr {
+         page-break-inside: avoid;
+     }
+
+     .ts-table th {
+         background-color: transparent !important;
+         color: black !important;
+         border: none !important;
+         border-top: 2px solid #000 !important;
+         border-bottom: 2px solid #000 !important;
+         font-size: 11pt !important;
+         padding: 10px 6px !important;
+     }
+
+     .ts-table td {
+         color: black !important;
+         border: none !important;
+         border-bottom: 1px solid #e0e0e0 !important;
+         font-size: 10pt !important;
+         padding: 8px 6px !important;
+     }
+
+     .print-summary-box {
+         display: block !important;
+         text-align: right;
+         padding: 15px 0;
+         margin-top: 10px;
+         font-size: 14pt;
+         font-weight: bold;
+         color: black !important;
+     }
+ }
+
+ .print-header-title,
+ .print-summary-box {
+     display: none;
+ }

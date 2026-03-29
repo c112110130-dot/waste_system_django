@@ -6,6 +6,7 @@ const StationMobile = (function () {
   let cfg = { locations: [] };
   let html5QrcodeScanner = null;
   let isScanning = false;
+  let weightValue = 0;
 
   // API URLs
   let recordApiUrl = '';
@@ -411,7 +412,7 @@ const StationMobile = (function () {
       return;
     }
 
-    const weightValue = parseFloat(receivedString);
+    weightValue = parseFloat(receivedString);
     if (!isNaN(weightValue)) {
       if (inputWeight){ 
         if(currentUnit.innerText === 'G') {
@@ -601,7 +602,7 @@ const StationMobile = (function () {
     const cleaner = inputCleaner ? inputCleaner.innerText.trim() : '';
     const time = inputTime ? inputTime.innerText.trim() : '';
 
-    const weight = inputWeight ? parseFloat(inputWeight.value) : 0;
+    const weight = weightValue || 0;
     const locSel = document.getElementById('select_loc_id');
     const locId = locSel ? locSel.value : '';
 
@@ -619,7 +620,7 @@ const StationMobile = (function () {
       body: JSON.stringify({
         dept: dept,
         waste_type: wasteType,
-        weight: weight,
+        weight: weight/1000, 
         location_id: locId
       })
     })
