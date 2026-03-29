@@ -519,4 +519,4 @@ def qrcode_print_view(request):
         'waste_types': waste_types_list,
         'current_user': current_user
     }
-    return render(request, 'dashboard_extension/qrcode_print.html', context)   
+    return render(request, 'dashboard_extension/qrcode_print.html', context)

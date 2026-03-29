@@ -149,18 +149,18 @@
                         <div class="ts-dropdown" id="dropdown-report" data-position="bottom-start" style="z-index: 9999;">
                             <button class="item" data-href="{% url 'management:visualize_index' %}">廢棄物報表管理(院內)</button>
                             <button class="item" data-href="{% url 'management:visualize_department_index' %}">廢棄物報表管理(部門)</button>
-                            <button class="item" data-href="{% url 'dashboard:settlement_view' %}">廢棄物過磅記錄檢視</button>
-                            <button class="item" data-href="{% url 'dashboard:transportation_view' %}">廢棄物載運紀錄檢視</button>
+                            <button class="item" data-href="{% url 'management:settlement_view' %}">廢棄物過磅記錄檢視</button>
+                            <button class="item" data-href="{% url 'management:transportation_view' %}">廢棄物載運紀錄檢視</button>
                         </div>
                         <a class="item tab-item {% if '/prediction' in request.path %}is-active{% endif %}" href="/prediction/">
                             <span class="ts-icon is-chart-line-icon"></span>
                             <span class="ts-text is-bold">廢棄物預測</span>
                         </a>
-                        <a class="item tab-item {% if '/dashboard/mobile/' in request.path %}is-active{% endif %}" href="/dashboard/mobile/">
+                        <a class="item tab-item {% if '/management/mobile/' in request.path %}is-active{% endif %}" href="/management/mobile/">
                             <span class="ts-icon is-mobile-screen-icon"></span>
                             <span class="ts-text is-bold">行動裝置登記</span>
                         </a>
-                        <a class="item tab-item {% if '/dashboard/qrcode/' in request.path %}is-active{% endif %}" href="{% url 'dashboard:qrcode_print' %}">
+                        <a class="item tab-item {% if '/management/qrcode/' in request.path %}is-active{% endif %}" href="{% url 'management:qrcode_print' %}">
                             <span class="ts-icon is-qrcode-icon"></span>
                             <span class="ts-text is-bold">QR code列印</span>
                         </a>
@@ -219,7 +219,7 @@
                                 </button>
                             {% endif %}
                             {% if user_is_over_mod %}
-                            <button class="item" data-href="{% url 'dashboard:location_management' %}">
+                            <button class="item" data-href="{% url 'management:location_management' %}">
                             <span class="ts-icon is-location-dot-icon"></span>
                             定點機構管理
                             </button>
