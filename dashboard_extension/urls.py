@@ -22,6 +22,9 @@ urlpatterns = [
     # 6. QR Code 列印頁面
     path('qrcode/', views.qrcode_print_view, name='qrcode_print'),
 
+    # 🌟 7. 警報紀錄管理 (畫面) - 新增這行！
+    path('alert_record/', views.alert_record_view, name='alert_record'),
+
     # ==========================================
     # --- API 路由區 ---
     # ==========================================
@@ -42,4 +45,7 @@ urlpatterns = [
     # 新增：儲存機構 (由 JavaScript fetch 呼叫)
     path('api/agency/save/', views.api_save_agency, name='api_save_agency'),
     path('api/agency/delete/', views.api_delete_agency, name='api_delete_agency'),
+
+    # 🌟 刪除警報紀錄 API - 新增這行！
+    path('api/delete_alert_records/', views.api_delete_alert_records, name='api_delete_alert_records'),
 ]

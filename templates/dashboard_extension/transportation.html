@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}醫療廢棄物暨資源管理系統 - 廢棄物載運紀錄{% endblock %}
@@ -217,14 +216,14 @@
                 
                 <div class="rwd-group-divider"></div>
                 
-                <div style="font-size: 1rem; margin-right: 5px;">
+                <div style="font-size: 1rem; margin-right: 5px; white-space: nowrap; min-width: 190px;">
                     <span id="weightLabelTop" style="color: var(--tp-text-sub);">本查詢結果總重量：</span>
                     <span id="displayTotalWeightTop" style="color: #db2828; font-weight: bold; font-size: 1.2rem; margin: 0 5px;">{{ total_weight_sum|floatformat:3 }}</span>
                     <span style="color: var(--tp-text-sub); font-size: 0.9rem;">kg</span>
                 </div>
 
-                <div style="position: relative; flex: 1;">
-                    <button id="exportBtn" class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; width: 100%;">
+                <div style="position: relative; width: 170px;">
+                    <button id="exportBtn" class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; width: 100%; white-space: nowrap !important;">
                         <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 
                         <span id="btnExportText">匯出報表</span>
                         <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
@@ -242,12 +241,12 @@
                     </div>
                 </div>
 
-                <button class="btn-print-custom" onclick="printSelectedReport()">
+                <button class="btn-print-custom" onclick="printSelectedReport()" style="width: 155px; white-space: nowrap !important;">
                     <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span>
                     <span id="btnPrintText">直接列印</span>
                 </button>
 
-                <button type="button" id="btnBatchDelete" class="ts-button is-warning" style="height: 38px !important; border-radius: 4px !important; font-weight: bold; padding: 0 15px !important; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="openBatchDelete()">
+                <button type="button" id="btnBatchDelete" class="ts-button is-warning" style="width: 150px; height: 38px !important; border-radius: 4px !important; font-weight: bold; padding: 0 15px !important; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; white-space: nowrap !important;" onclick="openBatchDelete()">
                     <span class="ts-icon is-rotate-left-icon" style="margin-right: 6px;"></span> 
                     <span id="btnBatchDeleteText">取消載運</span>
                 </button>
@@ -506,7 +505,6 @@
         }
     }
 
-    // 🌟 核心防呆跳頁邏輯
     window.changePageSize = function(size) {
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.set('page_size', size); urlParams.set('page', 1);
@@ -532,7 +530,6 @@
         window.goToPage(pageNum);
     }
 
-    // 🌟 全資料匯出邏輯
     function createPrintableElement(titleText) {
         const now = new Date(); 
         const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');

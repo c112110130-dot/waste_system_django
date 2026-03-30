@@ -123,7 +123,6 @@ def settlement_view(request):
     paginator = Paginator(filtered_records, page_size)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    # 🎯 結算：打包所有過濾後的資料，供前端匯出/列印使用
     export_list = []
     for r in filtered_records:
         export_list.append({
@@ -149,7 +148,7 @@ def settlement_view(request):
         'selected_location': f_location, 'selected_dept': f_dept, 'selected_weigher': f_weigher,
         'selected_waste_type': f_waste_type, 
         'current_sort': sort_by, 'current_page_size': page_size,
-        'all_filtered_data': json.dumps(export_list), # 傳送至前端
+        'all_filtered_data': json.dumps(export_list),
     }
     return render(request, 'dashboard_extension/settlement_fragment.html', context)
 
@@ -192,7 +191,6 @@ def transportation_view(request):
     paginator = Paginator(filtered_batches, page_size) 
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
-    # 🎯 載運紀錄：打包所有過濾後的批次資料
     export_list = []
     for b in filtered_batches:
         export_list.append({
@@ -210,7 +208,7 @@ def transportation_view(request):
         'selected_agency': f_agency, 'current_page_size': page_size,
         'current_sort': sort_by,
         'total_weight_sum': round(total_weight_sum, 2), 
-        'all_filtered_data': json.dumps(export_list), # 傳送至前端
+        'all_filtered_data': json.dumps(export_list),
     }
     return render(request, 'dashboard_extension/transportation.html', context)
 
@@ -239,15 +237,13 @@ def delete_records_api(request):
 @require_POST
 @login_required
 def delete_batches_api(request):
-    global transport_batches, all_records  # 🎯 狀態回滾修復：加入 all_records
+    global transport_batches, all_records
     try:
         data = json.loads(request.body)
         batch_ids = list(map(str, data.get('ids', [])))
         
-        # 1. 找出準備要被刪除的載運單
         batches_to_delete = [b for b in transport_batches if str(b['id']) in batch_ids]
         
-        # 2. 把這些載運單裡面的單筆垃圾，狀態改回未載運
         for batch in batches_to_delete:
             for item in batch.get('items', []):
                 for r in all_records:
@@ -256,7 +252,6 @@ def delete_batches_api(request):
                         r['update_time'] = datetime.now()
                         break
         
-        # 3. 刪除車輛
         before_len = len(transport_batches)
         transport_batches = [b for b in transport_batches if str(b['id']) not in batch_ids]
         return JsonResponse({'status': 'success', 'deleted_count': before_len - len(transport_batches)})
@@ -332,7 +327,7 @@ def settlement_process_view(request):
     return redirect('dashboard:settlement_view')
 
 # =========================================================
-# 6. 定點機構管理 (畫面與 APIs) ... 省略不變的區塊以節省空間 ...
+# 6. 定點機構管理 (畫面與 APIs)
 # =========================================================
 @login_required
 def location_management_view(request):
@@ -427,3 +422,124 @@ def qrcode_print_view(request):
         current_user = '測試人員'
     context = { 'departments': departments_list, 'waste_types': waste_types_list, 'current_user': current_user }
     return render(request, 'dashboard_extension/qrcode_print.html', context)
+
+
+# =========================================================
+# 8. 警報紀錄管理 (Alert Record)
+# =========================================================
+alert_records = []
+
+def generate_alert_data():
+    global alert_records
+    if alert_records: return
+    random.seed(88) 
+    alert_records = []
+    
+    alert_types_mapping = {
+        '超重': '重量異常',
+        '重量不足': '重量異常',
+        '資料傳輸失敗': '設備異常',
+        '通訊異常': '設備異常'
+    }
+    
+    for i in range(80): 
+        hours_ago = random.randint(1, 720) 
+        create_time = datetime.now() - timedelta(hours=hours_ago)
+        alert_name = random.choice(list(alert_types_mapping.keys()))
+        alert_type = alert_types_mapping[alert_name]
+        
+        if alert_name == '資料傳輸失敗' or alert_name == '超重': severity = 'High'
+        else: severity = 'Medium'
+            
+        fake_alert = {
+            'id': i + 1,
+            'create_time': create_time,
+            'weigher': weighers_list[random.randint(0, 3)],
+            'alert_name': alert_name,
+            'alert_type': alert_type,
+            'severity': severity
+        }
+        alert_records.append(fake_alert)
+
+@login_required
+def alert_record_view(request):
+    if not alert_records: generate_alert_data()
+    
+    f_start_date = request.GET.get('start_date', '')
+    f_end_date = request.GET.get('end_date', '')
+    f_alert_name = request.GET.get('alert_name', '')
+    f_alert_type = request.GET.get('alert_type', '')
+    f_weigher = request.GET.get('weigher', '')
+    sort_by = request.GET.get('sort_by', 'newest')
+
+    filtered_alerts = []
+    for r in alert_records:
+        match = True
+        if f_start_date:
+            try:
+                if r['create_time'] < datetime.strptime(f_start_date, '%Y-%m-%d'): match = False
+            except: pass
+        if f_end_date:
+            try:
+                if r['create_time'] >= datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1): match = False
+            except: pass
+            
+        if f_alert_name and r['alert_name'] != f_alert_name: match = False
+        if f_alert_type and r['alert_type'] != f_alert_type: match = False
+        if f_weigher and str(r['weigher']['id']) != str(f_weigher): match = False
+        
+        if match: filtered_alerts.append(r)
+
+    if sort_by == 'newest': 
+        filtered_alerts.sort(key=lambda x: x['create_time'], reverse=True)
+    elif sort_by == 'oldest': 
+        filtered_alerts.sort(key=lambda x: x['create_time'], reverse=False)
+    elif sort_by == 'severity_desc': 
+        filtered_alerts.sort(key=lambda x: 0 if x['severity'] == 'High' else 1)
+    elif sort_by == 'severity_asc': 
+        filtered_alerts.sort(key=lambda x: 1 if x['severity'] == 'High' else 0)
+
+    try: 
+        page_size = int(request.GET.get('page_size', '10'))
+    except ValueError: 
+        page_size = 10
+    
+    paginator = Paginator(filtered_alerts, page_size)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # 🌟 重點：打包過濾後的全部資料供前端匯出使用
+    export_list = []
+    for a in filtered_alerts:
+        export_list.append({
+            'create_time': a['create_time'].strftime("%Y-%m-%d %H:%M") if a.get('create_time') else '-',
+            'weigher': a.get('weigher', {}).get('name', '-'),
+            'alert_name': a.get('alert_name', '重量異常'),
+            'alert_type': a.get('alert_type', '設備異常'),
+            'severity': a.get('severity', 'Medium')
+        })
+
+    context = {
+        'page_obj': page_obj,
+        'weighers': weighers_list, 
+        'start_date': f_start_date, 'end_date': f_end_date,
+        'selected_alert_name': f_alert_name,
+        'selected_alert_type': f_alert_type,
+        'selected_weigher': f_weigher,
+        'current_sort': sort_by, 
+        'current_page_size': page_size,
+        'all_filtered_data': json.dumps(export_list), # 傳送至前端
+    }
+    return render(request, 'dashboard_extension/alert_record.html', context)
+
+@require_POST
+@login_required
+def api_delete_alert_records(request):
+    global alert_records 
+    try:
+        data = json.loads(request.body)
+        record_ids = list(map(str, data.get('ids', [])))
+        before_len = len(alert_records)
+        alert_records = [r for r in alert_records if str(r['id']) not in record_ids]
+        return JsonResponse({'status': 'success', 'deleted_count': before_len - len(alert_records)})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
