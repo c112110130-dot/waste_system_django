@@ -3,7 +3,7 @@
 {% block title %}醫療廢棄物暨資源管理系統 - 行動裝置{% endblock %}
 {% load humanize %}
 {% block stylesheet %}
-    <link rel="stylesheet" href="{% static 'css/dashboard_extension/mobile_style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/management/mobile_style.css' %}">
 {% endblock %}
 {% block content %}
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -177,5 +177,5 @@
     modal.style.display = show ? 'flex' : 'none';
     }
 </script>
-<script type="module" src="{% static 'js/dashboard_extension/station-mobile-utils.js' %}"></script>
+<script type="module" src="{% static 'js/management/station-mobile-utils.js' %}"></script>
 {% endblock %}
