@@ -11,6 +11,10 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
     /* ========================================= */
     /* 1. 變數設定                                */
@@ -37,7 +41,7 @@
     }
 
     /* ========================================= */
-    /* 2. 嚴格隔離樣式 (Scoped CSS)              */
+    /* 2. 嚴格隔離樣式與儀表板卡片               */
     /* ========================================= */
     .transport-page .ts-select, 
     .transport-page .ts-input input, 
@@ -48,7 +52,6 @@
         font-size: 1rem !important; display: block;
     }
 
-    /* 🎯 只有搜尋區塊的輸入框需要 100% 填滿 */
     .control-panel .ts-select, .control-panel .ts-input input, .control-panel .flatpickr-input {
         width: 100% !important;
     }
@@ -62,6 +65,7 @@
         border-radius: 4px !important; padding: 0 15px !important;
         display: inline-flex !important; align-items: center !important; justify-content: center !important;
         cursor: pointer; font-size: 0.95rem !important; font-weight: bold; transition: background-color 0.2s;
+        white-space: nowrap !important;
     }
     .btn-print-custom:hover { background-color: var(--tp-hover) !important; }
 
@@ -77,6 +81,22 @@
     .transport-page .data-panel { padding: 0; border-left: 4px solid #2185d0; min-height: 400px; }
     .transport-page label { color: var(--tp-text-sub); margin-bottom: 6px; display: block; font-weight: bold; font-size: 0.95rem; }
 
+    /* 🌟 新增：統計卡片 CSS */
+    .stat-card {
+        background: var(--tp-bg-panel); border: 1px solid var(--tp-border);
+        border-radius: 8px; padding: 20px; display: flex; align-items: center; gap: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    .stat-icon { 
+        width: 60px; height: 60px; border-radius: 12px; display: flex; 
+        justify-content: center; align-items: center; font-size: 1.8rem; flex-shrink: 0;
+    }
+    .stat-info { flex: 1; overflow: hidden; }
+    .stat-title { color: var(--tp-text-sub); font-size: 0.95rem; font-weight: bold; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-value { color: var(--tp-text-main); font-size: 1.8rem; font-weight: 900; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     .transport-page .ts-table { background: transparent !important; color: var(--tp-text-main) !important; }
     .transport-page .ts-table thead th { background-color: var(--tp-bg-panel) !important; border-bottom: 1px solid var(--tp-border) !important; color: var(--tp-text-main) !important; font-size: 0.95rem; }
     .transport-page .ts-table tbody td { border-bottom: 1px solid var(--tp-border) !important; vertical-align: middle !important; font-size: 0.95rem; }
@@ -90,20 +110,12 @@
     .sub-table th, .sub-table td { padding: 8px; border-bottom: 1px solid var(--tp-border); color: var(--tp-text-main); }
 
     /* ========================================= */
-    /* 🟢 3. RWD 全面響應式適應 (全新升級)       */
+    /* 🟢 3. RWD 全面響應式適應                 */
     /* ========================================= */
-    .rwd-toolbar {
-        display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;
-    }
-    .rwd-group {
-        display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-    }
-    .rwd-group-divider {
-        width: 1px; height: 20px; background: var(--tp-border); margin: 0 5px;
-    }
-    .page-size-wrap {
-        display: inline-flex !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important;
-    }
+    .rwd-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
+    .rwd-group { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .rwd-group-divider { width: 1px; height: 20px; background: var(--tp-border); margin: 0 5px; }
+    .page-size-wrap { display: inline-flex !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important; }
 
     @media (max-width: 991px) {
         .rwd-toolbar { flex-direction: column; align-items: stretch; gap: 15px; }
@@ -112,11 +124,10 @@
         .rwd-group .ts-button, .rwd-group .btn-print-custom { width: 100%; justify-content: center; }
         .sort-select { flex: 1; min-width: 0; }
         .rwd-group-divider { display: none; }
+        .stat-card-container > .column { width: 100% !important; margin-bottom: 15px; }
     }
 
-    /* 隱藏跳頁輸入框的原生上下箭頭 */
-    .page-jump-input::-webkit-outer-spin-button,
-    .page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .page-jump-input::-webkit-outer-spin-button, .page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .page-jump-input[type=number] { -moz-appearance: textfield; }
 
     /* ========================================= */
@@ -126,20 +137,27 @@
         nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
         .ts-topbar, .topbar, .navbar, .sidebar, [class*="topbar"], [class*="navbar"], [class*="header"], 
         .user-greeting, #greeting, .control-panel, .ts-pagination, .dashboard-panel:not(.data-panel),
-        .data-panel > .ts-content.is-secondary, .top-pagination-bar, .bottom-pagination-bar { display: none !important; }
+        .data-panel > .ts-content.is-secondary, .top-pagination-bar, .bottom-pagination-bar,
+        .stat-card-container { display: none !important; } /* 列印時隱藏卡片 */
 
         @page { size: A4 landscape; margin: 15mm; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
         body, html { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; }
         .ts-container, .ts-content, .data-panel, .dashboard-panel { padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; background: transparent !important; }
+        .ts-table { background-color: white !important; }
+        .ts-table th, .ts-table td, .ts-table tr { background-color: white !important; background: white !important; color: black !important; }
+        .ts-table.is-striped tbody tr:nth-child(even) td, .ts-table.is-striped tbody tr:nth-child(even) th,
+        .ts-table.is-striped tbody tr:nth-child(odd) td, .ts-table.is-striped tbody tr:nth-child(odd) th { background-color: white !important; background: white !important; }
+        
         .ts-table th.collapsing, .ts-table td.collapsing, .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
         .no-print-row { display: none !important; }
         .print-header-title { display: block !important; text-align: center; font-size: 1.8rem; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: black !important; }
         .ts-table { width: 100% !important; border-collapse: collapse !important; border: none !important; table-layout: auto !important; }
         .ts-table thead { display: table-header-group; } 
         .ts-table tr { page-break-inside: avoid; } 
-        .ts-table th { background-color: transparent !important; color: black !important; border: none !important; border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 11pt !important; padding: 10px 6px !important; }
-        .ts-table td { color: black !important; border: none !important; border-bottom: 1px solid #e0e0e0 !important; font-size: 10pt !important; padding: 8px 6px !important; }
+        .ts-table th { border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 11pt !important; padding: 10px 6px !important; }
+        .ts-table td { border-bottom: 1px solid #e0e0e0 !important; font-size: 10pt !important; padding: 8px 6px !important; }
         .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; }
     }
     .print-header-title, .print-summary-box { display: none; } 
@@ -195,6 +213,53 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <div class="ts-grid is-relaxed is-4-columns stat-card-container" style="margin-bottom: 25px;">
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(33, 133, 208, 0.1); color: #2185d0;">
+                    <span class="ts-icon is-truck-fast-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">總載運趟數</div>
+                    <div class="stat-value" id="cardTotalBatches">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(242, 113, 28, 0.1); color: #f2711c;">
+                    <span class="ts-icon is-weight-scale-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">載運總重量 (kg)</div>
+                    <div class="stat-value" id="cardTotalWeight">0.000</div>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(0, 181, 173, 0.1); color: #00b5ad;">
+                    <span class="ts-icon is-scale-balanced-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">單趟平均重量 (kg)</div>
+                    <div class="stat-value" id="cardAvgWeight">0.000</div>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(163, 51, 200, 0.1); color: #a333c8;">
+                    <span class="ts-icon is-industry-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">配合處理廠數</div>
+                    <div class="stat-value" id="cardAgencies">0</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="dashboard-panel data-panel">
@@ -448,7 +513,7 @@
 {% endfor %}
 
 <script>
-    // 🌟 引入全資料以供匯出使用
+    // 🌟 引入全資料
     const allFilteredData = JSON.parse('{{ all_filtered_data|escapejs }}' || '[]');
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -457,7 +522,37 @@
         
         syncDropdownWidth();
         window.addEventListener('resize', syncDropdownWidth);
+        
+        // 🌟 初始化並更新儀表板數字
+        updateStatCards();
     });
+
+    // 🌟 計算並更新儀表板的邏輯
+    function updateStatCards() {
+        let totalBatches = allFilteredData.length;
+        let totalWeight = 0;
+        let agencies = new Set();
+
+        allFilteredData.forEach(item => {
+            let w = parseFloat(item.total_weight) || 0;
+            totalWeight += w;
+            if(item.process_agency) agencies.add(item.process_agency);
+        });
+
+        let avgWeight = totalBatches > 0 ? (totalWeight / totalBatches) : 0;
+        let uniqueAgenciesCount = agencies.size;
+
+        animateValue("cardTotalBatches", totalBatches, 0);
+        animateValue("cardTotalWeight", totalWeight, 3);
+        animateValue("cardAvgWeight", avgWeight, 3);
+        animateValue("cardAgencies", uniqueAgenciesCount, 0);
+    }
+
+    function animateValue(id, end, decimals) {
+        let obj = document.getElementById(id);
+        if(!obj) return;
+        obj.innerText = end.toFixed(decimals);
+    }
 
     window.submitWithSort = function(val) { document.getElementById('hiddenSortInput').value = val; document.getElementById('searchForm').submit(); }
     window.toggleAll = function(src) { document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); updateUI(); }
@@ -731,7 +826,7 @@
             tbody.innerHTML = allHTML;
             document.getElementById('printTotalWeight').innerText = printWeight.toFixed(3);
             
-            const paginations = document.querySelectorAll('.ts-pagination, .top-pagination-bar, .bottom-pagination-bar');
+            const paginations = document.querySelectorAll('.ts-pagination, .top-pagination-bar, .bottom-pagination-bar, .stat-card-container');
             paginations.forEach(p => p.style.display = 'none');
 
             window.print();

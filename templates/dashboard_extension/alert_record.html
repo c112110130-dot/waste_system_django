@@ -58,7 +58,7 @@
     .btn-print-custom {
         height: 45px !important; background-color: transparent !important;
         border: 1px solid var(--my-border) !important; color: var(--my-text-main) !important;
-        border-radius: 6px !important; padding: 0 15px !important;
+        border-radius: 6px !important; padding: 0 20px !important;
         display: inline-flex !important; align-items: center !important; justify-content: center !important;
         cursor: pointer; font-size: 1rem !important; font-weight: bold; transition: background-color 0.2s;
         /* 🌟 強制不換行 */
@@ -67,9 +67,25 @@
     .btn-print-custom:hover { background-color: var(--my-hover) !important; }
     
     .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 5px; margin-bottom: 25px; }
-    .control-panel { padding: 30px; }
+    .control-panel { padding: 30px; margin-bottom: 20px; }
     .data-panel { padding: 0; border-left: 4px solid #db2828; min-height: 400px; }
     label { color: var(--my-text-sub); font-size: 1rem; margin-bottom: 8px; display: block; font-weight: 500; }
+
+    /* 🌟 新增：統計卡片 CSS */
+    .stat-card {
+        background: var(--my-bg-panel); border: 1px solid var(--my-border);
+        border-radius: 8px; padding: 20px; display: flex; align-items: center; gap: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    .stat-icon { 
+        width: 60px; height: 60px; border-radius: 12px; display: flex; 
+        justify-content: center; align-items: center; font-size: 1.8rem; flex-shrink: 0;
+    }
+    .stat-info { flex: 1; overflow: hidden; }
+    .stat-title { color: var(--my-text-sub); font-size: 0.95rem; font-weight: bold; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-value { color: var(--my-text-main); font-size: 1.8rem; font-weight: 900; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .ts-table { background: transparent !important; color: var(--my-text-main) !important; }
     .ts-table thead th { background-color: var(--my-bg-panel) !important; color: var(--my-text-main) !important; border-bottom: 1px solid var(--my-border) !important; }
@@ -114,6 +130,7 @@
         .rwd-group .ts-button, .rwd-group .btn-print-custom { width: 100%; justify-content: center; }
         .sort-select { flex: 1; min-width: 0; }
         .rwd-group-divider { display: none; }
+        .stat-card-container > .column { width: 100% !important; margin-bottom: 15px; }
     }
 
     .page-jump-input::-webkit-outer-spin-button, .page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -126,9 +143,10 @@
         nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, 
         .ts-topbar, .topbar, .navbar, .sidebar, [class*="topbar"], [class*="navbar"], [class*="header"], 
         .user-greeting, #greeting, .control-panel, .ts-pagination, .dashboard-panel:not(.data-panel),
-        .data-panel > .ts-content.is-secondary, .top-pagination-bar, .bottom-pagination-bar { display: none !important; }
+        .data-panel > .ts-content.is-secondary, .top-pagination-bar, .bottom-pagination-bar,
+        .stat-card-container { display: none !important; }
 
-        @page { size: A4 landscape; margin: 15mm; }
+        @page { size: A4 portrait; margin: 15mm; }
 
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
@@ -145,8 +163,9 @@
         .ts-table, .ts-table th, .ts-table td { width: auto !important; min-width: 0 !important; max-width: none !important; white-space: normal !important; word-break: break-all !important; }
         .truncate-text { white-space: normal; overflow: visible; text-overflow: clip; }
 
+        /* 🌟 隱藏圓形燈號，顯示實體文字 */
         .severity-light { display: none !important; }
-        .print-only-text { display: inline-block !important; font-weight: bold; font-size: 14px; }
+        .print-only-text { display: inline-block !important; font-weight: bold; font-size: 11pt; }
 
         .print-header-title { display: block !important; text-align: center; font-size: 1.8rem; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: black !important; border-bottom: 2px solid black; padding-bottom: 10px; }
         .ts-table { width: 100% !important; border-collapse: collapse !important; border: none !important; table-layout: auto !important; }
@@ -228,6 +247,53 @@
         </form>
     </div>
 
+    <div class="ts-grid is-relaxed is-4-columns stat-card-container" style="margin-bottom: 25px;">
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(33, 133, 208, 0.1); color: #2185d0;">
+                    <span class="ts-icon is-bell-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">總警報觸發數</div>
+                    <div class="stat-value" id="cardTotalAlerts">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(219, 40, 40, 0.1); color: #db2828;">
+                    <span class="ts-icon is-triangle-exclamation-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">嚴重警報數</div>
+                    <div class="stat-value" id="cardSevereAlerts" style="color: #db2828;">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(251, 189, 8, 0.1); color: #fbbd08;">
+                    <span class="ts-icon is-circle-exclamation-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">警告警報數</div>
+                    <div class="stat-value" id="cardWarningAlerts" style="color: #fbbd08;">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(163, 51, 200, 0.1); color: #a333c8;">
+                    <span class="ts-icon is-server-icon"></span>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-title">設備異常筆數</div>
+                    <div class="stat-value" id="cardEquipAlerts">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="dashboard-panel data-panel">
         
         <div class="ts-content is-secondary is-fitted rwd-toolbar" style="padding: 15px 25px; border-bottom: 1px solid var(--my-border); background-color: var(--my-bg-panel); border-radius: 5px 5px 0 0;">
@@ -271,8 +337,8 @@
                     <span id="btnPrintText">直接列印</span>
                 </button>
 
-                <button type="button" id="btnBatchDelete" class="ts-button is-negative" onclick="openBatchDelete()" style="width: 125px; white-space: nowrap !important;">
-                    <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> <span id="btnBatchDeleteText">刪除</span>
+                <button type="button" id="btnBatchDelete" class="ts-button is-negative" onclick="openBatchDelete()" style="width: 110px; white-space: nowrap !important;">
+                    <span class="ts-icon is-trash-can-icon"></span> <span id="btnBatchDeleteText">刪除</span>
                 </button>
             </div>
         </div>
@@ -437,7 +503,44 @@
 
         syncDropdownWidth();
         window.addEventListener('resize', syncDropdownWidth);
+        
+        // 🌟 初始化更新統計儀表板卡片
+        updateStatCards();
     });
+
+    // 🌟 計算並更新警報儀表板數字的邏輯
+    function updateStatCards() {
+        let totalAlerts = allFilteredData.length;
+        let severeAlerts = 0;
+        let equipAlerts = 0;
+
+        allFilteredData.forEach(item => {
+            let isSevere = item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'));
+            if (isSevere) severeAlerts++;
+            if (item.alert_type === '設備異常') equipAlerts++;
+        });
+
+        let warningAlerts = totalAlerts - severeAlerts;
+
+        animateValue("cardTotalAlerts", totalAlerts, 0);
+        animateValue("cardSevereAlerts", severeAlerts, 0);
+        animateValue("cardWarningAlerts", warningAlerts, 0);
+        animateValue("cardEquipAlerts", equipAlerts, 0);
+    }
+
+    function animateValue(id, end, decimals) {
+        let obj = document.getElementById(id);
+        if(!obj) return;
+        obj.innerText = end.toFixed(decimals);
+    }
+
+    window.submitWithSort = function(sortValue) {
+        document.getElementById('hiddenSortInput').value = sortValue;
+        document.getElementById('searchForm').submit();
+    }
+
+    window.pendingDeleteIds = null;
+    window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
 
     function syncDropdownWidth() {
         const btn = document.getElementById('exportBtn');
@@ -449,14 +552,6 @@
             menu.style.boxSizing = 'border-box';
         }
     }
-
-    window.submitWithSort = function(sortValue) {
-        document.getElementById('hiddenSortInput').value = sortValue;
-        document.getElementById('searchForm').submit();
-    }
-
-    window.pendingDeleteIds = null;
-    window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
 
     window.updateUI = function(){
         const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
@@ -679,7 +774,7 @@
             filename:     `警報紀錄報表_${dateStr}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true }, 
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }, 
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }, 
             pagebreak:    { mode: ['css', 'legacy'], avoid: 'tr' } 
         };
 
@@ -784,7 +879,6 @@
             paginations.forEach(p => p.style.display = '');
 
         } else if (allFilteredData && allFilteredData.length > 0) {
-            // 如果後端有給全部資料，執行跨頁完美替換列印
             const tbody = document.querySelector('#dataTable tbody');
             const originalHTML = tbody.innerHTML; 
             
@@ -821,7 +915,6 @@
             paginations.forEach(p => p.style.display = '');
 
         } else {
-            // 🚨 終極防呆：如果後端沒有傳資料過來，就直接拿當前畫面印！
             const rows = document.querySelectorAll('#dataTable tbody tr');
             printCount = 0;
             
