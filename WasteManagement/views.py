@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import Counter
 
 from django.contrib import messages
@@ -1716,7 +1716,7 @@ def visualize_department_index(request):
 
 
 def visualize_department_config(request):
-    """Department visualization configuration API - provides waste types and department lists"""
+    """Department visualization configuration API - provides waste types, data sources, and time units"""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'error': '只支援GET請求'})
     
@@ -1741,14 +1741,44 @@ def visualize_department_config(request):
                 'display_order': dept.display_order
             })
         
-        # Y-axis options with unit mapping
+        # ========== 新增：資料來源選項 ==========
+        data_source_options = [
+            {'value': 'management_and_weighing', 'label': '部門廢棄物產出(管理+過磅)'},
+            {'value': 'management_only', 'label': '部門廢棄物產出(管理)'},
+            {'value': 'weighing_only', 'label': '部門廢棄物產出(過磅)'},
+            {'value': 'transport', 'label': '廢棄物載運量'}
+        ]
+        
+        # ========== 新增：計量單位選項 ==========
+        unit_options = [
+            {'value': 'metric_ton', 'label': '公噸'},
+            {'value': 'kilogram', 'label': '公斤'}
+        ]
+        
+        # ========== 新增：時間單位選項（年/季度/月份 + 總和/平均） ==========
+        time_unit_options = [
+            {'value': 'year_sum', 'label': '年份 - 總和'},
+            {'value': 'year_avg', 'label': '年份 - 平均'},
+            {'value': 'quarter_sum', 'label': '季度 - 總和'},
+            {'value': 'quarter_avg', 'label': '季度 - 平均'},
+            {'value': 'month_sum', 'label': '月份 - 總和'},
+            {'value': 'month_avg', 'label': '月份 - 平均'}
+        ]
+        
+        # ========== 新增：顯示方法選項 ==========
+        display_method_options = [
+            {'value': 'priority', 'label': '優先度'},
+            {'value': 'merge', 'label': '合併'}
+        ]
+        
+        # Y-axis options with unit mapping (保留用於向後相容)
         y_axis_options = [
             {'value': 'metric_ton', 'label': '以重量劃分 - 公噸'},
             {'value': 'kilogram', 'label': '以重量劃分 - 公斤'},
             {'value': 'gram', 'label': '以重量劃分 - 克'}
         ]
         
-        # X-axis time options
+        # X-axis time options (保留用於向後相容)
         x_axis_options = [
             {'value': 'year_sum', 'label': '以年份劃分 - 總和'},
             {'value': 'year_avg', 'label': '以年份劃分 - 平均'},
@@ -1757,7 +1787,7 @@ def visualize_department_config(request):
             {'value': 'month', 'label': '以月份劃分'}
         ]
         
-        # Ranking options
+        # Ranking options (保留用於向後相容)
         ranking_options = [
             {'value': 'most', 'label': '最多'},
             {'value': 'least', 'label': '最少'}
@@ -1767,6 +1797,12 @@ def visualize_department_config(request):
             'success': True,
             'waste_types': waste_types,
             'departments': departments,
+            # 新增選項
+            'data_source_options': data_source_options,
+            'unit_options': unit_options,
+            'time_unit_options': time_unit_options,
+            'display_method_options': display_method_options,
+            # 保留選項（向後相容）
             'y_axis_options': y_axis_options,
             'x_axis_options': x_axis_options,
             'ranking_options': ranking_options
@@ -1778,25 +1814,57 @@ def visualize_department_config(request):
 
 
 def visualize_department_data(request):
-    """Department waste visualization data API - returns department ranking data by waste type"""
+    """
+    Department waste visualization data API - returns department ranking data with multi-source support
+    
+    支援的資料來源：
+    - management_and_weighing: WasteRecord + WasteRecord_new (管理+過磅)
+    - management_only: WasteRecord (管理)
+    - weighing_only: WasteRecord_new (過磅)
+    - transport: TransportRecord (載運)
+    
+    時間聚合：年/季度/月份，總和/平均
+    顯示方法：優先度（按順序）/ 合併（按總和排序）
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': '只支援POST請求'})
     
     try:
-        from django.db.models import Sum, Avg
-        from .models import WasteRecord, WasteType, Department
+        from django.db.models import Sum, Avg, Q, F
+        from django.utils import timezone
+        from datetime import datetime
+        from .models import WasteRecord, WasteRecord_New, TransportRecord, WasteType, Department
         
         data = json.loads(request.body)
         
-        # Parameter validation
-        required_fields = ['y_axis', 'x_axis', 'display_type', 'datasets']
-        for field in required_fields:
-            if field not in data:
-                return JsonResponse({'success': False, 'error': f'缺少必要參數: {field}'})
+        # 支援新舊參數格式
+        # 新格式：data_source, unit, time_unit, display_method
+        # 舊格式：y_axis, x_axis, display_type
         
-        y_axis = data['y_axis']
-        x_axis = data['x_axis']
-        display_type = data['display_type']
+        # 如果使用舊格式，自動轉換為新格式供內部使用
+        if 'data_source' not in data:
+            # 使用舊格式參數
+            y_axis = data.get('y_axis')
+            x_axis = data.get('x_axis')
+            display_type = data.get('display_type')
+            
+            # 轉換為新格式
+            data_source = 'management_only'  # 預設使用舊的管理資料來源
+            unit = y_axis or 'metric_ton'
+            time_unit = x_axis or 'year_sum'
+            display_method = 'priority' if display_type == 'separate' else 'merge'
+        else:
+            # 使用新格式參數
+            data_source = data.get('data_source', 'management_only')
+            unit = data.get('unit', 'metric_ton')
+            time_unit = data.get('time_unit', 'year_sum')
+            display_method = data.get('display_method', 'priority')
+            
+            # 轉換為舊格式以相容現有前端邏輯
+            y_axis = unit
+            x_axis = time_unit
+            display_type = 'separate' if display_method == 'priority' else 'combine'
+        
         datasets = data['datasets']
         title = data.get('title', '部門廢棄物分析')
         show_values = data.get('show_values', False)
@@ -1804,15 +1872,290 @@ def visualize_department_data(request):
         if not datasets:
             return JsonResponse({'success': False, 'error': '至少需要一個資料集'})
         
-        # Process each dataset (department ranking by waste type)
+        # ========== 核心查詢函數：根據資料來源和時間單位查詢數據 ==========
+        def query_waste_data(data_source, waste_type_id, start_date, end_date, time_unit):
+            """
+            根據指定的資料來源查詢廢棄物數據
+            
+            Args:
+                data_source: 'management_and_weighing', 'management_only', 'weighing_only', 'transport'
+                waste_type_id: 廢棄物類型ID
+                start_date: 開始日期 (YYYY or YYYY-MM)
+                end_date: 結束日期 (YYYY or YYYY-MM)
+                time_unit: 時間單位 ('year_sum', 'year_avg', 'quarter_sum', 'quarter_avg', 'month_sum', 'month_avg')
+            
+            Returns:
+                List of dicts with department_id, department_name, total_amount
+            """
+            results = {}  # {dept_id: {dept_name: '', amount: 0}}
+            
+            # ===== 年份時間單位 =====
+            if time_unit.startswith('year'):
+                start_year = int(start_date.split('-')[0] if '-' in start_date else start_date)
+                end_year = int(end_date.split('-')[0] if '-' in end_date else end_date)
+                
+                is_average = time_unit.endswith('_avg')
+                num_years = end_year - start_year + 1
+                
+                # 管理資料 (WasteRecord)
+                if data_source in ['management_only', 'management_and_weighing']:
+                    query = WasteRecord.objects.filter(
+                        waste_type_id=waste_type_id,
+                        date__gte=f'{start_year}-01',
+                        date__lte=f'{end_year}-12'
+                    ).values('department_id', 'department__name').annotate(
+                        total=Sum('amount')
+                    )
+                    
+                    for item in query:
+                        dept_id = item['department_id']
+                        if dept_id not in results:
+                            results[dept_id] = {
+                                'name': item['department__name'],
+                                'total': 0,
+                                'count': 0
+                            }
+                        results[dept_id]['total'] += item['total'] or 0
+                        results[dept_id]['count'] += 1
+                
+                # 過磅資料 (WasteRecord_New) - 固定單位為公斤
+                if data_source in ['weighing_only', 'management_and_weighing']:
+                    query = WasteRecord_New.objects.filter(
+                        waste_type_id=waste_type_id,
+                        create_time__year__gte=start_year,
+                        create_time__year__lte=end_year
+                    ).values('department_id', 'department__name').annotate(
+                        total=Sum('weight')
+                    )
+                    
+                    for item in query:
+                        dept_id = item['department_id']
+                        if dept_id not in results:
+                            results[dept_id] = {
+                                'name': item['department__name'],
+                                'total': 0,
+                                'count': 0
+                            }
+                        results[dept_id]['total'] += float(item['total'] or 0)
+                        results[dept_id]['count'] += 1
+                
+                # 載運資料 (TransportRecord) - 固定單位為公斤
+                if data_source == 'transport':
+                    query = TransportRecord.objects.filter(
+                        settle_time__year__gte=start_year,
+                        settle_time__year__lte=end_year
+                    ).prefetch_related('wasterecord_new_set').all()
+                    
+                    for record in query:
+                        for waste_item in record.wasterecord_new_set.filter(waste_type_id=waste_type_id):
+                            dept_id = waste_item.department_id
+                            if dept_id not in results:
+                                results[dept_id] = {
+                                    'name': waste_item.department.name,
+                                    'total': 0,
+                                    'count': 0
+                                }
+                            results[dept_id]['total'] += float(waste_item.weight or 0)
+                            results[dept_id]['count'] += 1
+                
+                # 計算平均值（如果需要）
+                if is_average:
+                    for dept_id in results:
+                        if results[dept_id]['count'] > 0:
+                            results[dept_id]['total'] = results[dept_id]['total'] / num_years
+            
+            # ===== 季度時間單位 =====
+            elif time_unit.startswith('quarter'):
+                start_year = int(start_date.split('-')[0] if '-' in start_date else start_date)
+                end_year = int(end_date.split('-')[0] if '-' in end_date else end_date)
+                
+                is_average = time_unit.endswith('_avg')
+                
+                # 計算季度數量
+                quarters = 0
+                for year in range(start_year, end_year + 1):
+                    if year == start_year and year == end_year:
+                        quarters += 1
+                    else:
+                        quarters += 4
+                
+                # 管理資料 (WasteRecord)
+                if data_source in ['management_only', 'management_and_weighing']:
+                    query = WasteRecord.objects.filter(
+                        waste_type_id=waste_type_id,
+                        date__gte=f'{start_year}-01',
+                        date__lte=f'{end_year}-12'
+                    ).values('department_id', 'department__name').annotate(
+                        total=Sum('amount')
+                    )
+                    
+                    for item in query:
+                        dept_id = item['department_id']
+                        if dept_id not in results:
+                            results[dept_id] = {
+                                'name': item['department__name'],
+                                'total': 0,
+                                'count': 0
+                            }
+                        results[dept_id]['total'] += item['total'] or 0
+                        results[dept_id]['count'] += 1
+                
+                # 過磅資料 (WasteRecord_New)
+                if data_source in ['weighing_only', 'management_and_weighing']:
+                    query = WasteRecord_New.objects.filter(
+                        waste_type_id=waste_type_id,
+                        create_time__year__gte=start_year,
+                        create_time__year__lte=end_year
+                    ).values('department_id', 'department__name').annotate(
+                        total=Sum('weight')
+                    )
+                    
+                    for item in query:
+                        dept_id = item['department_id']
+                        if dept_id not in results:
+                            results[dept_id] = {
+                                'name': item['department__name'],
+                                'total': 0,
+                                'count': 0
+                            }
+                        results[dept_id]['total'] += float(item['total'] or 0)
+                        results[dept_id]['count'] += 1
+                
+                # 載運資料
+                if data_source == 'transport':
+                    query = TransportRecord.objects.filter(
+                        settle_time__year__gte=start_year,
+                        settle_time__year__lte=end_year
+                    ).prefetch_related('wasterecord_new_set').all()
+                    
+                    for record in query:
+                        for waste_item in record.wasterecord_new_set.filter(waste_type_id=waste_type_id):
+                            dept_id = waste_item.department_id
+                            if dept_id not in results:
+                                results[dept_id] = {
+                                    'name': waste_item.department.name,
+                                    'total': 0,
+                                    'count': 0
+                                }
+                            results[dept_id]['total'] += float(waste_item.weight or 0)
+                            results[dept_id]['count'] += 1
+                
+                # 計算平均值
+                if is_average and quarters > 0:
+                    for dept_id in results:
+                        results[dept_id]['total'] = results[dept_id]['total'] / quarters
+            
+            # ===== 月份時間單位 =====
+            elif time_unit.startswith('month'):
+                is_average = time_unit.endswith('_avg')
+                
+                # 管理資料
+                if data_source in ['management_only', 'management_and_weighing']:
+                    query = WasteRecord.objects.filter(
+                        waste_type_id=waste_type_id,
+                        date__gte=start_date,
+                        date__lte=end_date
+                    ).values('department_id', 'department__name').annotate(
+                        total=Sum('amount')
+                    )
+                    
+                    for item in query:
+                        dept_id = item['department_id']
+                        if dept_id not in results:
+                            results[dept_id] = {
+                                'name': item['department__name'],
+                                'total': 0,
+                                'count': 0
+                            }
+                        results[dept_id]['total'] += item['total'] or 0
+                        results[dept_id]['count'] += 1
+                
+                # 過磅資料
+                if data_source in ['weighing_only', 'management_and_weighing']:
+                    # 解析 YYYY-MM 格式
+                    start_parts = start_date.split('-')
+                    end_parts = end_date.split('-')
+                    
+                    start_dt = datetime(int(start_parts[0]), int(start_parts[1]), 1)
+                    end_dt = datetime(int(end_parts[0]), int(end_parts[1]), 1)
+                    
+                    query = WasteRecord_New.objects.filter(
+                        waste_type_id=waste_type_id,
+                        create_time__date__gte=start_dt.date(),
+                        create_time__date__lt=(end_dt.replace(day=28) + timedelta(days=4)).replace(day=1)
+                    ).values('department_id', 'department__name').annotate(
+                        total=Sum('weight')
+                    )
+                    
+                    for item in query:
+                        dept_id = item['department_id']
+                        if dept_id not in results:
+                            results[dept_id] = {
+                                'name': item['department__name'],
+                                'total': 0,
+                                'count': 0
+                            }
+                        results[dept_id]['total'] += float(item['total'] or 0)
+                        results[dept_id]['count'] += 1
+                
+                # 載運資料
+                if data_source == 'transport':
+                    start_parts = start_date.split('-')
+                    end_parts = end_date.split('-')
+                    
+                    start_dt = datetime(int(start_parts[0]), int(start_parts[1]), 1)
+                    end_dt = datetime(int(end_parts[0]), int(end_parts[1]), 1)
+                    
+                    query = TransportRecord.objects.filter(
+                        settle_time__date__gte=start_dt.date(),
+                        settle_time__date__lt=(end_dt.replace(day=28) + timedelta(days=4)).replace(day=1)
+                    ).prefetch_related('wasterecord_new_set').all()
+                    
+                    for record in query:
+                        for waste_item in record.wasterecord_new_set.filter(waste_type_id=waste_type_id):
+                            dept_id = waste_item.department_id
+                            if dept_id not in results:
+                                results[dept_id] = {
+                                    'name': waste_item.department.name,
+                                    'total': 0,
+                                    'count': 0
+                                }
+                            results[dept_id]['total'] += float(waste_item.weight or 0)
+                            results[dept_id]['count'] += 1
+                
+                # 計算平均值
+                if is_average:
+                    # 計算月份數
+                    start_parts = start_date.split('-')
+                    end_parts = end_date.split('-')
+                    months = 1
+                    if int(start_parts[0]) == int(end_parts[0]):
+                        months = int(end_parts[1]) - int(start_parts[1]) + 1
+                    else:
+                        months = (int(end_parts[0]) - int(start_parts[0])) * 12 + (int(end_parts[1]) - int(start_parts[1])) + 1
+                    
+                    for dept_id in results:
+                        results[dept_id]['total'] = results[dept_id]['total'] / max(1, months)
+            
+            # 轉換為列表格式
+            return [
+                {
+                    'department_id': dept_id,
+                    'department_name': info['name'],
+                    'total_amount': info['total']
+                }
+                for dept_id, info in results.items()
+            ]
+        
+        # ========== 處理每個數據集 ==========
         all_series = []
-        all_labels = []  # Collect all department labels
-        department_priority = {}  # Department priority mapping
+        all_labels = []  # 所有部門標籤
+        department_priority = {}  # 部門優先級映射
         priority_counter = 0
         
         for dataset in datasets:
             try:
-                # Validate dataset parameters
+                # 驗證數據集參數
                 required_dataset_fields = ['waste_type_id', 'start_date', 'end_date', 'ranking_type', 'ranking_count', 'name', 'color']
                 for field in required_dataset_fields:
                     if field not in dataset:
@@ -1826,111 +2169,90 @@ def visualize_department_data(request):
                 series_name = dataset['name']
                 series_color = dataset['color']
                 
-                # Get waste type information
+                # 獲取廢棄物類型信息
                 try:
                     waste_type = WasteType.objects.get(id=waste_type_id, is_active=True)
                 except WasteType.DoesNotExist:
                     return JsonResponse({'success': False, 'error': f'廢棄物類型 {waste_type_id} 不存在或未啟用'})
                 
-                # Determine aggregation method based on time unit
-                if x_axis.startswith('year'):
-                    # Year aggregation
-                    start_year = start_date
-                    end_year = end_date
-                    date_filter = {
-                        'date__gte': f'{start_year}-01',
-                        'date__lte': f'{end_year}-12'
-                    }
-                    if x_axis == 'year_sum':
-                        aggregation = Sum('amount')
-                    else:  # year_avg
-                        aggregation = Avg('amount')
-                elif x_axis.startswith('quarter'):
-                    # Quarter aggregation (simplified implementation using yearly data)
-                    start_year = start_date
-                    end_year = end_date
-                    date_filter = {
-                        'date__gte': f'{start_year}-01',
-                        'date__lte': f'{end_year}-12'
-                    }
-                    if x_axis == 'quarter_sum':
-                        aggregation = Sum('amount')
-                    else:  # quarter_avg
-                        aggregation = Avg('amount')
-                else:  # month
-                    date_filter = {
-                        'date__gte': start_date + '-01',
-                        'date__lte': end_date + '-01'
-                    }
-                    aggregation = Sum('amount')
+                # 查詢廢棄物數據
+                department_stats = query_waste_data(data_source, waste_type_id, start_date, end_date, time_unit)
                 
-                # Query department statistics
-                department_stats = WasteRecord.objects.filter(
-                    waste_type_id=waste_type_id,
-                    **date_filter
-                ).values('department__id', 'department__name').annotate(
-                    total_amount=aggregation
-                ).filter(total_amount__isnull=False)
-                
-                # Sort and limit departments based on ranking_count
+                # 排序部門
                 if ranking_type == 'most':
-                    department_stats = department_stats.order_by('-total_amount')
+                    department_stats = sorted(department_stats, key=lambda x: x['total_amount'], reverse=True)
                 else:  # least
-                    department_stats = department_stats.order_by('total_amount')
-
-                # Limit results to ranking_count (top/bottom N items)
-                # This ensures only the specified number of departments are displayed
+                    department_stats = sorted(department_stats, key=lambda x: x['total_amount'])
+                
+                # 限制結果數量
                 department_stats = department_stats[:ranking_count]
                 
-                # Process unit conversion
+                # 處理單位轉換
                 series_data = []
-                department_labels = []  # Full department names (no truncation)
-
+                department_labels = []
+                
                 for stat in department_stats:
-                    dept_name = stat['department__name']
+                    dept_name = stat['department_name']
                     amount = stat['total_amount'] or 0
-
-                    # Unit conversion
-                    if y_axis == 'metric_ton' and waste_type.unit == 'kilogram':
-                        amount = amount / 1000  # kg to metric ton
-                    elif y_axis == 'kilogram' and waste_type.unit == 'metric_ton':
-                        amount = amount * 1000  # metric ton to kg
                     
-
+                    # ===== 單位轉換邏輯 =====
+                    # 注意：WasteRecord_new 和 TransportRecord 固定為公斤
+                    if data_source == 'management_only':
+                        # 僅管理資料，需要根據廢棄物類型單位進行轉換
+                        if unit == 'metric_ton' and waste_type.unit == 'kilogram':
+                            amount = amount / 1000  # kg to metric ton
+                        elif unit == 'kilogram' and waste_type.unit == 'metric_ton':
+                            amount = amount * 1000  # metric ton to kg
+                    elif data_source == 'weighing_only':
+                        # 過磅資料固定為公斤，需要轉換至指定單位
+                        if unit == 'metric_ton':
+                            amount = amount / 1000  # kg to metric ton
+                        # 如果 unit == 'kilogram'，無需轉換
+                    elif data_source == 'transport':
+                        # 載運資料固定為公斤，需要轉換至指定單位
+                        if unit == 'metric_ton':
+                            amount = amount / 1000  # kg to metric ton
+                        # 如果 unit == 'kilogram'，無需轉換
+                    elif data_source == 'management_and_weighing':
+                        # 混合資料，需要統一轉換
+                        # 先假設所有數據都已轉換為廢棄物原始單位，再統一轉換
+                        if unit == 'metric_ton' and waste_type.unit == 'kilogram':
+                            amount = amount / 1000
+                        elif unit == 'kilogram' and waste_type.unit == 'metric_ton':
+                            amount = amount * 1000
+                    
                     series_data.append(amount)
-                    # Keep full department names - no truncation in backend
                     department_labels.append(dept_name)
-
-                    # Record department priority (for priority display)
+                    
+                    # 記錄部門優先級
                     if dept_name not in department_priority:
                         department_priority[dept_name] = priority_counter
                         priority_counter += 1
                 
-                # Add to results
+                # 添加到結果
                 all_series.append({
                     'name': series_name,
                     'data': series_data,
-                    'labels': department_labels,  # Full department names (no truncation)
+                    'labels': department_labels,
                     'color': series_color,
                     'waste_type': waste_type.name,
-                    'unit': y_axis
+                    'unit': unit
                 })
-
-                # Collect all department labels (full names)
+                
+                # 收集所有部門標籤
                 all_labels.extend(department_labels)
                 
             except Exception as e:
                 logger.error(f"Dataset processing error: {str(e)}", exc_info=True)
                 return JsonResponse({'success': False, 'error': f'處理資料集失敗: {str(e)}'})
         
-        # Process final output based on display method
-        if display_type == 'separate':
-            # By priority - rearrange all departments using full names for sorting
+        # ========== 根據顯示方法進行最終處理 ==========
+        if display_method == 'priority':
+            # 優先度：按首次出現的順序排列部門
             unique_departments = list(set(all_labels))
-            # Sort by priority using department names (earlier appearance has higher priority)
             unique_departments.sort(key=lambda x: department_priority.get(x, 999))
-
-            # Reorganize data: create complete data arrays for each series
+            
+            # 重新組織數據
             final_series = []
             for series in all_series:
                 full_data = []
@@ -1939,21 +2261,21 @@ def visualize_department_data(request):
                         idx = series['labels'].index(dept)
                         full_data.append(series['data'][idx])
                     else:
-                        full_data.append(0)  # No data for this department in this series
-
+                        full_data.append(0)
+                
                 final_series.append({
                     'name': series['name'],
                     'data': full_data,
                     'color': series['color']
                 })
-
+            
             result_labels = unique_departments
-        else:
-            # Combine - show all series but order departments by total sum
+        else:  # merge
+            # 合併：按各廢棄物類型總和排序部門
             department_totals = {}
             unique_departments = list(set(all_labels))
             
-            # Calculate total for each department across all series
+            # 計算每個部門的總量
             for dept in unique_departments:
                 department_totals[dept] = 0
                 for series in all_series:
@@ -1961,11 +2283,11 @@ def visualize_department_data(request):
                         idx = series['labels'].index(dept)
                         department_totals[dept] += series['data'][idx]
             
-            # Sort departments by total (highest first)
+            # 按總量排序（最高優先）
             sorted_depts = sorted(department_totals.items(), key=lambda x: x[1], reverse=True)
             result_labels = [dept for dept, _ in sorted_depts]
             
-            # Create series for each original series, but reorganized by combined total
+            # 根據新順序重新組織各系列數據
             final_series = []
             for series in all_series:
                 full_data = []
@@ -1974,7 +2296,7 @@ def visualize_department_data(request):
                         idx = series['labels'].index(dept)
                         full_data.append(series['data'][idx])
                     else:
-                        full_data.append(0)  # No data for this department in this series
+                        full_data.append(0)
                 
                 final_series.append({
                     'name': series['name'],
@@ -1982,26 +2304,29 @@ def visualize_department_data(request):
                     'color': series['color']
                 })
         
-        # Determine Y-axis unit
+        # ========== 決定Y軸單位 ==========
         y_axis_unit = ''
-        if y_axis == 'metric_ton':
+        if unit == 'metric_ton':
             y_axis_unit = '公噸'
-        elif y_axis == 'kilogram':
+        elif unit == 'kilogram':
             y_axis_unit = '公斤'
-        elif y_axis == 'gram':
+        elif unit == 'gram':
             y_axis_unit = '公克'
-        elif y_axis == 'new_taiwan_dollar':
+        elif unit == 'new_taiwan_dollar':
             y_axis_unit = '新台幣'
-
+        
         return JsonResponse({
             'success': True,
-            'chart_type': 'bar',  # Department analysis defaults to bar chart
+            'chart_type': 'bar',  # 部門分析默認使用柱狀圖
             'x_axis_labels': result_labels,
             'series': final_series,
             'title': title,
             'show_values': show_values,
-            'y_axis': y_axis,
-            'y_axis_unit': y_axis_unit
+            'y_axis': unit,
+            'y_axis_unit': y_axis_unit,
+            'data_source': data_source,
+            'time_unit': time_unit,
+            'display_method': display_method
         })
         
     except json.JSONDecodeError:
@@ -2061,7 +2386,7 @@ def settlement_process(request):
         
         messages.error(request, '資料不完整，請選擇機構並確認有勾選資料。')
         
-    return redirect('management:settlement_page') 
+    return redirect('management:settlement_view') 
 
 
 @login_required

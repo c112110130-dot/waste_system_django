@@ -1,14 +1,19 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物結算{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統 - 警報紀錄管理{% endblock %}
+
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
 {% endblock %}
-{% block content %}
 
+{% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
     /* ========================================= */
@@ -22,7 +27,6 @@
         --del-icon-bg: #ffffff; --del-icon-fg: #000000;
         --del-cancel-bg: #e0e0e0; --del-cancel-fg: #333333;
     }
-
     html.is-light {
         --my-bg-panel: #f7f7f7; --my-bg-input: #ffffff;
         --my-text-main: #333333; --my-text-sub: #555555;
@@ -38,13 +42,10 @@
     .ts-select, .ts-input input, .flatpickr-input { 
         height: 45px !important; font-size: 1rem !important;
         background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important;
-        color: var(--my-text-main) !important; border-radius: 4px !important; box-sizing: border-box !important;
+        color: var(--my-text-main) !important; border-radius: 4px !important; box-sizing: border-box !important; width: 100%;
     }
     .ts-select option { background-color: var(--my-bg-panel); color: var(--my-text-main); }
     
-    .control-panel .ts-select, .control-panel .ts-input input, .control-panel .flatpickr-input,
-    #settlementModal .ts-select { width: 100% !important; }
-
     .date-picker-wrapper { position: relative; width: 100%; }
     .calendar-icon {
         position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
@@ -60,19 +61,20 @@
         border-radius: 6px !important; padding: 0 15px !important;
         display: inline-flex !important; align-items: center !important; justify-content: center !important;
         cursor: pointer; font-size: 1rem !important; font-weight: bold; transition: background-color 0.2s;
+        /* 🌟 強制不換行 */
+        white-space: nowrap !important;
     }
     .btn-print-custom:hover { background-color: var(--my-hover) !important; }
     
     .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 5px; margin-bottom: 25px; }
     .control-panel { padding: 30px; }
-    .data-panel { padding: 0; border-left: 4px solid #fbbd08; min-height: 400px; }
+    .data-panel { padding: 0; border-left: 4px solid #db2828; min-height: 400px; }
     label { color: var(--my-text-sub); font-size: 1rem; margin-bottom: 8px; display: block; font-weight: 500; }
 
     .ts-table { background: transparent !important; color: var(--my-text-main) !important; }
     .ts-table thead th { background-color: var(--my-bg-panel) !important; color: var(--my-text-main) !important; border-bottom: 1px solid var(--my-border) !important; }
     .ts-table tbody td { border-bottom: 1px solid var(--my-border) !important; vertical-align: middle !important; }
     .ts-table tbody tr:hover { background-color: var(--my-hover) !important; }
-    .tr-locked { background-color: rgba(128,128,128,0.15) !important; }
 
     .sort-select {
         background-color: transparent !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border) !important;
@@ -80,51 +82,41 @@
     }
     .sort-select option { background: var(--my-bg-panel); color: var(--my-text-main); }
 
-    #settlementModal > div, #deleteModal > div {
-        background: var(--my-modal-bg) !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border);
-        border-radius: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    .severity-light {
+        display: inline-block; width: 18px; height: 18px; border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-top: 4px;
     }
-    #settlementModal > div { width: 500px; max-width: 95vw; display: flex; flex-direction: column; }
-    #deleteModal > div { width: 450px; max-width: 90vw; border-radius: 10px; text-align: center; }
+    .light-yellow { background-color: #fbbd08; border: 2px solid #e2a800; }
+    .light-red { background-color: #db2828; border: 2px solid #b82020; }
     
-    #settlementModal label { text-align: center; width: 100%; display: block; margin-bottom: 10px; color: var(--my-text-main); font-weight: bold; font-size: 1.1rem; }
-    #settlementModal select { width: 100% !important; height: 55px !important; font-size: 1.1rem !important; padding-left: 15px !important; box-sizing: border-box; }
-    .modal-info-box { background: var(--my-bg-panel); border: 1px solid var(--my-border); padding: 15px; border-radius: 5px; margin-bottom: 20px; color: var(--my-text-sub); }
-    
+    .truncate-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 🌟 刪除視窗 CSS */
+    #deleteModal > div {
+        background: var(--my-modal-bg) !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border);
+        border-radius: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); width: 450px; max-width: 90vw; border-radius: 10px; text-align: center; 
+    }
     .delete-icon-circle { display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 70px; border-radius: 50%; margin-bottom: 20px; background: var(--del-icon-bg) !important; color: var(--del-icon-fg) !important; }
     .delete-hint-text { color: var(--my-text-sub) !important; background: var(--my-hover); padding: 10px; border-radius: 5px; }
-    #deleteModal button { border-radius: 6px !important; height: 45px; font-weight: bold; cursor: pointer; border: none; }
+    #deleteModal button { border-radius: 6px !important; height: 45px; font-weight: bold; cursor: pointer; border: none; font-size: 1.1rem; }
     #deleteModal .btn-cancel { background: var(--del-cancel-bg) !important; color: var(--del-cancel-fg) !important; }
     #deleteModal .btn-confirm { background: #db2828 !important; color: #ffffff !important; }
-
-    /* ========================================= */
-    /* 🟢 3. RWD 全面響應式適應                 */
-    /* ========================================= */
-    .rwd-toolbar {
-        display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;
-    }
-    .rwd-group {
-        display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-    }
-    .rwd-group-divider {
-        width: 1px; height: 24px; background: var(--my-border); margin: 0 5px;
-    }
-    .page-size-wrap {
-        display: inline-flex !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important;
-    }
+    
+    .rwd-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
+    .rwd-group { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .rwd-group-divider { width: 1px; height: 24px; background: var(--my-border); margin: 0 5px; }
+    .page-size-wrap { display: inline-flex !important; flex-direction: row !important; align-items: center !important; white-space: nowrap !important; }
 
     @media (max-width: 991px) {
         .rwd-toolbar { flex-direction: column; align-items: stretch; gap: 15px; }
         .rwd-group { justify-content: space-between; width: 100%; }
-        .ts-grid.is-5-columns .column, .ts-grid.is-6-wide { width: 100% !important; margin-bottom: 10px; }
+        .ts-grid.is-relaxed .column { width: 100% !important; margin-bottom: 10px; }
         .rwd-group .ts-button, .rwd-group .btn-print-custom { width: 100%; justify-content: center; }
         .sort-select { flex: 1; min-width: 0; }
         .rwd-group-divider { display: none; }
     }
 
-    /* 隱藏跳頁輸入框的原生上下箭頭 */
-    .page-jump-input::-webkit-outer-spin-button,
-    .page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .page-jump-input::-webkit-outer-spin-button, .page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .page-jump-input[type=number] { -moz-appearance: textfield; }
 
     /* ========================================= */
@@ -138,25 +130,39 @@
 
         @page { size: A4 landscape; margin: 15mm; }
 
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
         body, html { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; }
-        .ts-container, .ts-content, .data-panel, .dashboard-panel { padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; background: transparent !important; }
-        .ts-table th.collapsing, .ts-table td.collapsing, .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
+        .ts-container, .ts-content, .data-panel, .dashboard-panel { padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; background: transparent !important; overflow: visible !important; }
+        .ts-table { background-color: white !important; }
+        .ts-table th, .ts-table td, .ts-table tr { background-color: white !important; background: white !important; color: black !important; }
+        .ts-table.is-striped tbody tr:nth-child(even) td, .ts-table.is-striped tbody tr:nth-child(even) th,
+        .ts-table.is-striped tbody tr:nth-child(odd) td, .ts-table.is-striped tbody tr:nth-child(odd) th { background-color: white !important; background: white !important; }
+        
         .no-print-row { display: none !important; }
+        .ts-table th.collapsing, .ts-table td.collapsing, .ts-table th:last-child, .ts-table td:last-child { display: none !important; }
+        
+        .ts-table, .ts-table th, .ts-table td { width: auto !important; min-width: 0 !important; max-width: none !important; white-space: normal !important; word-break: break-all !important; }
+        .truncate-text { white-space: normal; overflow: visible; text-overflow: clip; }
+
+        .severity-light { display: none !important; }
+        .print-only-text { display: inline-block !important; font-weight: bold; font-size: 14px; }
 
         .print-header-title { display: block !important; text-align: center; font-size: 1.8rem; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: black !important; border-bottom: 2px solid black; padding-bottom: 10px; }
         .ts-table { width: 100% !important; border-collapse: collapse !important; border: none !important; table-layout: auto !important; }
         .ts-table thead { display: table-header-group; } 
         .ts-table tr { page-break-inside: avoid; } 
-        .ts-table th { background-color: transparent !important; color: black !important; border: none !important; border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 11pt !important; padding: 10px 6px !important; }
-        .ts-table td { color: black !important; border: none !important; border-bottom: 1px solid #e0e0e0 !important; font-size: 10pt !important; padding: 8px 6px !important; }
+        .ts-table th { border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important; font-size: 11pt !important; padding: 10px 6px !important; }
+        .ts-table td { border-bottom: 1px solid #e0e0e0 !important; font-size: 10pt !important; padding: 8px 6px !important; }
+        
         .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; border-top: 2px solid #000; }
     }
-    .print-header-title, .print-summary-box { display: none; } 
+    .print-header-title, .print-summary-box, .print-only-text { display: none; } 
 </style>
 
 <div class="ts-container is-fluid" style="padding: 30px;">
     
-    <div class="print-header-title">廢棄物結算報表</div>
+    <div class="print-header-title">警報紀錄報表</div>
 
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
@@ -165,14 +171,14 @@
 
             <div class="ts-grid is-relaxed" style="margin-bottom: 25px;">
                 <div class="column is-6-wide">
-                    <label>開始日期</label>
+                    <label>過磅日期(起)</label>
                     <div class="date-picker-wrapper">
                         <input type="text" id="start_date" name="start_date" value="{{ start_date|default:'' }}" placeholder="YYYY-MM-DD">
                         <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     </div>
                 </div>
                 <div class="column is-6-wide">
-                    <label>結束日期</label>
+                    <label>過磅日期(迄)</label>
                     <div class="date-picker-wrapper">
                         <input type="text" id="end_date" name="end_date" value="{{ end_date|default:'' }}" placeholder="YYYY-MM-DD">
                         <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -180,23 +186,24 @@
                 </div>
             </div>
 
-            <div class="ts-grid is-relaxed is-5-columns">
+            <div class="ts-grid is-relaxed is-4-columns">
                 <div class="column">
-                    <label>種類</label>
-                    <select name="waste_type" class="ts-select is-fluid">
-                        <option value="">全部種類</option>
-                        {% for type in waste_types %}
-                            <option value="{{ type.id }}" {% if selected_waste_type == type.id|stringformat:"i" %}selected{% endif %}>{{ type.name }}</option>
-                        {% endfor %}
+                    <label>警報名稱</label>
+                    <select name="alert_name" class="ts-select is-fluid">
+                        <option value="">全部警報名稱</option>
+                        <option value="超重" {% if selected_alert_name == '超重' %}selected{% endif %}>超重</option>
+                        <option value="重量不足" {% if selected_alert_name == '重量不足' %}selected{% endif %}>重量不足</option>
+                        <option value="資料傳輸失敗" {% if selected_alert_name == '資料傳輸失敗' %}selected{% endif %}>資料傳輸失敗</option>
+                        <option value="通訊異常" {% if selected_alert_name == '通訊異常' %}selected{% endif %}>通訊異常</option>
                     </select>
                 </div>
                 <div class="column">
-                    <label>定點</label>
-                    <select name="location" class="ts-select is-fluid"><option value="">全部定點</option>{% for loc in locations %}<option value="{{ loc.id }}" {% if selected_location == loc.id|stringformat:"i" %}selected{% endif %}>{{ loc.name }}</option>{% endfor %}</select>
-                </div>
-                <div class="column">
-                    <label>部門</label>
-                    <select name="dept" class="ts-select is-fluid"><option value="">全部部門</option>{% for dept in departments %}<option value="{{ dept.id }}" {% if selected_dept == dept.id|stringformat:"i" %}selected{% endif %}>{{ dept.name }}</option>{% endfor %}</select>
+                    <label>警報類型</label>
+                    <select name="alert_type" class="ts-select is-fluid">
+                        <option value="">全部警報類型</option>
+                        <option value="重量異常" {% if selected_alert_type == '重量異常' %}selected{% endif %}>重量異常</option>
+                        <option value="設備異常" {% if selected_alert_type == '設備異常' %}selected{% endif %}>設備異常</option>
+                    </select>
                 </div>
                 <div class="column">
                     <label>過磅人員</label>
@@ -234,18 +241,14 @@
                 <select class="sort-select" onchange="submitWithSort(this.value)">
                     <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊) ↓</option>
                     <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新) ↑</option>
-                    <option value="weight_desc" {% if current_sort == 'weight_desc' %}selected{% endif %}>重量 (重 → 輕) ↓</option>
-                    <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重) ↑</option>
+                    <option value="severity_desc" {% if current_sort == 'severity_desc' %}selected{% endif %}>嚴重度 (高 → 低) ↓</option>
+                    <option value="severity_asc" {% if current_sort == 'severity_asc' %}selected{% endif %}>嚴重度 (低 → 高) ↑</option>
                 </select>
                 
                 <div class="rwd-group-divider"></div>
-                
-                <div style="color: var(--my-text-main); font-size: 1rem;">
-                    選取總重：<span id="displayTotalWeight" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.000</span> kg
-                </div>
 
-                <div style="position: relative; flex: 1;">
-                    <button id="exportBtn" class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; width: 100%;">
+                <div style="position: relative; width: 170px;">
+                    <button id="exportBtn" class="btn-print-custom" data-dropdown="export-menu" style="color: #21ba45 !important; border-color: #21ba45 !important; width: 100%; white-space: nowrap !important;">
                         <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 
                         <span id="btnExportText">匯出報表</span>
                         <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
@@ -263,16 +266,13 @@
                     </div>
                 </div>
 
-                <button class="btn-print-custom" onclick="printSelectedReport()">
+                <button class="btn-print-custom" onclick="printSelectedReport()" style="width: 155px; white-space: nowrap !important;">
                     <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span>
                     <span id="btnPrintText">直接列印</span>
                 </button>
 
-                <button type="button" class="ts-button is-positive" onclick="openSettlementModal()">
-                    <span class="ts-icon is-calculator-icon"></span> 結算
-                </button>
-                <button type="button" id="btnBatchDelete" class="ts-button is-negative" onclick="openBatchDelete()">
-                    <span class="ts-icon is-trash-can-icon"></span> <span id="btnBatchDeleteText">刪除</span>
+                <button type="button" id="btnBatchDelete" class="ts-button is-negative" onclick="openBatchDelete()" style="width: 125px; white-space: nowrap !important;">
+                    <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> <span id="btnBatchDeleteText">刪除</span>
                 </button>
             </div>
         </div>
@@ -314,69 +314,61 @@
         </div>
 
         <div class="ts-content is-fitted" style="overflow-x: auto;">
-            <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable" style="min-width: 1000px;">
+            <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable" style="min-width: 900px; table-layout: fixed;">
                 <thead>
                     <tr>
-                        <th class="collapsing"><label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label></th>
-                        <th>過磅時間</th>
-                        <th>重量 (kg)</th>
-                        <th>狀態</th>
-                        <th>種類</th>
-                        <th>部門</th>
-                        <th>定點</th>
-                        <th>過磅人員</th>
-                        <th>更新人員</th>
-                        <th>更新時間</th>
-                        <th>操作</th>
+                        <th class="collapsing is-center-aligned" style="width: 5%;">
+                            <label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label>
+                        </th>
+                        <th class="is-center-aligned" style="width: 7%;">序號</th>
+                        <th style="width: 15%;">警示時間</th>
+                        <th style="width: 15%;">過磅人員</th>
+                        <th style="width: 25%;">警報名稱</th>
+                        <th style="width: 15%;">警報類型</th>
+                        <th class="is-center-aligned" style="width: 10%;">嚴重度</th>
+                        <th class="collapsing is-center-aligned" style="width: 8%;">操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for record in page_obj %}
-                    <tr id="row_{{ record.id }}" class="{% if record.is_expired or record.is_transported %}tr-locked{% endif %}">
-                        <td class="collapsing">
+                    {% for alert in page_obj %}
+                    <tr id="row_{{ alert.id }}">
+                        <td class="collapsing is-center-aligned">
                             <label class="ts-checkbox">
-                                <input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" data-weight="{{ record.weight|floatformat:3 }}" onchange="updateUI()" {% if record.is_expired or record.is_transported %}disabled{% endif %}>
+                                <input type="checkbox" name="record_ids" value="{{ alert.id }}" class="record-checkbox" onchange="updateUI()">
                             </label>
                         </td>
-                        <td>
-                            {{ record.create_time|date:"Y-m-d H:i" }}
-                        </td>
-                        <td>{{ record.weight|floatformat:3 }}</td>
-                        <td>
-                            {% if record.is_transported %}<span class="ts-label is-success">已載運</span>{% else %}<span class="ts-label is-secondary">未載運</span>{% endif %}
-                        </td>
-                        <td>{{ record.waste_type.name }}</td>
-                        <td>{{ record.department.name }}</td>
-                        <td>{{ record.location.name }}</td>
-                        
-                        <td>{{ record.creator.username|default:"-" }}</td>
-                        <td>{{ record.updater.username|default:"-" }}</td>
-                        
-                        <td>{{ record.update_time|date:"Y-m-d H:i"|default:"-" }}</td>
-                        <td>
-                            {% if not record.is_expired and not record.is_transported %}
-                                <button class="ts-button is-negative is-icon is-small is-dense" type="button" onclick="deleteRecord({{ record.id }})" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
-                                    <span class="ts-icon is-trash-can-icon"></span>
-                                </button>
+                        <td class="is-center-aligned">{{ forloop.counter }}</td>
+                        <td>{{ alert.create_time|date:"Y-m-d H:i" }}</td>
+                        <td class="truncate-text" title="{{ alert.weigher.name }}">{{ alert.weigher.name }}</td>
+                        <td class="truncate-text" title="{{ alert.alert_name|default:'重量異常' }}">{{ alert.alert_name|default:"重量異常" }}</td>
+                        <td class="truncate-text" title="{{ alert.alert_type|default:'設備異常' }}">{{ alert.alert_type|default:"設備異常" }}</td>
+                        <td class="is-center-aligned">
+                            {% if alert.severity == 'High' or '失敗' in alert.alert_name %}
+                                <span class="severity-light light-red" title="嚴重"></span>
+                                <span class="print-only-text" style="color: #db2828;">嚴重</span>
                             {% else %}
-                                <button class="ts-button is-disabled is-icon is-small is-dense" type="button" style="width: 32px; height: 32px; padding: 0; display: inline-flex; justify-content: center; align-items: center;">
-                                    <span class="ts-icon is-lock-icon"></span>
-                                </button>
+                                <span class="severity-light light-yellow" title="警告"></span>
+                                <span class="print-only-text" style="color: #e2a800;">警告</span>
                             {% endif %}
+                        </td>
+                        <td class="collapsing is-center-aligned">
+                            <button class="ts-button is-negative is-small is-dense" type="button" onclick="deleteRecord({{ alert.id }})" style="padding: 0 15px; height: 32px !important;">
+                                刪除
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="11" style="text-align: center !important; padding: 60px 0;">
-                            <div class="ts-icon is-file-circle-question-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5; color: var(--my-text-sub);"></div>
-                            <div style="font-size: 1.1rem; font-weight: bold; color: var(--my-text-sub);">資料表內沒有資料</div>
+                        <td colspan="8" style="text-align: center !important; padding: 60px 0;">
+                            <div class="ts-icon is-bell-slash-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5; color: var(--my-text-sub);"></div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: var(--my-text-sub);">目前沒有警報紀錄</div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             <div class="print-summary-box">
-                總計列印重量：<span id="printTotalWeight">0.000</span> kg
+                總計列印筆數：<span id="printTotalCount">0</span> 筆
             </div>
         </div>
 
@@ -391,13 +383,7 @@
                 </select>
             </div>
             
-            <div class="rwd-group" style="justify-content: flex-end; gap: 20px;">
-                <div style="font-size: 1rem;">
-                    <span style="color: var(--my-text-sub);">選取總重：</span>
-                    <span id="displayTotalWeightBottom" style="color: #fbbd08; font-weight: bold; font-size: 1.3rem; margin: 0 5px;">0.000</span>
-                    <span style="color: var(--my-text-sub); font-size: 0.9rem;">kg</span>
-                </div>
-                
+            <div class="rwd-group" style="justify-content: flex-end;">
                 <div class="ts-pagination is-small is-secondary" style="align-items: center;">
                     {% if page_obj.has_previous %}
                         <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
@@ -427,38 +413,6 @@
     </div>
 </div>
 
-<dialog id="settlementModal" style="padding:0;border:none;background:transparent;margin:auto;">
-    <div>
-        <div style="padding:15px 20px;border-bottom:1px solid var(--my-border);font-weight:bold;color:var(--my-text-main);">確認結算</div>
-        <div style="padding:20px;">
-            <div class="modal-info-box">
-                <div style="margin-bottom:8px;">目前時間：<span id="modalCurrentTime" style="color:var(--my-text-main);"></span></div>
-                <div>您已選取：<strong id="modalSelectedCount" style="color:#4db8ff;">0</strong> 筆資料</div>
-            </div>
-            <form id="settlementForm" method="post" class="ts-form" action="{% url 'management:settlement_process' %}">
-                {% csrf_token %}
-                <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
-                <div class="field">
-                    <label>處理公司</label>
-                    <select name="process_agency" class="ts-basic is-fluid">
-                        {% for agency in process_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div class="field" style="margin-top:15px;">
-                    <label>清理公司</label>
-                    <select name="clear_agency" class="ts-basic is-fluid">
-                        {% for agency in clear_agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}
-                    </select>
-                </div>
-            </form>
-        </div>
-        <div style="padding:15px 20px;border-top:1px solid var(--my-border);text-align:right;">
-            <button onclick="document.getElementById('settlementModal').close()" style="background:transparent;border:1px solid var(--my-border);color:var(--my-text-main);padding:8px 20px;margin-right:10px; cursor: pointer;">取消</button>
-            <button onclick="document.getElementById('settlementForm').submit()" style="background:#2185d0;border:none;color:#fff;padding:8px 25px; cursor: pointer;">確認</button>
-        </div>
-    </div>
-</dialog>
-
 <dialog id="deleteModal" style="padding:0;border:none;background:transparent;margin:auto;">
     <div>
         <div style="padding:40px 30px 20px;">
@@ -480,19 +434,11 @@
         const config = { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true, theme: "dark", disableMobile: "true" };
         flatpickr("#start_date", config);
         flatpickr("#end_date", config);
-        
+
         syncDropdownWidth();
         window.addEventListener('resize', syncDropdownWidth);
     });
 
-    window.submitWithSort = function(sortValue) {
-        document.getElementById('hiddenSortInput').value = sortValue;
-        document.getElementById('searchForm').submit();
-    }
-
-    window.pendingDeleteIds = null;
-    window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
-    
     function syncDropdownWidth() {
         const btn = document.getElementById('exportBtn');
         const menu = document.getElementById('export-menu');
@@ -504,42 +450,38 @@
         }
     }
 
-    window.updateUI = function(){
-        let total=0;
-        const checkedBoxes=document.querySelectorAll('.record-checkbox:checked');
-        checkedBoxes.forEach(cb=>{
-            let w=parseFloat(cb.getAttribute('data-weight'));
-            if(!isNaN(w))total+=w;
-        });
-        
-        const displayTop = document.getElementById('displayTotalWeight');
-        const displayBottom = document.getElementById('displayTotalWeightBottom');
-        if(displayTop) displayTop.innerText = total.toFixed(3);
-        if(displayBottom) displayBottom.innerText = total.toFixed(3);
+    window.submitWithSort = function(sortValue) {
+        document.getElementById('hiddenSortInput').value = sortValue;
+        document.getElementById('searchForm').submit();
+    }
 
-        const count=checkedBoxes.length;
+    window.pendingDeleteIds = null;
+    window.toggleAll = function(src){document.querySelectorAll('.record-checkbox:not([disabled])').forEach(cb=>{cb.checked=src.checked;});updateUI();}
+
+    window.updateUI = function(){
+        const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+        const count = checkedBoxes.length;
         
-        const btnText=document.getElementById('btnBatchDeleteText');
-        if(btnText) btnText.innerText=count>0?`刪除 (${count})`:"刪除";
+        const btnText = document.getElementById('btnBatchDeleteText');
+        if(btnText) btnText.innerText = count > 0 ? `刪除 (${count})` : "刪除";
 
         const btnExportText = document.getElementById('btnExportText');
         if (btnExportText) btnExportText.innerText = count > 0 ? `匯出報表 (${count})` : "匯出報表";
 
-        setTimeout(syncDropdownWidth, 10);
-
         const btnPrintText = document.getElementById('btnPrintText');
         if (btnPrintText) btnPrintText.innerText = count > 0 ? `直接列印 (${count})` : "直接列印";
+        
+        setTimeout(syncDropdownWidth, 10);
     }
 
     window.getSelectedIds = function(){const checkboxes=document.querySelectorAll('.record-checkbox:checked');return Array.from(checkboxes).map(cb=>cb.value);}
-    window.openSettlementModal = function(){let ids=getSelectedIds();if(ids.length===0)return alert('請至少選取一筆資料');document.getElementById('modalSelectedCount').innerText=ids.length;document.getElementById('hiddenSelectedIds').value=ids.join(',');document.getElementById('modalCurrentTime').innerText=new Date().toLocaleString();document.getElementById('settlementModal').showModal();}
     window.openBatchDelete = function(){let ids=getSelectedIds();if(ids.length===0)return alert('請至少選取一筆資料');window.pendingDeleteIds=ids;document.getElementById('deleteModal').showModal();}
     window.deleteRecord = function(id){window.pendingDeleteIds=[id];document.getElementById('deleteModal').showModal();}
     window.closeDeleteModal = function(){window.pendingDeleteIds=null;document.getElementById('deleteModal').close();}
     
     window.confirmDelete = function() {
         if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
-        const apiUrl = "{% url 'management:api_delete_records' %}";
+        const apiUrl = "{% url 'dashboard:api_delete_alert_records' %}"; 
         fetch(apiUrl, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
@@ -579,10 +521,10 @@
     window.clearAllFilters = function(){window.location.href=window.location.pathname;}
     
     window.changePageSize = function(size){
-        const urlParams=new URLSearchParams(window.location.search);
-        urlParams.set('page_size',size);
-        urlParams.set('page',1);
-        window.location.search=urlParams.toString();
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page_size', size);
+        urlParams.set('page', 1);
+        window.location.search = urlParams.toString();
     }
 
     window.goToPage = function(pageNum) {
@@ -604,6 +546,9 @@
         window.goToPage(pageNum);
     }
 
+    /* ========================================= */
+    /* 🌟 匯出與 PDF/PNG 邏輯                     */
+    /* ========================================= */
     function createPrintableElement(titleText) {
         const now = new Date(); 
         const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
@@ -619,98 +564,107 @@
         let html = `
             <style>
                 .export-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; margin-top: 15px; }
-                .export-table th, .export-table td { padding: 10px 8px; color: #000000; }
+                .export-table th, .export-table td { padding: 10px 8px; color: #000000; border-bottom: 1px solid #e0e0e0; }
                 .export-table th { border-top: 2px solid #000000; border-bottom: 2px solid #000000; font-weight: bold; background-color: #ffffff; }
-                .export-table td { border-bottom: 1px solid #e0e0e0; }
                 .export-table tr { page-break-inside: avoid; } 
                 .export-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 5px; color: #000; }
                 .export-date { text-align: center; font-size: 14px; color: #555; margin-bottom: 20px; }
-                .export-highlight { color: #db2828; font-weight: bold; }
+                .text-red { color: #db2828; font-weight: bold; }
+                .text-yellow { color: #e2a800; font-weight: bold; }
             </style>
             <div class="export-title">${titleText}</div>
             <div class="export-date">匯出日期：${dateStr}</div>
             <table class="export-table">
                 <thead>
                     <tr>
-                        <th>過磅時間</th>
-                        <th>重量 (kg)</th>
-                        <th>狀態</th>
-                        <th>種類</th>
-                        <th>部門</th>
-                        <th>定點</th>
+                        <th style="width: 60px; text-align: center;">序號</th>
+                        <th>警示時間</th>
                         <th>過磅人員</th>
-                        <th>更新人員</th>
-                        <th>更新時間</th>
+                        <th>警報名稱</th>
+                        <th>警報類型</th>
+                        <th style="text-align: center;">嚴重度</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
         let hasData = false; 
-        let printWeight = 0; 
         const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
 
         if (selectedCount > 0) {
+            let idx = 1;
             document.querySelectorAll('#dataTable tbody tr').forEach(row => {
                 const cb = row.querySelector('.record-checkbox');
                 if(!cb || !cb.checked) return;
                 const cols = row.querySelectorAll('td');
-                if(cols.length >= 10) {
+                if(cols.length >= 7) {
                     hasData = true;
-                    let w = parseFloat(cols[2].innerText.trim()) || 0;
-                    printWeight += w;
-                    let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
+                    let isSevere = cols[6].innerHTML.includes('light-red');
+                    let sevClass = isSevere ? 'text-red' : 'text-yellow';
+                    let sevText = isSevere ? '嚴重' : '警告';
+                    let cleanTime = cols[2].innerText.trim().replace(/\n/g, ' ');
+                    
                     html += `<tr>
+                        <td style="text-align: center;">${idx++}</td>
                         <td>${cleanTime}</td>
-                        <td class="export-highlight">${w.toFixed(3)}</td>
                         <td>${cols[3].innerText.trim()}</td>
                         <td>${cols[4].innerText.trim()}</td>
                         <td>${cols[5].innerText.trim()}</td>
-                        <td>${cols[6].innerText.trim()}</td>
-                        <td>${cols[7].innerText.trim()}</td>
-                        <td>${cols[8].innerText.trim()}</td>
-                        <td>${cols[9].innerText.trim()}</td>
+                        <td style="text-align: center;" class="${sevClass}">${sevText}</td>
                     </tr>`;
                 }
             });
         } else {
-            if (allFilteredData.length > 0) hasData = true;
-            allFilteredData.forEach(item => {
-                let w = parseFloat(item.weight) || 0;
-                printWeight += w;
-                html += `<tr>
-                    <td>${item.create_time}</td>
-                    <td class="export-highlight">${w.toFixed(3)}</td>
-                    <td>${item.status}</td>
-                    <td>${item.waste_type}</td>
-                    <td>${item.department}</td>
-                    <td>${item.location}</td>
-                    <td>${item.creator}</td>
-                    <td>${item.updater}</td>
-                    <td>${item.update_time}</td>
-                </tr>`;
-            });
+            if (allFilteredData && allFilteredData.length > 0) {
+                hasData = true;
+                allFilteredData.forEach((item, index) => {
+                    let isSevere = item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'));
+                    let sevClass = isSevere ? 'text-red' : 'text-yellow';
+                    let sevText = isSevere ? '嚴重' : '警告';
+                    
+                    html += `<tr>
+                        <td style="text-align: center;">${index + 1}</td>
+                        <td>${item.create_time}</td>
+                        <td>${item.weigher}</td>
+                        <td>${item.alert_name}</td>
+                        <td>${item.alert_type}</td>
+                        <td style="text-align: center;" class="${sevClass}">${sevText}</td>
+                    </tr>`;
+                });
+            } else {
+                let idx = 1;
+                document.querySelectorAll('#dataTable tbody tr').forEach(row => {
+                    const cols = row.querySelectorAll('td');
+                    if(cols.length >= 7 && !row.classList.contains('no-print-row')) {
+                        let isSevere = cols[6].innerHTML.includes('light-red');
+                        if(!isSevere && !cols[6].innerHTML.includes('light-yellow')) return;
+                        hasData = true;
+                        let sevClass = isSevere ? 'text-red' : 'text-yellow';
+                        let sevText = isSevere ? '嚴重' : '警告';
+                        let cleanTime = cols[2].innerText.trim().replace(/\n/g, ' ');
+                        html += `<tr>
+                            <td style="text-align: center;">${idx++}</td>
+                            <td>${cleanTime}</td>
+                            <td>${cols[3].innerText.trim()}</td>
+                            <td>${cols[4].innerText.trim()}</td>
+                            <td>${cols[5].innerText.trim()}</td>
+                            <td style="text-align: center;" class="${sevClass}">${sevText}</td>
+                        </tr>`;
+                    }
+                });
+            }
         }
 
         html += `</tbody></table>`; 
-        html += `<div style="text-align: right; font-size: 16px; font-weight: bold; margin-top: 20px; padding-right: 25px;">總計列印重量：<span style="color: #db2828;">${printWeight.toFixed(3)}</span> kg</div>`;
         wrapper.innerHTML = html; 
         return { wrapper, hasData, dateStr };
     }
 
     window.exportToPDF = function() {
         if (typeof html2pdf === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-            script.onload = executePDFExport;
-            document.head.appendChild(script);
-        } else {
-            executePDFExport();
+            alert("PDF匯出套件載入中，請稍後再試。"); return;
         }
-    }
-
-    function executePDFExport() {
-        const { wrapper, hasData, dateStr } = createPrintableElement('廢棄物結算報表');
+        const { wrapper, hasData, dateStr } = createPrintableElement('警報紀錄報表');
         if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
         
         const hiddenContainer = document.createElement('div');
@@ -722,7 +676,7 @@
 
         const opt = {
             margin:       15, 
-            filename:     `廢棄物結算報表_${dateStr}.pdf`,
+            filename:     `警報紀錄報表_${dateStr}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }, 
@@ -735,8 +689,8 @@
     }
 
     window.exportToPNG = function() {
-        if (typeof html2canvas === 'undefined') { alert("載入圖片套件失敗！"); return; }
-        const { wrapper, hasData, dateStr } = createPrintableElement('廢棄物結算報表');
+        if (typeof html2canvas === 'undefined') { alert("圖片匯出套件載入中，請稍後再試。"); return; }
+        const { wrapper, hasData, dateStr } = createPrintableElement('警報紀錄報表');
         if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
         
         wrapper.style.position = 'absolute';
@@ -746,7 +700,7 @@
         
         html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', scrollY: 0, scrollX: 0 }).then(canvas => {
             let link = document.createElement('a'); 
-            link.download = `廢棄物結算報表_${dateStr}.png`; 
+            link.download = `警報紀錄報表_${dateStr}.png`; 
             link.href = canvas.toDataURL('image/png'); 
             link.click(); 
             document.body.removeChild(wrapper);
@@ -754,72 +708,154 @@
     }
 
     window.exportToExcel = function() {
-        if (typeof XLSX === 'undefined') { alert("載入 Excel 套件失敗！"); return; }
+        if (typeof XLSX === 'undefined') { 
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            script.onload = executeExcelExport;
+            document.head.appendChild(script);
+        } else {
+            executeExcelExport();
+        }
+    }
+
+    function executeExcelExport() {
         const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
         const now = new Date(); const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        let data = [['廢棄物結算報表'], ['匯出日期：', dateStr], [], ['過磅時間', '重量 (kg)', '狀態', '種類', '部門', '定點', '過磅人員', '更新人員', '更新時間']];
+        let data = [['警報紀錄報表'], ['匯出日期：', dateStr], [], ['序號', '警示時間', '過磅人員', '警報名稱', '警報類型', '嚴重度']];
         let hasData = false;
 
         if (selectedCount > 0) {
+            let idx = 1;
             document.querySelectorAll('#dataTable tbody tr').forEach(row => {
                 const cb = row.querySelector('.record-checkbox'); if (!cb || !cb.checked) return;
                 const cols = row.querySelectorAll('td');
-                if (cols.length >= 10) {
-                    hasData = true; let cleanTime = cols[1].innerText.trim().replace(/\n/g, ' ');
-                    data.push([cleanTime, parseFloat(cols[2].innerText.trim()), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), cols[6].innerText.trim(), cols[7].innerText.trim(), cols[8].innerText.trim(), cols[9].innerText.trim()]);
+                if (cols.length >= 7) {
+                    hasData = true; 
+                    let severityText = cols[6].innerHTML.includes('light-red') ? '嚴重' : '警告';
+                    data.push([idx++, cols[2].innerText.trim().replace(/\n/g, ' '), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), severityText]);
                 }
             });
         } else {
-            if (allFilteredData.length > 0) hasData = true;
-            allFilteredData.forEach(item => {
-                data.push([item.create_time, parseFloat(item.weight), item.status, item.waste_type, item.department, item.location, item.creator, item.updater, item.update_time]);
-            });
+            if (allFilteredData && allFilteredData.length > 0) {
+                hasData = true;
+                allFilteredData.forEach((item, index) => {
+                    let severityText = (item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'))) ? '嚴重' : '警告';
+                    data.push([index + 1, item.create_time, item.weigher, item.alert_name, item.alert_type, severityText]);
+                });
+            } else {
+                let idx = 1;
+                document.querySelectorAll('#dataTable tbody tr').forEach(row => {
+                    const cols = row.querySelectorAll('td');
+                    if (cols.length >= 7 && !row.classList.contains('no-print-row')) {
+                        let isSevere = cols[6].innerHTML.includes('light-red');
+                        if(!isSevere && !cols[6].innerHTML.includes('light-yellow')) return;
+                        hasData = true; 
+                        let severityText = isSevere ? '嚴重' : '警告';
+                        data.push([idx++, cols[2].innerText.trim().replace(/\n/g, ' '), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), severityText]);
+                    }
+                });
+            }
         }
 
         if (!hasData) { alert("目前沒有資料可以匯出喔！"); return; }
         const ws = XLSX.utils.aoa_to_sheet(data); const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "結算紀錄"); XLSX.writeFile(wb, `廢棄物結算報表_${dateStr}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "警報紀錄"); XLSX.writeFile(wb, `警報紀錄報表_${dateStr}.xlsx`);
     }
 
+    // 🌟 直接列印的核心邏輯 (加入了超強防呆機制)
     window.printSelectedReport = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox');
         const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        let printWeight = 0;
+        let printCount = 0;
 
         if (selectedCount > 0) {
             checkboxes.forEach(cb => {
                 if (!cb.checked) { cb.closest('tr').classList.add('no-print-row'); }
-                else { printWeight += parseFloat(cb.getAttribute('data-weight')) || 0; }
+                else { printCount++; }
             });
-            document.getElementById('printTotalWeight').innerText = printWeight.toFixed(3);
+            document.getElementById('printTotalCount').innerText = printCount;
+            
+            const paginations = document.querySelectorAll('.ts-pagination, .top-pagination-bar, .bottom-pagination-bar');
+            paginations.forEach(p => p.style.display = 'none');
+
             window.print();
+
             checkboxes.forEach(cb => { cb.closest('tr').classList.remove('no-print-row'); });
-        } else {
+            paginations.forEach(p => p.style.display = '');
+
+        } else if (allFilteredData && allFilteredData.length > 0) {
+            // 如果後端有給全部資料，執行跨頁完美替換列印
             const tbody = document.querySelector('#dataTable tbody');
             const originalHTML = tbody.innerHTML; 
             
             let allHTML = '';
-            allFilteredData.forEach(item => {
-                let w = parseFloat(item.weight) || 0;
-                printWeight += w;
+            printCount = 0;
+            allFilteredData.forEach((item, index) => {
+                printCount++;
+                let isSevere = item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'));
+                let sevText = isSevere 
+                    ? '<span class="print-only-text" style="display:inline-block !important; font-weight:bold; color:#db2828;">嚴重</span>' 
+                    : '<span class="print-only-text" style="display:inline-block !important; font-weight:bold; color:#e2a800;">警告</span>';
+                
                 allHTML += `<tr>
-                    <td class="collapsing"></td>
+                    <td class="collapsing is-center-aligned"></td>
+                    <td class="is-center-aligned">${index + 1}</td>
                     <td>${item.create_time}</td>
-                    <td style="color: #000; font-weight: bold;">${w.toFixed(3)}</td>
-                    <td>${item.status}</td>
-                    <td>${item.waste_type}</td>
-                    <td>${item.department}</td>
-                    <td>${item.location}</td>
-                    <td>${item.creator}</td>
-                    <td>${item.updater}</td>
-                    <td>${item.update_time}</td>
-                    <td class="collapsing"></td>
+                    <td class="truncate-text">${item.weigher}</td>
+                    <td class="truncate-text">${item.alert_name}</td>
+                    <td class="truncate-text">${item.alert_type}</td>
+                    <td class="is-center-aligned">${sevText}</td>
+                    <td class="collapsing is-center-aligned"></td>
                 </tr>`;
             });
             
             tbody.innerHTML = allHTML;
-            document.getElementById('printTotalWeight').innerText = printWeight.toFixed(3);
+            document.getElementById('printTotalCount').innerText = printCount;
             
+            const paginations = document.querySelectorAll('.ts-pagination, .top-pagination-bar, .bottom-pagination-bar');
+            paginations.forEach(p => p.style.display = 'none');
+
+            window.print();
+
+            tbody.innerHTML = originalHTML;
+            paginations.forEach(p => p.style.display = '');
+
+        } else {
+            // 🚨 終極防呆：如果後端沒有傳資料過來，就直接拿當前畫面印！
+            const rows = document.querySelectorAll('#dataTable tbody tr');
+            printCount = 0;
+            
+            let fallbackHTML = '';
+            let idx = 1;
+            
+            rows.forEach(r => {
+                const cols = r.querySelectorAll('td');
+                if (cols.length >= 7 && !r.classList.contains('no-print-row')) {
+                    printCount++;
+                    let isSevere = cols[6].innerHTML.includes('light-red');
+                    let sevText = isSevere 
+                        ? '<span class="print-only-text" style="display:inline-block !important; font-weight:bold; color:#db2828;">嚴重</span>' 
+                        : '<span class="print-only-text" style="display:inline-block !important; font-weight:bold; color:#e2a800;">警告</span>';
+                    
+                    fallbackHTML += `<tr>
+                        <td class="collapsing is-center-aligned"></td>
+                        <td class="is-center-aligned">${idx++}</td>
+                        <td>${cols[2].innerText.trim().replace(/\n/g, ' ')}</td>
+                        <td class="truncate-text">${cols[3].innerText.trim()}</td>
+                        <td class="truncate-text">${cols[4].innerText.trim()}</td>
+                        <td class="truncate-text">${cols[5].innerText.trim()}</td>
+                        <td class="is-center-aligned">${sevText}</td>
+                        <td class="collapsing is-center-aligned"></td>
+                    </tr>`;
+                }
+            });
+
+            const tbody = document.querySelector('#dataTable tbody');
+            const originalHTML = tbody.innerHTML; 
+            tbody.innerHTML = fallbackHTML;
+
+            document.getElementById('printTotalCount').innerText = printCount;
+
             const paginations = document.querySelectorAll('.ts-pagination, .top-pagination-bar, .bottom-pagination-bar');
             paginations.forEach(p => p.style.display = 'none');
 

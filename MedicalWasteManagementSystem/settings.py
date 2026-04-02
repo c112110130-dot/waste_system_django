@@ -98,7 +98,6 @@ INSTALLED_APPS = [
     'WasteManagement',
     'WastePrediction',
     'access_control',
-    'dashboard_extension', # Our new app for dashboard extensions
 ]
 
 MIDDLEWARE = [

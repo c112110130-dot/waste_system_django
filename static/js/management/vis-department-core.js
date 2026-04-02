@@ -45,10 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const showValuesCheckbox = document.getElementById('showValues');
     const includeTableCheckbox = document.getElementById('includeTable');
     
-    // Y-axis and time settings
-    const yAxisSelect = document.getElementById('yAxis');
-    const xAxisSelect = document.getElementById('xAxis');
-    const displayTypeSelect = document.getElementById('displayType');
+    // ========== 新增：新的選擇器參考 ==========
+    // 資料來源、計量單位、時間單位、顯示方法
+    const dataSourceSelect = document.getElementById('dataSource');  // 資料來源
+    const yAxisSelect = document.getElementById('yAxis');             // 計量單位
+    const xAxisSelect = document.getElementById('xAxis');             // 時間單位
+    const displayTypeSelect = document.getElementById('displayType');  // 顯示方法
+    
+    // Y-axis and time settings (保留用於向後相容)
     const showFullGridCheckbox = document.getElementById('showFullGrid');
 
     // Load department configuration on page load
@@ -121,14 +125,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 finalTitle = chartTitleInput.placeholder || generateDepartmentAutoTitle();
             }
 
-            // Prepare request data
+            // Prepare request data with new format
             const requestData = {
-                y_axis: yAxisSelect.value,
-                x_axis: xAxisSelect.value,
-                display_type: displayTypeSelect.value,
+                // 新格式參數
+                data_source: dataSourceSelect.value,      // 資料來源
+                unit: yAxisSelect.value,                  // 計量單位
+                time_unit: xAxisSelect.value,             // 時間單位
+                display_method: displayTypeSelect.value,  // 顯示方法
+                // 共通參數
                 datasets: datasets,
                 title: finalTitle,
-                show_values: showValuesCheckbox.checked
+                show_values: showValuesCheckbox.checked,
+                // 保留舊格式參數用於向後相容
+                y_axis: yAxisSelect.value,
+                x_axis: xAxisSelect.value,
+                display_type: displayTypeSelect.value === 'priority' ? 'separate' : 'combine'
             };
 
             console.log('[Department Visualization] Request data:', requestData);
@@ -365,19 +376,53 @@ document.addEventListener('DOMContentLoaded', () => {
     function collectDepartmentDatasets() {
         const datasets = [];
         const dataBoxes = document.querySelectorAll('#dataList .ts-box:not(#addChartBtnContainer)');
+        const xAxisValue = xAxisSelect ? xAxisSelect.value : 'year_sum';
 
         dataBoxes.forEach((box, index) => {
             try {
-                const startDateInput = box.querySelector('.start-date');
-                const endDateInput = box.querySelector('.end-date');
                 const nameInput = box.querySelector('.data-name');
                 const colorInput = box.querySelector('.color-picker');
                 const wasteTypeSelect = box.querySelector('.waste-type-select');
                 const rankingTypeSelect = box.querySelector('.ranking-type-select');
                 const rankingCountInput = box.querySelector('.ranking-count-input');
 
-                if (!startDateInput || !endDateInput || !nameInput || !colorInput || 
-                    !wasteTypeSelect || !rankingTypeSelect || !rankingCountInput) {
+                // 根據時間單位收集不同格式的日期
+                let startDate = '';
+                let endDate = '';
+
+                if (xAxisValue.startsWith('quarter')) {
+                    // 季度格式：YYYY-Q
+                    const startYear = box.querySelector('.start-date-year');
+                    const startQuarter = box.querySelector('.start-date-quarter');
+                    const endYear = box.querySelector('.end-date-year');
+                    const endQuarter = box.querySelector('.end-date-quarter');
+
+                    if (startYear && startQuarter && endYear && endQuarter) {
+                        startDate = `${startYear.value}-${startQuarter.value}`;
+                        endDate = `${endYear.value}-${endQuarter.value}`;
+                    }
+                } else if (xAxisValue.startsWith('month')) {
+                    // 月份格式：YYYY-MM
+                    const startMonthInput = box.querySelector('.start-date');
+                    const endMonthInput = box.querySelector('.end-date');
+
+                    if (startMonthInput && endMonthInput) {
+                        startDate = startMonthInput.value;
+                        endDate = endMonthInput.value;
+                    }
+                } else {
+                    // 年份格式：YYYY
+                    const startYearInput = box.querySelector('.start-date');
+                    const endYearInput = box.querySelector('.end-date');
+
+                    if (startYearInput && endYearInput) {
+                        startDate = startYearInput.value;
+                        endDate = endYearInput.value;
+                    }
+                }
+
+                if (!nameInput || !colorInput || !wasteTypeSelect || 
+                    !rankingTypeSelect || !rankingCountInput || !startDate || !endDate) {
                     console.warn(`[Department Visualization] Missing elements in dataset ${index + 1}`);
                     return;
                 }
@@ -391,8 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     // Create default name based on waste type and date range
                     const wasteTypeName = wasteTypeSelect.options[wasteTypeSelect.selectedIndex]?.text || '廢棄物';
-                    const startDate = startDateInput.value;
-                    const endDate = endDateInput.value;
 
                     // Format similar to visualize system
                     if (startDate && endDate) {
@@ -404,8 +447,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const dataset = {
                     waste_type_id: wasteTypeSelect.value,
-                    start_date: startDateInput.value,
-                    end_date: endDateInput.value,
+                    start_date: startDate,
+                    end_date: endDate,
                     ranking_type: rankingTypeSelect.value,
                     ranking_count: rankingCountInput.value,
                     name: defaultName,
