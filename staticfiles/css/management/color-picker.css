@@ -1,0 +1,6 @@
+/* Style the color picker input as a thumbnail */
+.color-picker {
+    cursor: pointer;
+    text-indent: -9999px; /* Hide the HEX text visually */
+    overflow: hidden;
+}

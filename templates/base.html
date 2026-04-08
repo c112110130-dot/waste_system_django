@@ -1,0 +1,253 @@
+{% load static %}
+{% load custom_filters %}
+{% is_theme "dark" as is_dark_mode %}
+{% is_theme "light" as is_light_mode %}
+{% is_theme "system" as is_system_theme %}
+<!DOCTYPE html>
+<html lang="zh-Hant-TW" class="{% theme_class %}" id="html-root">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="icon" type="image/png" sizes="128x128" href="{% block icon %}{% static 'icon/trash-128.png' %}{% endblock %}">
+        <title>{% block title %}{% endblock %}</title>
+        <script>
+            // Unified theme management system
+            window.themeManager = (function() {
+                const htmlRoot = document.documentElement;
+
+                function getSystemTheme() {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                function applyThemeClass(theme) {
+                    htmlRoot.classList.remove('is-light', 'is-dark');
+                    const actualTheme = (theme === 'system') ? getSystemTheme() : theme;
+                    htmlRoot.classList.add(actualTheme === 'dark' ? 'is-dark' : 'is-light');
+                    return actualTheme;
+                }
+
+                function updateUsernameSpan(actualTheme) {
+                    const usernameSpan = document.getElementById('username-span');
+                    if (!usernameSpan) return;
+                    usernameSpan.classList.remove('is-mark', 'color-{{ permission_hi }}-inverted', 'color-{{ permission_hi }}');
+                    if (actualTheme === 'light') {
+                        usernameSpan.classList.add('is-mark', 'color-{{ permission_hi }}-inverted');
+                    } else {
+                        usernameSpan.classList.add('color-{{ permission_hi }}');
+                    }
+                }
+
+                function applyTheme(theme) {
+                    const actualTheme = applyThemeClass(theme);
+                    updateUsernameSpan(actualTheme);
+                    return actualTheme;
+                }
+
+                let initialTheme;
+                {% if user.is_authenticated %}
+                    initialTheme = '{% current_theme %}';
+                {% else %}
+                    initialTheme = localStorage.getItem('theme') || 'system';
+                {% endif %}
+
+                const initialActualTheme = applyThemeClass(initialTheme);
+
+                return {
+                    getSystemTheme: getSystemTheme,
+                    applyTheme: applyTheme,
+                    updateUsernameSpan: updateUsernameSpan,
+                    initialTheme: initialTheme,
+                    initialActualTheme: initialActualTheme
+                };
+            })();
+        </script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas/5.0.1/tocas.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas/5.0.1/tocas.min.js"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
+        <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
+        <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.18/build/pdfmake.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.18/build/vfs_fonts.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+        <link rel="stylesheet" href="{% static 'css/color-palette.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/styles-button.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/animation.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/common-utils.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/fontface.css' %}" media="print" onload="this.media='all'">
+        <link rel="stylesheet" href="{% static 'css/select2-custom-theme.css' %}" />
+
+        <script src="{% static 'js/common/app-config.js' %}"></script>
+        <script src="{% static 'js/common/dom-utils.js' %}"></script>
+        <script src="{% static 'js/common/common-utils.js' %}"></script>
+        <script src="{% static 'js/common/modal-utils.js' %}"></script>
+        <script src="{% static 'js/common/loading-utils.js' %}"></script>
+        <script src="{% static 'js/common/api-utils.js' %}"></script>
+        <script src="{% static 'js/common/security-utils.js' %}"></script>
+        <script src="{% static 'js/common/csv-validator.js' %}"></script>
+        <script src="{% static 'js/common/date-validator.js' %}"></script>
+        <script src="{% static 'js/common/loading-manager.js' %}"></script>
+        <script src="{% static 'js/common/cache-manager.js' %}"></script>
+        <script src="{% static 'js/common/statistics-refresher.js' %}"></script>
+        <script src="{% static 'js/common/global-modal-manager.js' %}"></script>
+        
+        {% block stylesheet %}{% endblock %}
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                themeManager.updateUsernameSpan(themeManager.initialActualTheme);
+                if (themeManager.initialTheme === 'system') {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                        themeManager.applyTheme('system');
+                    });
+                }
+            });
+        </script>
+    </head>
+    <body class="background-quaternary" data-theme="{% current_theme %}">
+        <div class="ts-app-topbar background-secondary is-large is-bold" style="position: relative; z-index: 99;">
+            <div class="start">
+                {% block navbar-start %}
+                    <div class="ts-tab pretty-scroll" style="max-width: 70vw; overflow-x: auto; flex-wrap: nowrap; white-space: nowrap;">
+                        <a class="item tab-item {% if request.path == '/main/' or request.path == '/' %}is-active{% endif %}" href="{% url 'main' %}">
+                            <span class="ts-icon is-house-icon"></span>
+                            <span class="ts-text is-bold">主頁面</span>
+                        </a>
+                        <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-management">
+                            <span class="ts-icon is-folder-open-icon"></span>
+                            <span class="ts-text is-bold">廢棄物管理</span>
+                            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
+                        </a>
+                        <div class="ts-dropdown" id="dropdown-management" data-position="bottom-start" style="z-index: 9999;">        
+                            <button class="item" data-href="{% url 'transportation:transportation_index' %}">聯單管理</button>
+                            <button class="item" data-href="{% url 'WasteManagement:database_index' %}">廢棄物管理(院內)</button>
+                            <button class="item" data-href="{% url 'WasteManagement:db_department_index' %}">廢棄物管理(部門)</button>
+                        </div>
+                        <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-report">
+                            <span class="ts-icon is-chart-pie-icon"></span>
+                            <span class="ts-text is-bold">報表與紀錄</span>
+                            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
+                        </a>
+                        <div class="ts-dropdown" id="dropdown-report" data-position="bottom-start" style="z-index: 9999;">
+                            <button class="item" data-href="{% url 'WasteManagement:visualize_index' %}">廢棄物報表管理(院內)</button>
+                            <button class="item" data-href="{% url 'WasteManagement:visualize_department_index' %}">廢棄物報表管理(部門)</button>
+                            <button class="item" data-href="{% url 'WasteManagement:settlement_view' %}">廢棄物過磅記錄檢視</button>
+                            <button class="item" data-href="{% url 'WasteManagement:transportation_view' %}">廢棄物載運紀錄檢視</button>
+                        </div>
+                        <a class="item tab-item {% if '/prediction' in request.path %}is-active{% endif %}" href="/prediction/">
+                            <span class="ts-icon is-chart-line-icon"></span>
+                            <span class="ts-text is-bold">廢棄物預測</span>
+                        </a>
+                        <a class="item tab-item {% if '/management/mobile/' in request.path %}is-active{% endif %}" href="/WasteManagement/mobile/">
+                            <span class="ts-icon is-mobile-screen-icon"></span>
+                            <span class="ts-text is-bold">行動裝置登記</span>
+                        </a>
+                        <a class="item tab-item {% if '/management/qrcode/' in request.path %}is-active{% endif %}" href="{% url 'WasteManagement:qrcode_print' %}">
+                            <span class="ts-icon is-qrcode-icon"></span>
+                            <span class="ts-text is-bold">QR code列印</span>
+                        </a>
+                    </div>
+                {% endblock %}
+            </div>
+            <div class="end">
+                {% block navbar-end %}
+                    {% if user.is_authenticated %}
+                        <span class="ts-text is-large has-end-spaced">
+                            Hello,&nbsp;<span
+                                id="username-span"
+                                class="ts-text is-large monospace-medium has-vertically-padded-small
+                                {% if not is_system_theme %}
+                                    {% if is_light_mode %}is-mark color-{{ permission_hi }}-inverted{% elif is_dark_mode %}color-{{ permission_hi }}{% endif %}
+                                {% endif %}"
+                            >{{ user.username }}</span> !
+                        </span>
+                        <button class="item" data-dropdown="dropdown">
+                            <span class="ts-icon is-ellipsis-vertical-icon"></span>
+                        </button>
+                        <div class="ts-dropdown is-start-icon is-relaxed" id="dropdown" data-position="bottom-end" style="--min-width: 15rem" >
+                            <div style="padding-left: 1em; padding-top: 0.2em; padding-bottom: 0.2em"> 
+                                <span class="ts-text is-small is-start-aligned monospace color-{{ permission_hi }}
+                                {% if not is_system_theme %}
+                                    {% if is_light_mode %}is-mark color-{{ permission_hi }}-inverted{% elif is_dark_mode %}color-{{ permission_hi }}{% endif %}
+                                {% endif %}
+                                ">
+                                    {{ permission_hi|permission_name }}
+                                </span>
+                                <br>
+                                <span class="ts-text is-big is-bold is-start-aligned">
+                                    {{ user.get_full_name }}
+                                </span>
+                                <br>
+                                <span class="ts-text monospace is-start-aligned is-disabled">
+                                    {{ user.username }}
+                                </span>
+                            </div>
+                            <div class="divider"></div>
+                            <button class="item" data-href="{% url 'account:index_setting' %}">
+                                <span class="ts-icon is-user-icon"></span>
+                                個人帳號設定
+                            </button>
+                            {% if user_is_over_mod %}
+                                <button class="item" data-href="{% url 'account:database' %}">
+                                    <span class="ts-icon is-file-lines-icon"></span>
+                                    廢棄物種類和部門管理
+                                </button>
+                                <button class="item" data-href="{% url 'WasteManagement:location_management' %}">
+                                    <span class="ts-icon is-location-dot-icon"></span>
+                                    秤重定點和處理清運機構管理
+                                </button>
+                                <button class="item" data-href="/WasteManagement/alert_record/">
+                                    <span class="ts-icon is-bell-icon"></span>
+                                    警報紀錄管理
+                                </button>
+                                <button class="item" data-href="{% url 'account:manage' %}">
+                                    <span class="ts-icon is-users-gear-icon"></span>
+                                    系統帳號管理
+                                </button>
+                            {% endif %}
+                            {% if user.is_staff %}
+                                <button class="item" data-href="{% url 'admin:index' %}">
+                                    <span class="ts-icon is-python-icon"></span>
+                                    Django Administration
+                                </button>
+                            {% endif %}
+                            <button class="item" data-href="{% url 'account:logout' %}">
+                                <span class="ts-icon is-arrow-right-from-bracket-icon"></span>
+                                登出
+                            </button>
+                        </div>
+                    {% else %}
+                        <button class="ts-button is-start-icon is-primary" data-href="{% url 'account:login' %}">
+                            <span class="ts-icon is-arrow-right-to-bracket-icon"></span>
+                            登出
+                        </button>
+                    {% endif %}
+                {% endblock %}
+            </div>
+        </div>
+
+        <div style="padding-top: 2em">
+            {% block content %}{% endblock %}
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('click', function(event) {
+                    const target = event.target.closest('[data-href]');
+                    if (target && target.dataset.href) {
+                        window.location.href = target.dataset.href;
+                    }
+                });
+            });
+        </script>
+        {% block scripts %}{% endblock %}
+    </body>
+</html>

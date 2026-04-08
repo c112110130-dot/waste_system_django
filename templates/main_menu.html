@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
+{% block title %}醫療廢棄物暨資源管理系統 - 總覽{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/main_menu/main_menu.css' %}">
+    <link rel="stylesheet" href="{% static 'css/main_menu/chart_maximize.css' %}">
+{% endblock %}
+{% block content %}
+
+    {% if not user.is_authenticated and not request.session.login_as_guest %}     <!-- Not Login Yet! -->
+        <div class="ts-wrap is-center-aligned">
+            <p>尚未登入，跳轉中...</p>
+            <a href="/account/login">如果畫面沒有反應，按下這行字跳轉至登錄畫面。</a>
+        </div>
+        <script>
+            setTimeout(function() {
+                window.location.href = "/account/login";
+            }, 2000); // Delay
+        </script>
+    {% else %}
+        <div class="ts-container" style="--width: 1650px">
+            <div class="ts-box has-shadow is-center-aligned is-fluid monospace-medium background-quaternary">
+                <!-- Summary: Date display -->
+                <div class="ts-content is-center-aligned has-padded-small">
+                    <div class="ts-grid is-3-wide is-middle-aligned is-center-aligned">
+                        <div class="column">
+                            <div class="ts-statistic">
+                                <div class="value">{{ summary_data.year }}</div>
+                                <div class="unit">年</div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="ts-statistic">
+                                <div class="value">{{ summary_data.month }}</div>
+                                <div class="unit">月</div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="ts-text">摘要</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <!-- Summary: Data -->
+                <div class="ts-content">
+                    <div class="ts-grid is-3-columns is-divided">
+                        <!-- General Waste -->
+                        <div class="column ts-grid is-3-columns is-stacked has-horizontally-padded">
+                            <div class="column ts-header">一般事業廢棄物</div>
+                            <div class="column ts-grid is-middle-aligned">
+                                <div class="column is-3-wide ts-text">南區</div>
+                                <div class="column is-fluid ts-content is-fitted is-end-aligned">
+                                    <div class="ts-statistic">
+                                        <div class="value" {% if not summary_data.general_tainan or none %}style="color: var(--ts-gray-400)"{% endif %}>
+                                            {{ summary_data.general_tainan|default_if_none:"無資料" }}
+                                        </div>
+                                        {% if summary_data.general_tainan is not none %}<div class="unit">公噸</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column ts-grid is-middle-aligned">
+                                <div class="column is-3-wide ts-text">仁武</div>
+                                <div class="column is-fluid ts-content is-fitted is-end-aligned">
+                                    <div class="ts-statistic">
+                                        <div class="value" {% if not summary_data.general_renwu or none %}style="color: var(--ts-gray-400)"{% endif %}>
+                                            {{ summary_data.general_renwu|default_if_none:"無資料" }}
+                                        </div>
+                                        {% if summary_data.general_renwu is not none %}<div class="unit">公噸</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Biomedical Waste -->
+                        <div class="column ts-grid is-3-columns is-stacked has-horizontally-padded">
+                            <div class="column ts-header">醫療事業廢棄物</div>
+                            <div class="column ts-grid is-middle-aligned">
+                                <div class="column is-3-wide ts-text">紅袋</div>
+                                <div class="column is-fluid ts-content is-fitted is-end-aligned">
+                                    <div class="ts-statistic">
+                                        <div class="value" {% if not summary_data.biomed_red or none %}style="color: var(--ts-gray-400)"{% endif %}>
+                                            {{ summary_data.biomed_red|default_if_none:"無資料" }}
+                                        </div>
+                                        {% if summary_data.biomed_red is not none %}<div class="unit">公噸</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column ts-grid is-middle-aligned">
+                                <div class="column is-3-wide ts-text">黃袋</div>
+                                <div class="column is-fluid ts-content is-fitted is-end-aligned">
+                                    <div class="ts-statistic">
+                                        <div class="value" {% if not summary_data.biomed_yellow or none %}style="color: var(--ts-gray-400)"{% endif %}>
+                                            {{ summary_data.biomed_yellow|default_if_none:"無資料" }}
+                                        </div>
+                                        {% if summary_data.biomed_yellow is not none %}<div class="unit">公噸</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Disposal Cost -->
+                        <div class="column ts-grid is-3-columns is-stacked has-horizontally-padded">
+                            <div class="column ts-header">處理費用</div>
+                            <div class="column ts-grid is-middle-aligned">
+                                <div class="column is-3-wide ts-text">洗腎桶</div>
+                                <div class="column is-fluid ts-content is-fitted is-end-aligned">
+                                    <div class="ts-statistic">
+                                        <div class="value" {% if summary_data.cost_dialysis is none %}style="color: var(--ts-gray-400)"{% endif %}>
+                                            {% if summary_data.cost_dialysis is none %}
+                                                無資料
+                                            {% else %}
+                                                {{ summary_data.cost_dialysis|floatformat:0|intcomma }}
+                                            {% endif %}
+                                        </div>
+                                        {% if summary_data.cost_dialysis is not none %}<div class="unit">新台幣</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column ts-grid is-middle-aligned">
+                                <div class="column is-4-wide ts-text">藥用玻璃</div>
+                                <div class="column is-fluid ts-content is-fitted is-end-aligned">
+                                    <div class="ts-statistic">
+                                        <div class="value" {% if summary_data.cost_phar_glass is none %}style="color: var(--ts-gray-400)"{% endif %}>
+                                            {% if summary_data.cost_phar_glass is none %}
+                                                無資料
+                                            {% else %}
+                                                {{ summary_data.cost_phar_glass|floatformat:0|intcomma }}
+                                            {% endif %}
+                                        </div>
+                                        {% if summary_data.cost_phar_glass is not none %}<div class="unit">新台幣</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons for chart selection -->
+        <div class="ts-container has-top-spaced-huge" style="--width: 1300px">
+            <div class="ts-grid">
+                <div class="column is-4-wide ts-grid is-2-columns is-stacked">
+                    <div class="column is-centered">
+                        <hex-button activate="#9AA6B2" deactivate="#BCCCDC" active data-section="recycleOverview">回收物質</hex-button>
+                    </div>
+                    <div class="column is-centered">
+                        <hex-button activate="#9AA6B2" deactivate="#BCCCDC" data-section="generalOverview">一般事業<br>廢棄物</hex-button>
+                    </div>
+                </div>
+                <div class="column is-fluid">
+                    <div class="ts-image is-rounded is-centered">
+                        <img src="{% static 'png/hospital.png' %}" height="400px" width="400px" />
+                    </div>
+                </div>
+                <div class="column is-4-wide ts-grid is-2-columns is-stacked">
+                    <div class="column is-centered">
+                        <hex-button activate="#9AA6B2" deactivate="#BCCCDC" data-section="biomedicalOverview">生物醫療<br>廢棄物</hex-button>
+                    </div>
+                    <div class="column is-centered">
+                        <hex-button activate="#9AA6B2" deactivate="#BCCCDC" data-section="pharGlassOverview">藥用玻璃</hex-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Sections -->
+        <!-- Recycle Charts -->
+        <div class="ts-container has-top-spaced-huge" id="recycleOverview" style="--width: 1650px">
+            <div class="ts-grid is-4-columns">
+                <div class="column ts-box has-shadow">
+                    <span class="column is-fluid ts-header background-tertiary is-center-aligned has-padded-small">
+                        上月({{ summary_data.year }}/{{ summary_data.month }})回收物質產量
+                    </span>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small" id="barChartRecycleProductionCurrent"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月回收物質產量
+                        </span>
+                        <div class="column is-center-aligned is-middle-aligned">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartRecycleProduction-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartRecycleProduction"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月回收物質比例
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="stackedBarChartRecycleProductionPercentage-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="ts-content">
+                        <div class="ts-selection is-fluid">
+                            <label class="item"><input type="radio" name="recyclePeriod" value="total"><div class="text">總和</div></label>
+                            <label class="item"><input type="radio" name="recyclePeriod" value="monthly" checked><div class="text">每月</div></label>
+                        </div>
+                    </div>
+                    <div class="has-padded-small is-chart" id="stackedBarChartRecycleProductionPercentage"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月回收收入
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartRecycleRevenue-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartRecycleRevenue"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- General Waste Charts -->
+        <div class="ts-container has-top-spaced-huge has-hidden" id="generalOverview" style="--width: 1650px;">
+            <div class="ts-grid is-3-columns">
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月一般事業廢棄物產量
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartGeneralWasteProduction-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartGeneralWasteProduction"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月一般事業廢棄物比例
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="stackedBarChartGeneralWasteProductionPercentage-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="ts-content">
+                        <div class="ts-selection is-fluid">
+                            <label class="item"><input type="radio" name="generalPeriod" value="total"><div class="text">總和</div></label>
+                            <label class="item"><input type="radio" name="generalPeriod" value="monthly" checked><div class="text">每月</div></label>
+                        </div>
+                    </div>
+                    <div class="has-padded-small is-chart" id="stackedBarChartGeneralWasteProductionPercentage"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月一般事業廢棄物總產量
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartGeneralWasteProductionTotal-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartGeneralWasteProductionTotal"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Biomedical Waste Charts -->
+        <div class="ts-container has-top-spaced-huge has-hidden" id="biomedicalOverview" style="--width: 1800px;">
+            <div class="ts-grid is-5-columns">
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月生物醫療廢棄物產量
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartBiomedicalWasteProduction-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartBiomedicalWasteProduction"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月生物醫療廢棄物比例
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="stackedBarChartBiomedicalWasteProductionPercentage-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="ts-content">
+                        <div class="ts-selection is-fluid">
+                            <label class="item"><input type="radio" name="biomedicalPeriod" value="total"><div class="text">總和</div></label>
+                            <label class="item"><input type="radio" name="biomedicalPeriod" value="monthly" checked><div class="text">每月</div></label>
+                        </div>
+                    </div>
+                    <div class="has-padded-small is-chart" id="stackedBarChartBiomedicalWasteProductionPercentage"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月生物醫療廢棄物總產量
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartBiomedicalWasteProductionTotal-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartBiomedicalWasteProductionTotal"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月洗腎桶與軟袋產出
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartDialBucketAndSoftBagProduction-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartDialBucketAndSoftBagProduction"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月洗腎桶與軟袋處理費用
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartDialBucketAndSoftBagDisposalCosts-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartDialBucketAndSoftBagDisposalCosts"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pharmaceutical Glass Charts -->
+        <div class="ts-container has-top-spaced-huge has-hidden" id="pharGlassOverview" style="--width: 1650px;">
+            <div class="ts-grid is-2-columns">
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月藥用玻璃產量
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartPharGlassProduction-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartPharGlassProduction"></div>
+                </div>
+                <div class="column ts-box has-shadow">
+                    <div class="ts-grid background-tertiary">
+                        <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                            近12月藥用玻璃處理費用
+                        </span>
+                        <div class="column">
+                            <button class="ts-button is-ghost is-small is-relaxed is-icon" id="lineChartPharGlassDisposalCosts-maximize-btn">
+                                <span class="ts-icon is-up-right-and-down-left-from-center-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ts-divider"></div>
+                    <div class="has-padded-small is-chart" id="lineChartPharGlassDisposalCosts"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maximized Overview -->
+        <div class="ts-container has-top-spaced-huge" id="maximizedOverview" style="--width: 1650px;">
+            <div class="column ts-box has-shadow">
+                <div class="ts-grid is-center-aligned is-middle-aligned background-tertiary">
+                    <span class="column is-fluid ts-header is-center-aligned has-padded-small">
+                    </span>
+                    <div class="column has-end-spaced">
+                        <button class="ts-close is-big"></button>
+                    </div>
+                </div>
+                <div class="ts-divider"></div>
+                <div class="has-padded-small" id="maximizedChart"></div>
+            </div>
+        </div>
+
+    {% endif %}
+
+{% endblock %}
+
+{% block description %}
+
+    <!-- Main Description -->
+    <div class="ts-divider" style="margin-top: 8rem"></div>
+    <div class="ts-content is-deactivate is-vertically-padded background-tertiary">
+        <div class="ts-container">
+            <div class="ts-text">
+                <span id="version" class="ts-text monospace">Ver: PRE-RELEASE 25.11.27.2</span><br>
+                <span id="clock" class="ts-text monospace">Loading Server Time ...</span><br>
+                <div class="ts-text has-top-spaced-small">
+                    2024 - 2025,
+                    <a href="https://www.google.com/maps/place/%E5%9C%8B%E7%AB%8B%E9%AB%98%E9%9B%84%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%B8%E7%AC%AC%E4%B8%80%E6%A0%A1%E5%8D%80%E5%B7%A5%E5%AD%B8%E9%99%A2/@22.75842,120.3355331,17z/data=!3m1!4b1!4m6!3m5!1s0x346e0e21fef44795:0xfa7ce41da70d86f2!8m2!3d22.75842!4d120.338108!16s%2Fg%2F11bw3d37_d?entry=ttu&g_ep=EgoyMDI0MTIwMy4wIKXMDSoASAFQAw%3D%3D" target="_blank">
+                        Data Mining & Optimization Lab, Dept. of CCE, NKUST(First Campus), Yanchao, Kaohsiung, Taiwan
+                    </a>
+                </div>
+                Powered by
+                <div class="ts-meta is-link">
+                    <a class="item" href="https://tocas-ui.com/" target="_blank">TocasUI 5.0.2</a>
+                    <a class="item" href="https://github.com/apexcharts/apexcharts.js" target="_blank">Apexcharts.js</a>
+                    <a class="item" href="https://github.com/be5invis/Sarasa-Gothic" target="_blank">Sarasa Gothic</a>
+                    <a class="item" href="https://fonts.google.com/noto/specimen/Noto+Sans+TC" target="_blank">Noto Sans TC</a>
+                    <a class="item" href="https://fontawesome.com/" target="_blank">Font Awesome(TocasUI)</a>
+                    <a class="item" href="https://www.svgrepo.com/" target="_blank">SVG Repo</a>
+                    <a class="item" href="https://www.flaticon.com/free-icon/trash_2424870" title="waste icons">Waste icons created by Freepik - Flaticon</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+    <!-- Pass theme information from Django to JavaScript -->
+    <script type="text/javascript">
+        // Theme configuration from Django template system
+        window.themeConfig = {
+            {% if user.is_authenticated %}
+                currentTheme: '{% current_theme %}',
+                isSystemTheme: {% if current_theme == "system" %}true{% else %}false{% endif %},
+                isLightMode: {% if current_theme == "light" %}true{% else %}false{% endif %},
+                isDarkMode: {% if current_theme == "dark" %}true{% else %}false{% endif %},
+                fallbackTheme: null
+            {% else %}
+                // For guest users, check localStorage or default to system preference
+                currentTheme: localStorage.getItem('theme') || 'system',
+                isSystemTheme: !localStorage.getItem('theme') || localStorage.getItem('theme') === 'system',
+                isLightMode: localStorage.getItem('theme') === 'light',
+                isDarkMode: localStorage.getItem('theme') === 'dark',
+                fallbackTheme: 'system'
+            {% endif %}
+        };
+
+        // For guest users, if using system theme, set proper flags based on browser preference
+        {% if not user.is_authenticated %}
+        if (window.themeConfig.isSystemTheme) {
+            const systemIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            window.themeConfig.actualTheme = systemIsDark ? 'dark' : 'light';
+        } else {
+            window.themeConfig.actualTheme = window.themeConfig.currentTheme;
+        }
+        {% endif %}
+    </script>
+
+    <!-- Embed chart data from backend -->
+    <script type="text/javascript">
+        window.recycleData = {
+            summary: {{ summary_data_json|safe }},
+            recycle: {{ recycle_data_json|safe }},
+            general: {{ general_data_json|safe }},
+            biomedical: {{ biomedical_data_json|safe }},
+            pharGlass: {{ phar_glass_data_json|safe }}
+        };
+        console.log("Recycle Data:", window.recycleData); // Debug output
+    </script>
+    <!-- Custom JS for recycle charts -->
+    <script src="{% static 'js/main_menu/chart_maximize.js' %}" type="module"></script>
+    <script type="module" src="{% static 'js/main_menu/main_menu.js' %}"></script>
+    <script src="{% static 'js/main_menu/hex-button.js' %}"></script>
+{% endblock %}

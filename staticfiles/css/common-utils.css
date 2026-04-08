@@ -1,0 +1,429 @@
+/**
+ * Common Utils CSS Styles
+ * 支持通用工具模組的樣式
+ */
+
+/* ============ 載入覆蓋層樣式 ============ */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    animation: fadeIn 0.2s ease-out forwards;
+}
+
+.loading-content {
+    background: var(--ts-gray-50);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--ts-gray-200);
+    border-left-color: var(--ts-primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.loading-spinner.small {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+    margin: 0 0.5rem 0 0;
+}
+
+.loading-message {
+    color: var(--ts-gray-700);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.loading-message:last-child {
+    margin-bottom: 0;
+}
+
+/* ============ 元素載入樣式 ============ */
+.element-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--ts-gray-600);
+    font-size: 0.9rem;
+}
+
+.is-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* ============ 進度條樣式 ============ */
+.progress-container {
+    margin: 1rem 0;
+}
+
+.progress-label {
+    font-size: 0.85rem;
+    color: var(--ts-gray-700);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.progress-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--ts-gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--ts-primary-500);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-bar.animated .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+.progress-bar.primary .progress-fill {
+    background: var(--ts-primary-500);
+}
+
+.progress-bar.success .progress-fill {
+    background: var(--ts-positive-500);
+}
+
+.progress-bar.warning .progress-fill {
+    background: var(--ts-warning-500);
+}
+
+.progress-bar.error .progress-fill {
+    background: var(--ts-negative-500);
+}
+
+.progress-percentage {
+    font-size: 0.8rem;
+    color: var(--ts-gray-600);
+    font-weight: 500;
+    min-width: 40px;
+    text-align: right;
+}
+
+.progress-container.completed .progress-bar {
+    background: var(--ts-positive-100);
+}
+
+.progress-container.completed .progress-fill {
+    background: var(--ts-positive-500);
+}
+
+/* ============ 骨架載入樣式 ============ */
+.skeleton-container {
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.skeleton-container.animated .skeleton-row,
+.skeleton-container.animated .skeleton-avatar,
+.skeleton-container.animated .skeleton-button {
+    background: linear-gradient(
+        90deg,
+        var(--ts-gray-200) 25%,
+        var(--ts-gray-100) 50%,
+        var(--ts-gray-200) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--ts-gray-200);
+    margin-bottom: 1rem;
+}
+
+.skeleton-content {
+    flex: 1;
+}
+
+.skeleton-row {
+    height: 12px;
+    background: var(--ts-gray-200);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+}
+
+.skeleton-row:last-child {
+    margin-bottom: 1rem;
+}
+
+.skeleton-button {
+    height: 36px;
+    width: 100px;
+    background: var(--ts-gray-200);
+    border-radius: 4px;
+}
+
+/* ============ 狀態指示器樣式 ============ */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+    position: relative;
+}
+
+.status-indicator.success {
+    background: var(--ts-positive-500);
+}
+
+.status-indicator.error {
+    background: var(--ts-negative-500);
+}
+
+.status-indicator.warning {
+    background: var(--ts-warning-500);
+}
+
+.status-indicator.info {
+    background: var(--ts-info-500);
+}
+
+.status-indicator::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0.3;
+    animation: pulse 2s infinite;
+}
+
+/* ============ 表單錯誤樣式 ============ */
+.field-error {
+    font-size: 0.8rem;
+    color: var(--ts-negative-500);
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.form-error {
+    margin-bottom: 1rem;
+    border-radius: 6px;
+    animation: shake 0.5s ease-in-out;
+}
+
+/* ============ 動畫效果 ============ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.1;
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-2px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(2px);
+    }
+}
+
+/* ============ 響應式設計 ============ */
+@media (max-width: 768px) {
+    .loading-content {
+        margin: 1rem;
+        padding: 1.5rem;
+        min-width: 0;
+        width: calc(100% - 2rem);
+        max-width: none;
+    }
+    
+    .progress-wrapper {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+    
+    .progress-percentage {
+        text-align: center;
+        min-width: auto;
+    }
+}
+
+/* ============ 深色模式支持 ============ */
+.is-dark .loading-content {
+    background: var(--ts-gray-800);
+    color: var(--ts-gray-100);
+}
+
+.is-dark .loading-spinner {
+    border-color: var(--ts-gray-600);
+    border-left-color: var(--ts-primary-400);
+}
+
+.is-dark .loading-message {
+    color: var(--ts-gray-300);
+}
+
+.is-dark .progress-bar {
+    background: var(--ts-gray-700);
+}
+
+.is-dark .progress-label {
+    color: var(--ts-gray-300);
+}
+
+.is-dark .progress-percentage {
+    color: var(--ts-gray-400);
+}
+
+.is-dark .skeleton-row,
+.is-dark .skeleton-avatar,
+.is-dark .skeleton-button {
+    background: var(--ts-gray-700);
+}
+
+.is-dark .skeleton-container.animated .skeleton-row,
+.is-dark .skeleton-container.animated .skeleton-avatar,
+.is-dark .skeleton-container.animated .skeleton-button {
+    background: linear-gradient(
+        90deg,
+        var(--ts-gray-700) 25%,
+        var(--ts-gray-600) 50%,
+        var(--ts-gray-700) 75%
+    );
+}
+
+.is-dark .field-error {
+    color: var(--ts-negative-400);
+}
+
+/* ============ 工具提示增強 ============ */
+[title] {
+    position: relative;
+}
+
+/* ============ 無障礙設計 ============ */
+@media (prefers-reduced-motion: reduce) {
+    .loading-spinner,
+    .progress-fill,
+    .skeleton-container.animated .skeleton-row,
+    .skeleton-container.animated .skeleton-avatar,
+    .skeleton-container.animated .skeleton-button,
+    .status-indicator::before {
+        animation: none;
+    }
+    
+    .progress-fill {
+        transition: none;
+    }
+}
+
+/* 高對比模式支援 */
+@media (prefers-contrast: high) {
+    .loading-overlay {
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .loading-content {
+        border: 2px solid var(--ts-gray-900);
+    }
+    
+    .progress-bar {
+        border: 1px solid var(--ts-gray-900);
+    }
+}
+
+/* 強制焦點樣式 */
+.loading-content button:focus,
+.progress-bar:focus {
+    outline: 2px solid var(--ts-primary-500);
+    outline-offset: 2px;
+}

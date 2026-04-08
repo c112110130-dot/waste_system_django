@@ -1,0 +1,16 @@
+/* Fixed width columns */
+.checkbox-column, .checkbox-cell {
+    width: 1% !important;
+}
+.date-column, .date-cell {
+    max-width: 2em;
+    width: 6% !important;
+}
+.action-column, .action-cell {
+    width: 6% !important;
+}
+
+/* Dynamic data columns share 75% width */
+.data-column, .data-cell {
+    width: calc(70% / var(--field-count, 1)) !important; /* Dynamic width based on field count */
+}

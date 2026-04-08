@@ -1,0 +1,950 @@
+================================================================================
+  醫療廢棄物管理系統 (MWMS) - 手動部署詳細步驟
+================================================================================
+
+本文件提供完整的手動部署步驟。
+如果自動化腳本 (initialize.sh) 失敗，或您想要完全掌控部署過程，請參考本文件。
+
+最後更新：2025-10-30
+
+
+================================================================================
+ 手動部署步驟
+================================================================================
+
+步驟 1：更新系統
+----------------
+$ sudo apt update
+$ sudo apt upgrade -y
+
+
+步驟 2：安裝系統依賴與 Python 3.12+
+--------------------------------------
+# 更新套件列表
+$ sudo apt update
+
+# 安裝基本依賴
+$ sudo apt install -y \
+    nginx \
+    build-essential \
+    git \
+    logrotate \
+    software-properties-common
+
+# 檢查系統 Python 版本
+$ python3 --version
+
+# 如果 Python 版本 < 3.12，安裝 Python 3.12
+$ sudo add-apt-repository -y ppa:deadsnakes/ppa
+$ sudo apt update
+$ sudo apt install -y \
+    python3.12 \
+    python3.12-venv \
+    python3.12-dev \
+    python3.12-distutils
+
+# 驗證安裝
+$ python3.12 --version
+
+
+步驟 3：設定專案環境
+--------------------
+# 進入專案目錄
+$ cd /path/to/MedicalWasteManagementSystem
+
+# 建立虛擬環境（使用 Python 3.12 或系統預設的 python3）
+# 如果已安裝 Python 3.12:
+$ python3.12 -m venv .venv
+
+# 或如果系統 Python 已是 3.12+:
+$ python3 -m venv .venv
+
+# 啟動虛擬環境
+$ source .venv/bin/activate
+
+# 安裝 Python 依賴
+$ pip install --upgrade pip
+$ pip install -r requirements.txt
+$ pip install gunicorn
+
+
+步驟 4：建立環境變數檔
+----------------------
+
+重要：系統根據環境檔案自動切換開發/生產模式
+---------------------------------------------
+本系統使用環境偵測機制：
+  - 只有 .env 檔案           → 開發模式 (DEBUG=True)
+  - 存在 .env.production 檔案 → 生產模式 (DEBUG=False，強制)
+
+
+選項 A：開發模式（本機開發/測試）
+---------------------------------
+建立 .env 檔案：
+$ nano .env
+
+加入以下內容：
+SECRET_KEY=您的開發密鑰
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+
+# 產生開發密鑰：
+$ python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+
+# 設定權限：
+$ chmod 600 .env
+
+注意：確保 .env.production 不存在！
+
+
+選項 B：生產模式（正式部署）
+---------------------------
+步驟 1：設定 SECRET_KEY 環境變數（必須！）
+$ SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+
+# 寫入系統環境變數（持久化）
+$ echo "DJANGO_SECRET_KEY='$SECRET_KEY'" | sudo tee -a /etc/environment
+
+# 立即生效
+$ export DJANGO_SECRET_KEY="$SECRET_KEY"
+
+步驟 2：建立 .env.production 檔案
+$ nano .env.production
+
+加入以下內容（注意：不包含 SECRET_KEY！）：
+# Medical Waste Management System - Production Configuration
+# .env.production 的存在會自動啟用生產模式 (DEBUG=False)
+# SECRET_KEY 必須從環境變數 DJANGO_SECRET_KEY 讀取
+
+# Host Configuration
+ALLOWED_HOSTS=您的網域.com,www.您的網域.com,localhost,127.0.0.1
+
+# HTTPS/SSL Settings（啟用 SSL 後設為 True）
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+SECURE_BROWSER_XSS_FILTER=True
+SECURE_CONTENT_TYPE_NOSNIFF=True
+
+# Environment marker
+ENVIRONMENT=production
+
+# 設定嚴格權限：
+$ chmod 600 .env.production
+
+重要提醒：
+- .env.production 不應包含 SECRET_KEY
+- SECRET_KEY 必須存在於環境變數 DJANGO_SECRET_KEY
+- DEBUG 會自動設為 False（無法在檔案中修改）
+- 將 .env.production 加入 .gitignore
+
+
+快速切換模式
+-----------
+開發模式 -> 生產模式：
+$ ./initialize.sh
+# 或手動：touch .env.production && export DJANGO_SECRET_KEY='...'
+
+生產模式 -> 開發模式：
+$ rm .env.production
+# 或：mv .env.production .env.production.backup
+
+驗證當前模式：
+$ python manage.py shell -c "from django.conf import settings; print(f'DEBUG={settings.DEBUG}')"
+
+
+步驟 5：建立 Gunicorn 配置
+--------------------------
+$ nano gunicorn.conf.py
+
+import multiprocessing
+
+# Server socket - bind to localhost only
+bind = "127.0.0.1:8000"
+backlog = 2048
+
+# Worker processes
+workers = multiprocessing.cpu_count() * 2 + 1
+worker_class = "sync"
+worker_connections = 1000
+timeout = 120
+keepalive = 5
+
+# Logging
+accesslog = "access.log"
+errorlog = "error.log"
+loglevel = "info"
+capture_output = True
+
+# Process naming
+proc_name = "mwms_gunicorn"
+
+# Server mechanics
+daemon = False
+pidfile = "gunicorn.pid"
+umask = 0
+user = None
+group = None
+tmp_upload_dir = None
+
+
+步驟 6：建立 Nginx 配置（HTTP 版本）
+------------------------------------
+$ sudo nano /etc/nginx/sites-available/mwms
+
+加入以下內容（替換專案路徑和網域）：
+
+server {
+    listen 80;
+    server_name 您的網域.com 您的IP;
+
+    client_max_body_size 100M;
+
+    location /static/ {
+        alias /專案路徑/staticfiles/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /media/ {
+        alias /專案路徑/media/;
+        expires 7d;
+    }
+
+    # SQLite 資料庫檔案禁止存取
+    location ~ /\..*|db\.sqlite3 {
+        deny all;
+        return 404;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 120;
+        proxy_send_timeout 120;
+        proxy_read_timeout 120;
+    }
+}
+
+# 啟用站台：
+$ sudo ln -s /etc/nginx/sites-available/mwms /etc/nginx/sites-enabled/
+
+# 測試 Nginx 配置：
+$ sudo nginx -t
+
+# 重新載入 Nginx：
+$ sudo systemctl reload nginx
+
+
+步驟 7：設定日誌輪替
+--------------------
+$ sudo nano /etc/logrotate.d/mwms
+
+加入以下內容（替換專案路徑和使用者）：
+
+/專案路徑/gunicorn.log
+/專案路徑/access.log
+/專案路徑/error.log
+/專案路徑/debug.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 您的使用者 您的使用者
+    sharedscripts
+    postrotate
+        [ -f /專案路徑/gunicorn.pid ] && kill -USR1 $(cat /專案路徑/gunicorn.pid) 2>/dev/null || true
+    endscript
+}
+
+/專案路徑/logs/*.log {
+    daily
+    rotate 90
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 您的使用者 您的使用者
+    dateext
+    dateformat -%Y%m%d
+    extension .log
+}
+
+# 測試配置：
+$ sudo logrotate -d /etc/logrotate.d/mwms
+
+
+步驟 8：準備 Django 應用程式
+----------------------------
+$ source .venv/bin/activate
+
+# 收集靜態檔案
+$ python manage.py collectstatic --noinput
+
+# 執行資料庫遷移
+$ python manage.py migrate
+
+# 初始化系統（創建權限組和 Root 帳號）
+$ python manage.py init_system
+
+
+步驟 9：更新啟動/停止腳本
+-------------------------
+確保 start-server.sh 使用正確的配置：
+
+#!/bin/bash
+set -e
+
+PROJECT_DIR="$(pwd)"
+VENV_PATH="$PROJECT_DIR/.venv"
+WSGI_MODULE="MedicalWasteManagementSystem.wsgi:application"
+GUNICORN_CONF="$PROJECT_DIR/gunicorn.conf.py"
+PID_FILE="$PROJECT_DIR/gunicorn.pid"
+
+echo "[INFO] Project directory: $PROJECT_DIR"
+
+# Check if already running
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if ps -p "$PID" > /dev/null 2>&1; then
+        echo "[ERROR] Gunicorn is already running (PID: $PID)"
+        exit 1
+    else
+        rm -f "$PID_FILE"
+    fi
+fi
+
+# Activate virtual environment
+source "$VENV_PATH/bin/activate"
+
+# Start Gunicorn
+echo "[INFO] Starting Gunicorn..."
+gunicorn -c "$GUNICORN_CONF" \
+    --pid "$PID_FILE" \
+    --daemon \
+    "$WSGI_MODULE"
+
+sleep 1
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if ps -p "$PID" > /dev/null 2>&1; then
+        echo "[SUCCESS] Gunicorn started (PID: $PID)"
+    else
+        echo "[ERROR] Gunicorn failed to start"
+        exit 1
+    fi
+fi
+
+確保 stop-server.sh 優雅關閉：
+
+#!/bin/bash
+
+PROJECT_DIR="$(pwd)"
+PID_FILE="$PROJECT_DIR/gunicorn.pid"
+
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    echo "[INFO] Found PID file: $PID"
+
+    if ps -p "$PID" > /dev/null 2>&1; then
+        echo "[INFO] Stopping Gunicorn (PID: $PID)..."
+
+        # Try graceful shutdown (SIGTERM)
+        kill -TERM "$PID"
+
+        # Wait up to 10 seconds
+        for i in {1..10}; do
+            if ! ps -p "$PID" > /dev/null 2>&1; then
+                echo "[SUCCESS] Gunicorn stopped gracefully"
+                rm -f "$PID_FILE"
+                exit 0
+            fi
+            sleep 1
+        done
+
+        # Force kill if still running
+        echo "[WARN] Graceful shutdown failed, forcing..."
+        kill -KILL "$PID" 2>/dev/null
+        rm -f "$PID_FILE"
+        echo "[SUCCESS] Gunicorn stopped (forced)"
+        exit 0
+    else
+        echo "[INFO] Process $PID not running (stale PID file)"
+        rm -f "$PID_FILE"
+    fi
+fi
+
+# Fallback
+PIDS=$(pgrep -f "MedicalWasteManagementSystem.wsgi:application")
+if [ -z "$PIDS" ]; then
+    echo "[INFO] No Gunicorn process found"
+    exit 0
+fi
+
+echo "[INFO] Found Gunicorn processes: $PIDS"
+echo "[INFO] Stopping..."
+echo "$PIDS" | xargs kill -TERM
+
+rm -f "$PID_FILE"
+echo "[SUCCESS] Gunicorn stopped"
+
+
+步驟 10：建立 Systemd 服務（選用）
+----------------------------------
+$ sudo nano /etc/systemd/system/mwms.service
+
+[Unit]
+Description=醫療廢棄物管理系統
+After=network.target
+
+[Service]
+Type=notify
+User=您的使用者名稱
+Group=www-data
+WorkingDirectory=/專案路徑
+Environment="PATH=/專案路徑/.venv/bin"
+EnvironmentFile=/專案路徑/.env
+ExecStart=/專案路徑/.venv/bin/gunicorn \
+    -c /專案路徑/gunicorn.conf.py \
+    MedicalWasteManagementSystem.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+# 啟用並啟動服務：
+$ sudo systemctl daemon-reload
+$ sudo systemctl enable mwms
+$ sudo systemctl start mwms
+$ sudo systemctl status mwms
+
+
+步驟 11：設定防火牆
+-------------------
+$ sudo ufw allow 80/tcp
+$ sudo ufw allow 443/tcp
+$ sudo ufw enable
+
+重要：不要開放 8000 port
+
+
+步驟 12：驗證部署
+-----------------
+1. 檢查 Gunicorn：
+   $ ps aux | grep gunicorn
+
+2. 檢查 Nginx：
+   $ sudo systemctl status nginx
+
+3. 訪問應用程式：
+   http://您的網域或IP/
+
+
+================================================================================
+ SSL/HTTPS 手動設定（使用機關提供的憑證）
+================================================================================
+
+前置準備
+--------
+1. 向您的資訊室或網管人員取得 SSL 憑證
+2. 您應該會拿到 2 個檔案：
+   - 憑證檔案（副檔名通常是 .pem, .crt, 或 .cer）
+   - 私鑰檔案（副檔名通常是 .key 或 .pem）
+
+
+步驟 1：建立系統 SSL 憑證目錄
+------------------------------
+$ sudo mkdir -p /etc/ssl/mwms
+$ sudo chmod 700 /etc/ssl/mwms
+
+
+步驟 2：放置憑證檔案
+--------------------
+將您取得的憑證檔案複製到系統SSL目錄：
+
+$ sudo cp 您的憑證檔案.pem /etc/ssl/mwms/cert.pem
+$ sudo cp 您的私鑰檔案.key /etc/ssl/mwms/key.key
+
+設定檔案權限（保護私鑰）：
+$ sudo chmod 640 /etc/ssl/mwms/cert.pem
+   $ sudo chmod 640 /etc/ssl/mwms/key.key
+$ sudo chown root:www-data /etc/ssl/mwms/cert.pem
+   $ sudo chown root:www-data /etc/ssl/mwms/key.key
+
+驗證檔案：
+$ sudo ls -l /etc/ssl/mwms/
+（應該看到 cert.pem 和 key.key）
+
+
+步驟 3：更新 Nginx 配置（加入 HTTPS）
+-------------------------------------
+$ sudo nano /etc/nginx/sites-available/mwms
+
+將原本的 HTTP 配置改為：
+
+# HTTP - 自動轉址到 HTTPS
+server {
+    listen 80;
+    server_name 您的網域.com;
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS
+server {
+    listen 443 ssl http2;
+    server_name 您的網域.com;
+
+    # SSL 憑證設定
+    ssl_certificate /etc/ssl/mwms/cert.pem;
+    ssl_certificate_key /etc/ssl/mwms/key.key;
+
+    # SSL 安全性設定
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # 檔案上傳大小限制
+    client_max_body_size 100M;
+
+    # 靜態檔案
+    location /static/ {
+        alias /專案路徑/staticfiles/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # 媒體檔案
+    location /media/ {
+        alias /專案路徑/media/;
+        expires 7d;
+    }
+
+    # 保護敏感檔案
+    location ~ /\..*|db\.sqlite3 {
+        deny all;
+        return 404;
+    }
+
+    # 應用程式
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 120;
+        proxy_send_timeout 120;
+        proxy_read_timeout 120;
+    }
+}
+
+注意：記得將 "/專案路徑/" 替換成實際的完整路徑！
+
+
+步驟 4：測試並重新載入 Nginx
+-----------------------------
+測試配置：
+$ sudo nginx -t
+（應該顯示 "test is successful"）
+
+如果測試成功，重新載入 Nginx：
+$ sudo systemctl reload nginx
+
+
+步驟 5：啟用 Django HTTPS 安全選項
+----------------------------------
+編輯 .env.production 檔案：
+$ nano .env.production
+
+修改以下設定為 True：
+SECURE_SSL_REDIRECT=True
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+
+儲存後重新啟動伺服器：
+$ ./stop-server.sh && ./start-server.sh
+
+
+步驟 6：驗證 HTTPS
+------------------
+用瀏覽器開啟：
+https://您的網域.com/
+
+檢查項目：
+✓ 瀏覽器網址列顯示鎖頭圖示
+✓ 不會出現憑證警告
+✓ 輸入 http:// 會自動轉到 https://
+
+
+步驟 7：檢查憑證資訊
+--------------------
+查看憑證有效期限：
+$ sudo openssl x509 -in /etc/ssl/mwms/cert.pem -noout -dates
+
+應該會顯示：
+notBefore=... （開始日期）
+notAfter=...  （到期日期）
+
+**重要提醒：**
+SSL 憑證通常有效期限是 1 年，請在到期前向資訊室申請新憑證。
+
+
+SSL 憑證更新
+------------
+當憑證即將到期時：
+
+1. 向資訊室取得新的憑證檔案
+
+2. 備份舊憑證：
+   $ sudo cp /etc/ssl/mwms/cert.pem /etc/ssl/mwms/cert.pem.old
+   $ sudo cp /etc/ssl/mwms/key.key /etc/ssl/mwms/key.key.old
+
+3. 放置新憑證：
+   $ sudo cp 新的憑證檔案.pem /etc/ssl/mwms/cert.pem
+   $ sudo cp 新的私鑰檔案.key /etc/ssl/mwms/key.key
+   $ sudo chmod 640 /etc/ssl/mwms/cert.pem
+   $ sudo chmod 640 /etc/ssl/mwms/key.key
+   $ sudo chown root:www-data /etc/ssl/mwms/cert.pem
+   $ sudo chown root:www-data /etc/ssl/mwms/key.key
+
+4. 測試 Nginx 配置：
+   $ sudo nginx -t
+
+5. 重新載入 Nginx：
+   $ sudo systemctl reload nginx
+
+6. 驗證新憑證：
+   $ sudo openssl x509 -in /etc/ssl/mwms/cert.pem -noout -dates
+
+
+SSL 安全性強化（進階）
+----------------------
+如果您的資訊室有要求，可以加入更嚴格的安全設定。
+
+編輯 Nginx 配置，在 server 區塊中加入：
+
+# 強制使用現代 TLS 版本
+ssl_protocols TLSv1.2 TLSv1.3;
+
+# 使用強加密套件
+ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+ssl_prefer_server_ciphers off;
+
+# 啟用 HSTS（強制使用 HTTPS）
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+# 防止 clickjacking
+add_header X-Frame-Options "SAMEORIGIN" always;
+
+# 防止 MIME 類型嗅探
+add_header X-Content-Type-Options "nosniff" always;
+
+# 啟用 XSS 保護
+add_header X-XSS-Protection "1; mode=block" always;
+
+測試並重新載入：
+$ sudo nginx -t
+$ sudo systemctl reload nginx
+
+
+================================================================================
+ 疑難排解
+================================================================================
+
+問題：無法連線到應用程式
+------------------------
+檢查：
+1. Gunicorn 是否執行？
+   $ ps aux | grep gunicorn
+
+2. Nginx 是否執行？
+   $ sudo systemctl status nginx
+
+3. 防火牆是否阻擋？
+   $ sudo ufw status
+
+4. 檢查 Nginx 配置：
+   $ sudo nginx -t
+
+5. 檢查 Nginx 錯誤日誌：
+   $ sudo tail -f /var/log/nginx/error.log
+
+
+問題：502 Bad Gateway
+---------------------
+檢查：
+1. Gunicorn 是否在 127.0.0.1:8000 上執行？
+   $ netstat -tlnp | grep 8000
+
+2. 檢查 Gunicorn 日誌：
+   $ tail -f logs/error.log
+
+3. 嘗試手動啟動 Gunicorn：
+   $ source .venv/bin/activate
+   $ gunicorn -c gunicorn.conf.py MedicalWasteManagementSystem.wsgi:application
+
+
+問題：靜態檔案無法載入
+----------------------
+執行：
+$ source .venv/bin/activate
+$ python manage.py collectstatic --noinput
+$ sudo systemctl reload nginx
+
+
+問題：資料庫鎖定錯誤
+--------------------
+1. 檢查是否有多個 Gunicorn 實例：
+   $ ps aux | grep gunicorn
+   $ ./stop-server.sh
+   $ ./start-server.sh
+
+2. 檢查 db.sqlite3 權限：
+   $ ls -l db.sqlite3*
+   $ chmod 664 db.sqlite3
+   $ chmod 775 .
+
+
+問題：權限拒絕錯誤
+------------------
+修正檔案權限：
+$ sudo chown -R $USER:www-data /專案路徑
+$ sudo chmod -R 755 /專案路徑
+$ sudo chmod 600 .env.production
+$ sudo chmod 640 /etc/ssl/mwms/cert.pem
+   $ sudo chmod 640 /etc/ssl/mwms/key.key
+$ sudo chown root:www-data /etc/ssl/mwms/cert.pem
+   $ sudo chown root:www-data /etc/ssl/mwms/key.key
+
+
+問題：Gunicorn 逾時
+-------------------
+編輯 gunicorn.conf.py：
+timeout = 300  # 5 分鐘
+
+重新啟動：
+$ ./stop-server.sh && ./start-server.sh
+
+
+問題：上傳檔案太大
+------------------
+編輯 Nginx 配置：
+client_max_body_size 500M;
+
+重新載入：
+$ sudo nginx -t
+$ sudo systemctl reload nginx
+
+
+問題：日誌未輪替
+----------------
+測試配置：
+$ sudo logrotate -d /etc/logrotate.d/mwms
+
+強制執行：
+$ sudo logrotate -f /etc/logrotate.d/mwms
+
+檢查 cron：
+$ sudo systemctl status cron
+
+
+問題：SSL 憑證錯誤
+------------------
+1. 檢查憑證檔案是否存在：
+   $ sudo ls -l /etc/ssl/mwms/
+   （應該看到 cert.pem 和 key.key）
+
+2. 檢查憑證是否過期：
+   $ sudo openssl x509 -in /etc/ssl/mwms/cert.pem -noout -dates
+
+3. 檢查憑證和私鑰是否配對：
+   $ sudo openssl x509 -in /etc/ssl/mwms/cert.pem -noout -modulus | md5sum
+   $ sudo openssl rsa -in /etc/ssl/mwms/key.key -noout -modulus | md5sum
+   （兩個輸出應該相同）
+
+4. 檢查 Nginx 配置：
+   $ sudo nginx -t
+
+5. 重新載入 Nginx：
+   $ sudo systemctl reload nginx
+
+
+問題：瀏覽器顯示憑證警告
+------------------------
+可能原因：
+1. 憑證已過期 → 向資訊室申請新憑證
+2. 憑證與網域不符 → 確認憑證是為您的網域簽發
+3. 憑證鏈不完整 → 向資訊室確認是否有中繼憑證需要一併安裝
+
+
+================================================================================
+ 效能調校
+================================================================================
+
+Gunicorn Workers
+----------------
+經驗法則：(2 × CPU 核心) + 1
+
+檢查 CPU 核心：
+$ nproc
+
+編輯 gunicorn.conf.py：
+workers = 9  # 4 核心 CPU
+
+
+SQLite WAL 模式優化
+-------------------
+檢查 WAL 狀態：
+$ sqlite3 db.sqlite3 "PRAGMA journal_mode;"
+# 應顯示: wal
+
+手動 checkpoint：
+$ sqlite3 db.sqlite3 "PRAGMA wal_checkpoint(FULL);"
+
+
+Nginx 快取
+----------
+編輯 Nginx 配置：
+
+location /static/ {
+    alias /專案路徑/staticfiles/;
+    expires 30d;
+    add_header Cache-Control "public, immutable";
+    gzip on;
+    gzip_types text/css application/javascript image/svg+xml;
+}
+
+重新載入：
+$ sudo systemctl reload nginx
+
+
+================================================================================
+ 備份與還原
+================================================================================
+
+備份資料庫
+----------
+方式 1：複製檔案（推薦）
+$ mkdir -p backups
+$ cp db.sqlite3 backups/db_$(date +%Y%m%d_%H%M%S).sqlite3
+$ cp db.sqlite3-shm backups/ 2>/dev/null || true
+$ cp db.sqlite3-wal backups/ 2>/dev/null || true
+
+方式 2：使用 Django dumpdata
+$ source .venv/bin/activate
+$ python manage.py dumpdata > backups/backup_$(date +%Y%m%d_%H%M%S).json
+
+
+還原資料庫
+----------
+方式 1：直接替換檔案
+$ ./stop-server.sh
+$ cp backups/db_YYYYMMDD_HHMMSS.sqlite3 db.sqlite3
+$ ./start-server.sh
+
+方式 2：使用 loaddata
+$ source .venv/bin/activate
+$ python manage.py loaddata backups/backup_YYYYMMDD_HHMMSS.json
+
+
+自動備份設定
+------------
+建立備份腳本：
+$ nano backup.sh
+
+#!/bin/bash
+BACKUP_DIR="/專案路徑/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+cp /專案路徑/db.sqlite3 $BACKUP_DIR/db_$DATE.sqlite3
+cp /專案路徑/db.sqlite3-wal $BACKUP_DIR/db_$DATE.sqlite3-wal 2>/dev/null || true
+
+# 清理 30 天前的備份
+find $BACKUP_DIR -name "db_*.sqlite3*" -mtime +30 -delete
+
+$ chmod +x backup.sh
+
+加入 crontab：
+$ crontab -e
+
+# 每天凌晨 2 點備份
+0 2 * * * /專案路徑/backup.sh
+
+
+================================================================================
+ 監控與維護
+================================================================================
+
+日誌查看
+--------
+Gunicorn 日誌：
+$ tail -f gunicorn.log
+$ tail -f access.log
+$ tail -f logs/error.log
+
+審計日誌：
+$ tail -f logs/latest.log
+
+Nginx 日誌：
+$ sudo tail -f /var/log/nginx/access.log
+$ sudo tail -f /var/log/nginx/error.log
+
+Systemd 日誌：
+$ sudo journalctl -u mwms -f
+
+
+系統狀態檢查
+------------
+檢查服務狀態：
+$ sudo systemctl status mwms
+$ sudo systemctl status nginx
+
+檢查磁碟空間：
+$ df -h
+
+檢查記憶體使用：
+$ free -h
+
+檢查 CPU 使用：
+$ top
+
+
+定期維護任務
+------------
+每週：
+[ ] 檢查日誌錯誤
+[ ] 檢查磁碟空間
+[ ] 測試備份還原
+
+每月：
+[ ] 更新系統套件
+[ ] 檢查 SSL 憑證到期日
+[ ] 清理舊日誌和備份
+[ ] 檢查資料庫完整性
+
+每季：
+[ ] 檢查安全性更新
+[ ] 審查存取日誌
+[ ] 效能分析
+
+
+================================================================================
+ 結束
+================================================================================
+
+如果您按照以上步驟完成手動部署，系統應該已經正常運作。
+
+如有問題，請參考 README.txt 的疑難排解章節，或檢查日誌檔案。
+
+建議定期執行備份和系統更新，確保系統穩定運作。

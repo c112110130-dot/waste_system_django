@@ -1,0 +1,72 @@
+/*
+    Optimized Font Loading Strategy
+    Only loads most commonly used font weights to reduce loading time
+    Uses font-display: swap for better user experience
+*/
+
+/* Primary Font: Sarasa Mono TC (Traditional Chinese) - Only essential weights */
+@font-face {
+    font-family: "Sarasa Mono TC";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarasa Mono TC";
+    src: url("/static/fonts/SarasaMonoTC-WOFF2-1.0.30/SarasaMonoTC-Light.woff2") format("woff2");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Font Utility Classes */
+.monospace-regular {
+    font-family: "Sarasa Mono TC", "Courier New", monospace;
+    font-weight: 400;
+}
+
+.monospace-bold {
+    font-family: "Sarasa Mono TC", "Courier New", monospace;
+    font-weight: 700;
+}
+
+.monospace-light {
+    font-family: "Sarasa Mono TC", "Courier New", monospace;
+    font-weight: 300;
+}
+
+.monospace-medium {
+    font-family: "Sarasa Mono TC", "Courier New", monospace;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500; /* Interpolated from regular to bold */
+}
+
+/* Fallback for browsers that don't support font loading optimizations */
+@supports not (font-display: swap) {
+    @font-face {
+        font-family: "Sarasa Mono TC Fallback";
+        src: local("Courier New"), local("monospace");
+        font-weight: 400;
+        font-style: normal;
+    }
+    
+    .monospace-regular, .monospace-bold, .monospace-light, .monospace-medium {
+        font-family: "Sarasa Mono TC Fallback", "Courier New", monospace;
+    }
+}
+
+/* Preload hint for critical fonts */
+.font-preload-hints {
+    /* This class exists to suggest critical font preloading in HTML head */
+    display: none;
+}

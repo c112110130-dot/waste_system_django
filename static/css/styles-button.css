@@ -1,0 +1,130 @@
+/* TocasUI Button */
+/* Disable borderline */
+.ts-button:not(.is-secondary):not(.is-outlined):not(.is-ghost) {
+    border: none !important;
+}
+
+.ts-button.is-primary {
+    background-color: var(--ts-primary-500);
+    color: white;
+}
+
+.ts-button.is-primary:hover {
+    background-color: var(--ts-primary-600);
+    color: lightgray;
+}
+
+.is-dark {
+    .ts-button.is-primary {
+        background-color: var(--ts-primary-600);
+        color: white;
+    }
+
+    .ts-button.is-primary:hover {
+        background-color: var(--ts-primary-700);
+        color: lightgray;
+    }
+}
+
+.ts-button.btn-tertiary {
+    background-color: #D9EAFD !important;
+    color: black !important;
+}
+
+.is-dark {
+    .ts-button.btn-tertiary {
+        background-color: #3A4A5A !important;
+        color: white !important;
+    }
+}
+
+.ts-button.is-negative:not(.is-outlined):not(.is-ghost) {
+    background-color: var(--ts-negative-500);
+    color: white;
+}
+
+.ts-button.is-negative:hover:not(.is-outlined):not(.is-ghost) {
+    background-color: var(--ts-negative-600);
+    color: white;
+}
+
+.ts-button.is-negative.is-outlined {
+    color: var(--ts-negative-500);
+}
+
+.ts-button.is-negative.is-outlined.is-critical:hover {
+    background-color: var(--ts-negative-500);
+    color: white;
+}
+
+.ts-button.is-warning:not(.is-outlined):not(.is-ghost) {
+    background-color: var(--ts-warning-500);
+    color: black;
+}
+
+.ts-button.is-warning:hover:not(.is-outlined):not(.is-ghost) {
+    background-color: var(--ts-warning-600);
+    color: black;
+}
+
+.ts-button.is-warning.is-outlined.is-critical:hover {
+    background-color: var(--ts-warning-500);
+    color: black;
+}
+
+.ts-button.is-positive:not(.is-outlined):not(.is-ghost) {
+    background-color: var(--ts-positive-500);
+    color: white;
+}
+
+.ts-button.is-positive:hover:not(.is-outlined):not(.is-ghost) {
+    background-color: var(--ts-positive-600);
+    color: lightgray;
+}
+
+.is-dark {
+    .ts-button.is-positive:not(.is-outlined):not(.is-ghost) {
+        background-color: var(--ts-positive-600);
+        color: white;
+    }
+
+    .ts-button.is-positive:hover:not(.is-outlined):not(.is-ghost) {
+        background-color: var(--ts-positive-700);
+        color: lightgray;
+    }
+}
+
+.ts-button.is-positive.is-outlined {
+    color: var(--ts-positive-500);
+}
+
+.ts-button.is-positive.is-outlined.is-critical:hover {
+    background-color: var(--ts-positive-500);
+    color: white !important;
+}
+
+.is-dark {
+    .ts-button.is-positive.is-outlined {
+        color: var(--ts-positive-500);
+    }
+
+    .ts-button.is-positive.is-outlined.is-critical:hover {
+        background-color: var(--ts-positive-500);
+        color: black !important;
+    }
+}
+
+.ts-button.is-filter {
+    background-color: var(--ts-static-gray-300);
+    color: black;
+}
+
+.ts-button.is-filter:hover {
+    background-color: var(--ts-static-gray-500);
+    color: lightgray;
+}
+
+.ts-button.is-filter.has-filter-index {
+    background-color: var(--ts-static-gray-500);
+    color: white;
+}

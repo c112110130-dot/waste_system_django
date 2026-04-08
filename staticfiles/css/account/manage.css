@@ -1,0 +1,35 @@
+.item.is-active{
+    background-color: #D9EAFD !important;
+    color: black !important;
+}
+
+.is-dark {
+    .item.is-active{
+        background-color: #3A4A5A !important;
+        color: white !important;
+    }
+}
+
+/* Fixed width columns */
+.checkbox-column, .checkbox-cell {
+    width: 5% !important;
+}
+.unit-column, .unit-cell {
+    width: 15% !important;
+}
+.action-column, .action-cell {
+    width: 15% !important;
+}
+.display-column, .display-cell {
+    width: 15% !important;
+}
+
+/* Override checkbox theme */
+.ts-checkbox input[type="checkbox"]:not(:checked) {
+    background-color: var(--ts-gray-50);
+    border: 2px solid var(--ts-gray-400) !important;
+}
+
+.ts-checkbox input[type="checkbox"]:not(:checked):disabled {
+    background-color: var(--ts-gray-400) !important;
+}

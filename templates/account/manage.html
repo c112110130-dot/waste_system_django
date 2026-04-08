@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% block title %}帳號管理{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/account/manage.css' %}">
+{% endblock %}
+{% block navbar-start %}
+    <div class="ts-tab" style="">
+        <div class="item tab-item" data-href="{% url 'main' %}">
+            <span class="ts-icon is-huge is-arrow-left-icon"></span>
+        </div>
+        <div class="item is-text">帳號管理</div>
+    </div>
+{% endblock %}
+{% block headline %}
+    <div class="ts-content is-tertiary is-vertically-padded" style="background-color: var(--ts-gray-200)">
+        <div class="ts-container has-vertically-spaced" style="--width: 1650px">
+            <div class="ts-header is-big is-heavy">帳號管理</div>
+            <div class="ts-text is-secondary">新增新使用者以及刪除使用者的地方。</div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="ts-container has-vertically-padded-large" style="--width: 1650px">
+        <div class="ts-grid is-relaxed">
+            <!-- Left (Sidebar) -->
+            <div class="column is-4-wide">
+               <!-- Add Account -->
+                <button class="ts-button is-positive is-fluid is-start-icon" data-href="{% url 'account:register' %}">
+                    <span class="ts-icon is-plus-icon"></span>
+                    加入使用者
+                </button>
+                <!-- Account List -->
+                <div class="ts-box has-shadow has-top-spaced-large">
+                    {% for permission, accounts in permission_types.items %}
+                        <!-- Permission Group -->
+                        <div class="ts-content is-dense color-{{ permission }}">
+                            <div class="ts-grid">
+                                <div class="column is-fluid">
+                                    <div class="ts-header">{{ permission|permission_name }}</div>
+                                </div>
+                                <div class="column">
+                                    <span class="ts-icon is-{{ permission_icons|get_icon:permission }}-icon"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Corresponding Accounts -->
+                        {% if accounts %}
+                        	<div class="ts-menu is-dense is-small monospace-medium">
+                                {% for account in accounts %}
+                                    <a class="item" data-action="select-account" data-account="{{ account.username }}">{{ account.username }}</a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="ts-text is-bold is-disabled has-start-padded">
+                                該身份組不存在帳號。
+                            </div>
+                        {% endif %}
+                        <div class="ts-divider has-top-spaced-small"></div>
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- Right corner -->
+            <div class="info column is-12-wide">
+                <!-- Account Info -->
+                <div class="ts-box has-shadow has-bottom-spaced-large">
+                    <table id="account-info" class="ts-table" current-account="{{ user.username }}">
+                    </table>
+                </div>
+                <!-- Control Panel -->
+                <div class="ts-grid is-center-aligned">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button class="ts-button is-negative is-start-icon"
+                                id="delete-account-btn"
+                                type="button">
+                            <span class="ts-icon is-trash-can-icon"></span>
+                            刪除
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{% static 'js/account/manage.js' %}"></script>
+{% endblock %}

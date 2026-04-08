@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}個人帳號設定{% endblock %}
+{% block navbar-start %}
+    <div class="ts-tab" style="">
+        <div class="item tab-item" data-action="back">
+            <span class="ts-icon is-huge is-arrow-left-icon"></span>
+        </div>
+        <div class="item is-text">個人帳號設定</div>
+    </div>
+{% endblock %}
+{% block headline %}
+    <div class="ts-content is-tertiary" style="background-color: var(--ts-gray-200)">
+        <div class="ts-container has-vertically-spaced" style="--width: 1650px">
+            <div class="ts-header is-big is-heavy">個人帳號設定</div>
+            <div class="ts-text is-secondary">個人資料瀏覽與重設密碼的地方。</div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="ts-container has-vertically-padded-large" style="--width: 1650px" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+        <div class="ts-grid is-evenly-divided is-relaxed is-stretched has-top-padded">
+            <div class="column">
+                <div class="ts-box has-shadow">
+                    <div class="ts-content is-rounded">
+                        <div class="ts-header is-large">帳號資訊</div>
+                        <div class="ts-container has-top-padded-small" id="account-info-content" current-account="{{ user.username }}">
+                            <!-- Account information will be dynamically loaded here -->
+                        </div>
+                    </div>
+                    <div class="symbol">
+                        <span class="ts-icon is-circle-info-icon"></span>
+                    </div>
+                </div>
+                <div class="ts-box has-shadow has-top-spaced">
+                    <div class="ts-content is-rounded">
+                        <div class="ts-header is-large">顯示設定</div>
+                        <div class="ts-container has-top-padded-small" id="theme-setting">
+                            <div class="ts-control">
+                                <div class="label is-start-aligned">主題色系</div>
+                                <div class="content is-fluid">
+                                    <div class="ts-select">
+                                        <select>
+                                            <option>跟隨系統</option>
+                                            <option>亮色</option>
+                                            <option>暗色</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ts-text is-description has-top-padded-small">
+                                <span class="ts-icon is-circle-info-icon"></span>
+                                選擇「跟隨系統」會根據您的裝置系統設定自動切換亮色或暗色主題。
+                            </div>
+                        </div>
+                    </div>
+                    <div class="symbol">
+                        <span class="ts-icon is-paintbrush-icon"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="ts-box has-shadow">
+                    <div class="ts-content is-rounded">
+                        <div class="ts-header is-large">更改密碼</div>
+                        <!-- Content -->
+                        <div class="ts-container has-top-padded-small">
+                            <form id="change-password-form" method="post">
+                                {% csrf_token %}
+                                <div class="ts-text has-top-padded is-required">輸入目前密碼</div>
+                                <div class="ts-input has-top-padded input-required">
+                                    {{ form.old_password }}
+                                </div>
+                                <div class="ts-text has-top-padded is-required">輸入新密碼</div>
+                                <div class="ts-input has-top-padded input-required">
+                                    {{ form.new_password1 }}
+                                </div>
+                                <div class="ts-text has-top-padded is-required">再次輸入新密碼</div>
+                                <div class="ts-input has-top-padded input-required">
+                                    {{ form.new_password2 }}
+                                </div>
+                                <div id="error-messages" class="ts-text color-negative has-top-spaced" style="display: none"></div>
+                                <div class="ts-divider has-spaced"></div>
+                                <button id="submit-all" class="ts-button is-fluid is-warning" type="submit">修改</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="symbol">
+                        <span class="ts-icon is-key-icon"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{% static 'js/account/setting.js' %}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("change-password-form");
+            const errorBox = document.getElementById("error-messages");
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Set body user authentication status attribute for JavaScript use
+            document.body.setAttribute('data-user-authenticated', '{% if user.is_authenticated %}true{% else %}false{% endif %}');
+
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                // Clear previous error messages
+                errorBox.innerHTML = "";
+                errorBox.style.display = "none";
+
+                // Manually collect form data
+                const formData = new FormData(form);
+
+                fetch("{% url 'account:change_password' %}", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRFToken": csrftoken
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw data;
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        alert('密碼修改成功！');
+                        // Redirect after a short delay to allow user to see the message
+                        setTimeout(() => {
+                            window.location.href = "{% url 'main' %}";
+                        }, 2000);
+                    }
+                })
+                .catch(errorData => {
+                    console.error("Request failed", errorData);
+                    if (errorData.errors) {
+                        for (const [field, messages] of Object.entries(errorData.errors)) {
+                            messages.forEach(msg => {
+                                let errorText = document.createElement("p");
+                                errorText.textContent = msg;
+                                errorBox.appendChild(errorText);
+                            });
+                        }
+                        errorBox.style.display = "block";
+                    } else {
+                        // Show error message
+                        alert('發生未知錯誤，請稍後再試！');
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

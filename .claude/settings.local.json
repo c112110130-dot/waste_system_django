@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py:*)",
+      "WebSearch",
+      "Bash(sudo nginx:*)",
+      "Bash(sudo systemctl reload:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "outputStyle": "default"
+}

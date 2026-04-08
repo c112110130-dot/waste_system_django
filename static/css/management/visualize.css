@@ -1,0 +1,179 @@
+/* Theme color variables */
+.select2-container--default .select2-dropdown .select2-results .select2-results__options {
+    max-height: 20em !important; /* Set desired height (e.g., 200px) */
+    overflow-y: auto !important;  /* Enable vertical scrolling if content exceeds height */
+}
+
+.tab-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: auto;
+    min-height: 2em;
+    max-height: 5em;
+    word-break: break-word;
+}
+
+.chart-tab-handle {
+    cursor: grab;
+    margin-right: 5px;
+}
+
+.chart-tab-handle:active {
+    cursor: grabbing;
+}
+
+.sortable-chosen {
+    opacity: 0.8;
+    transform: scale(0.98);
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: rgba(200, 200, 200, 0.5) !important;
+}
+
+/* SortableJS theme support */
+.sortable-ghost {
+    background-color: rgba(0, 0, 0, 0.1);
+    border: 2px dashed #ccc;
+    opacity: 0.7;
+}
+
+.sortable-chosen {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sortable-handle {
+    cursor: grab;
+    color: #6b7280;
+}
+
+.sortable-handle:active {
+    cursor: grabbing;
+}
+
+/* Dark theme support for SortableJS */
+.is-dark .sortable-ghost,
+.has-inverted .sortable-ghost {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border: 2px dashed #666 !important;
+}
+
+.is-dark .sortable-chosen,
+.has-inverted .sortable-chosen {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.is-dark .sortable-handle,
+.has-inverted .sortable-handle {
+    color: #9ca3af !important;
+}
+
+/* Chart preview theme transition */
+#chartPreviewDisplayArea {
+    transition: background-color 0.3s ease;
+}
+
+#exportPreview {
+    transition: background-color 0.3s ease;
+}
+
+/* Chart background */
+.has-inverted-preview-background {
+    background-color: var(--ts-gray-900) !important;
+}
+
+/* Table theme support */
+/* Light theme - table headers */
+.ts-table:not(.is-dark) th {
+    background-color: var(--ts-static-gray-100) !important;
+    color: var(--ts-static-gray-900) !important;
+    border-color: var(--ts-static-gray-300) !important;
+}
+
+/* Light theme - table cells */
+.ts-table:not(.is-dark) td {
+    background-color: var(--ts-static-gray-50) !important;
+    color: var(--ts-static-gray-900) !important;
+    border-color: var(--ts-static-gray-300) !important;
+}
+
+/* Light theme - table rows */
+.ts-table:not(.is-dark) tr {
+    border-color: var(--ts-static-gray-300) !important;
+}
+
+/* Dark theme - table headers */
+.ts-table.is-dark th {
+    background-color: var(--ts-static-gray-800) !important;
+    color: var(--ts-static-gray-50) !important;
+    border-color: var(--ts-static-gray-700) !important;
+}
+
+/* Dark theme - table cells */
+.ts-table.is-dark td {
+    background-color: var(--ts-static-gray-900) !important;
+    color: var(--ts-static-gray-50) !important;
+    border-color: var(--ts-static-gray-700) !important;
+}
+
+/* Dark theme - table rows */
+.ts-table.is-dark tr {
+    border-color: var(--ts-static-gray-700) !important;
+}
+
+/* Table container borders */
+.ts-table:not(.is-dark) {
+    border-color: var(--ts-static-gray-300) !important;
+}
+
+.ts-table.is-dark {
+    border-color: var(--ts-static-gray-700) !important;
+}
+
+/* Additional support for specific dataTable ID */
+#dataTable:not(.is-dark) {
+    border-color: var(--ts-static-gray-300) !important;
+}
+
+#dataTable.is-dark {
+    border-color: var(--ts-static-gray-700) !important;
+}
+
+/* dataTable container (ts-box that contains the table) */
+/* Use :has() selector for precise targeting of DIRECT dataTable wrapper only */
+.ts-box:has(> #dataTable):not(.is-dark) {
+    border-color: var(--ts-static-gray-300) !important;
+}
+
+.ts-box:has(> #dataTable).is-dark {
+    border-color: var(--ts-static-gray-700) !important;
+}
+
+/* ApexCharts tooltip theme support */
+.apexcharts-tooltip-light {
+    background: white !important;
+    border: 1px solid #e1e5e9 !important;
+    color: black !important;
+}
+
+.apexcharts-tooltip-light .apexcharts-tooltip-title {
+    background: white !important;
+    color: black !important;
+    border-bottom: 1px solid #e1e5e9 !important;
+}
+
+.apexcharts-tooltip-dark {
+    background: black !important;
+    border: 1px solid #4a4a4a !important;
+    color: white !important;
+}
+
+.apexcharts-tooltip-dark .apexcharts-tooltip-title {
+    background: black !important;
+    color: white !important;
+    border-bottom: 1px solid #4a4a4a !important;
+}

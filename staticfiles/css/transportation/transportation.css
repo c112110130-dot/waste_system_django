@@ -1,0 +1,412 @@
+/* Transport Management Specific Styles */
+
+/* Category selection boxes with proper color indicators */
+.category-box {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.category-box.overall-category {
+    border-left-color: #4A90E2;
+}
+
+.category-box.disposal-category {
+    border-left-color: #E74C3C;
+}
+
+.category-box.reuse-category {
+    border-left-color: #27AE60;
+}
+
+.category-box .symbol {
+    transition: all 0.2s ease;
+}
+
+.category-box.overall-category .symbol {
+    color: #4A90E2;
+}
+
+.category-box.disposal-category .symbol {
+    color: #E74C3C;
+}
+
+.category-box.reuse-category .symbol {
+    color: #27AE60;
+}
+
+/* Current display indicator */
+.category-box.current-display {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px #00000040;
+}
+
+.category-box.overall-category.current-display {
+    background-color: #4A90E240;
+    border-left-width: 6px;
+}
+
+.category-box.disposal-category.current-display {
+    background-color: #E74C3C40;
+    border-left-width: 6px;
+}
+
+.category-box.reuse-category.current-display {
+    background-color: #27AE6040;
+    border-left-width: 6px;
+}
+
+/* Hover effects */
+.category-box:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px #0000001A;
+}
+
+.category-box:hover .symbol {
+    transform: scale(1.1);
+}
+
+/* Fixed height manifest selection container */
+.manifest-selection-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.manifest-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(57.5vh);
+    min-height: calc(57.5vh);
+    padding-right: 8px;
+}
+
+.manifest-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.manifest-scroll-container::-webkit-scrollbar-track {
+    background: #F1F1F1;
+    border-radius: 3px;
+}
+
+.manifest-scroll-container::-webkit-scrollbar-thumb {
+    background: #888888;
+    border-radius: 3px;
+}
+
+.manifest-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}
+
+/* Manifest list items */
+.manifest-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem;
+    border-left: 2px solid transparent;
+}
+
+.manifest-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px #00000040;
+}
+
+/*.manifest-item.current-display {*/
+/*    border-left: 4px solid #4A90E2;*/
+/*    background-color: #4A90E240;*/
+/*    transform: translateY(-1px);*/
+/*}*/
+
+.manifest-item.current-display.is-disposal {
+    background-color: #E74C3C40;
+}
+
+.manifest-item.current-display.is-reuse {
+    background-color: #27AE6040;
+}
+
+.is-dark {
+    .manifest-item.current-display.is-disposal {
+        background-color: #CD5C5C40;
+    }
+
+    .manifest-item.current-display.is-reuse {
+        background-color: #468C7440;
+    }
+}
+
+.manifest-item.is-disposal {
+    border-left-color: #E74C3C;
+}
+
+.manifest-item.is-reuse {
+    border-left-color: #27AE60;
+}
+
+/* Filter chips styling with proper empty state */
+.filter-chips-container {
+    min-height: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.filter-chips-container:empty::before {
+    content: "尚未設定篩選條件";
+    color: #999999;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.ts-chip {
+    background-color: #F8F9FA;
+    border: 1px solid #DEE2E6;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.ts-chip .ts-close {
+    margin-left: 0.25rem;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.ts-chip .ts-close:hover {
+    opacity: 1;
+}
+
+/* Applied condition display padding */
+.has-applied-condition-display-padding {
+    padding: 0.4em 0.4em;
+    display: flex;
+    justify-content: space-between;
+}
+
+.has-applied-condition-display-padding .ts-content {
+    flex: 1;
+}
+
+.has-applied-condition-display-padding .symbol {
+    opacity: 0.5;
+    margin-left: 1rem;
+}
+
+/* Fix Select2 dropdown to escape ts-dropdown boundary */
+.ts-dropdown {
+    overflow: visible !important;
+}
+
+.select2-dropdown {
+    z-index: 9999 !important;
+}
+
+/* Conflict table styling */
+.ts-table tr.is-conflicted {
+    background-color: #E74C3C1A;
+    border-left: 3px solid #E74C3C;
+}
+
+.ts-table tr.is-conflicted td {
+    border-color: #E74C3C33;
+}
+
+.ts-table td.is-empty {
+    background-color: #F8F9FA;
+    color: #6C757D;
+    font-style: italic;
+}
+
+.ts-table td.is-empty::before {
+    content: "(空值)";
+}
+
+/* Button states */
+.ts-button.is-disabled {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* Tab visibility enhancements */
+.ts-tab .item[style*="display: none"] {
+    display: none !important;
+}
+
+/* Filter button enhancement */
+.ts-button.is-filter.has-filter-index::after {
+    content: "";
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 8px;
+    height: 8px;
+    background-color: var(--ts-primary-500);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Responsive design adjustments */
+@media (max-width: 768px) {
+    .ts-container {
+        --width: 100% !important;
+        padding: 0 1rem;
+    }
+
+    .ts-grid.is-3-columns {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .manifest-item {
+        margin-bottom: 0.75rem;
+    }
+
+    .category-box {
+        text-align: center;
+    }
+
+    .manifest-scroll-container {
+        max-height: calc(60vh - 100px);
+        min-height: 300px;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .ts-box.is-top-indicated {
+        background-color: #4A90E240;
+    }
+
+    .ts-box.is-top-indicated.is-disposal {
+        background-color: #E74C3C40;
+    }
+
+    .ts-box.is-top-indicated.is-reuse {
+        background-color: #27AE6040;
+    }
+
+    .ts-chip {
+        background-color: #2D3748;
+        border-color: #4A5568;
+        color: #E2E8F0;
+    }
+
+    .filter-chips-container:empty::before {
+        color: #A0AEC0;
+    }
+
+    .detail-item {
+        background: #2D3748;
+        border-left-color: #4A5568;
+    }
+
+    .detail-item.highlight {
+        border-left-color: #4A90E2;
+        background-color: #4A90E21A;
+    }
+
+    .detail-label {
+        color: #A0AEC0;
+    }
+
+    .detail-value {
+        color: #E2E8F0;
+    }
+
+    .detail-value.monospace {
+        background: #2D3748CC;
+        border-color: #4A5568;
+    }
+
+    .detail-value.empty {
+        color: #718096;
+    }
+
+    .manifest-scroll-container::-webkit-scrollbar-track {
+        background: #2D3748;
+    }
+
+    .manifest-scroll-container::-webkit-scrollbar-thumb {
+        background: #4A5568;
+    }
+
+    .manifest-scroll-container::-webkit-scrollbar-thumb:hover {
+        background: #718096;
+    }
+}
+
+.ts-box.is-top-indicated.is-overall {
+    background-color: #4A90E240;
+    border-top-color: #4A90E2;
+}
+
+.ts-box.is-top-indicated.is-disposal {
+    background-color: #E74C3C40;
+    border-top-color: #E74C3C;
+}
+
+.ts-box.is-top-indicated.is-reuse {
+    background-color: #27AE6040;
+    border-top-color: #27AE60;
+}
+
+.is-dark {
+    .ts-box.is-top-indicated.is-overall {
+        background-color: #6495ED40;
+        border-top-color: #6495ED;
+    }
+
+    .ts-box.is-top-indicated.is-disposal {
+        background-color: #CD5C5C40;
+        border-top-color: #CD5C5C;
+    }
+
+    .ts-box.is-top-indicated.is-reuse {
+        background-color: #468C7440;
+        border-top-color: #468C74;
+    }
+}
+
+/* Performance optimizations */
+.manifest-item {
+    contain: layout style;
+}
+
+.ts-progress .bar {
+    will-change: transform, width;
+}
+
+/* Print styles */
+@media print {
+    .ts-button,
+    .ts-dropdown {
+        display: none !important;
+    }
+
+    .manifest-item {
+        break-inside: avoid;
+    }
+
+    .category-box {
+        break-inside: avoid;
+    }
+
+    .detail-grid {
+        break-inside: avoid;
+    }
+}
+
+.has-short-label {
+    --label-width: 4em !important;
+}
