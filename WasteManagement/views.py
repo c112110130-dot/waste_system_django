@@ -2642,45 +2642,41 @@ def delete_records(request):
 @require_POST
 @login_required
 def settlement_process(request):
-    ids_str = request.POST.get('selected_ids'); p_id = request.POST.get('process_agency'); c_id = request.POST.get('clear_agency')
-    if ids_str and p_id and c_id:
-        try:
-            with transaction.atomic():
-                new_transport = TransportRecord.objects.create(settler=request.user, process_agency_id=p_id, clear_agency_id=c_id)
-                updated = WasteRecord_New.objects.filter(id__in=ids_str.split(',')).update(is_transported=True, transportrecord=new_transport)
-                messages.success(request, f'成功結算 {updated} 筆資料！')
-        except Exception as e: messages.error(request, f'結算失敗：{str(e)}')
-    return redirect('WasteManagement:settlement_view')
-    print("=== 1. 進入 settlement_process ===") 
+    # 1. 取得 POST 資料
     ids_str = request.POST.get('selected_ids')
     process_agency_id = request.POST.get('process_agency')
     clear_agency_id = request.POST.get('clear_agency')
-    print(f"=== 2. 接收到的資料: IDs={ids_str}, Process={process_agency_id}, Clear={clear_agency_id} ===")
-    if ids_str and process_agency_id and clear_agency_id:
-        try:
-            print("=== 3. 準備建立 TransportRecord ===")
+
+    # 檢查資料完整性
+    if not (ids_str and process_agency_id and clear_agency_id):
+        messages.error(request, '資料不完整，請選擇機構並確認有勾選資料。')
+        return redirect('management:settlement_view')
+
+    try:
+        # 使用 atomic 確保「建立清運單」與「更新狀態」兩件事要麼一起成功，要麼一起失敗
+        with transaction.atomic():
+            # 2. 建立 TransportRecord (清運單)
             new_transport = TransportRecord.objects.create(
-                settler_id=request.user.id,
+                settler=request.user,
                 process_agency_id=process_agency_id,
-                clear_agency_id=clear_agency_id,  
+                clear_agency_id=clear_agency_id
             )
-            print(f"=== 4. TransportRecord 建立成功 ID: {new_transport.id} ===")
+
+            # 3. 將選中的廢棄物紀錄與該清運單關聯
             id_list = ids_str.split(',')
-            
             updated_count = WasteRecord_New.objects.filter(id__in=id_list).update(
                 is_transported=True,
                 transportrecord=new_transport
             )
-            print("=== 5. WasteRecord 更新成功 ===")
+
             messages.success(request, f'成功結算 {updated_count} 筆資料，並建立清運單 #{new_transport.id}！')
 
-        except Exception as e:
-            messages.error(request, f'結算失敗：{str(e)}')
-    else:
-        
-        messages.error(request, '資料不完整，請選擇機構並確認有勾選資料。')
-        
-    return redirect('management:settlement_view') 
+    except Exception as e:
+        print(f"結算處理錯誤: {str(e)}")
+        messages.error(request, f'結算失敗：{str(e)}')
+
+    # 統一重新導向到結算頁面
+    return redirect('management:settlement_view')
 
 
 @login_required

@@ -81,7 +81,9 @@ CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
 SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
 
-
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app', 
+]
 # Application definition
 
 INSTALLED_APPS = [

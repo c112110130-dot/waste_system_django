@@ -162,6 +162,14 @@
                             <span class="ts-text is-bold">QR code列印</span>
                         </a>
                     </div>
+                    <style>
+                        /* 抓取 class 含有 'is-qrcode-icon' 的圖示 */
+                        .ts-tab .item.tab-item .ts-icon.is-qrcode-icon {
+                            transform: scale(0.95) !important; /* 稍微縮小 5%，騰出邊距空間 */
+                            transform-origin: center center;    /* 確保縮小時保持在正中央 */
+                            vertical-align: -3px !important;   /* 稍微向下修正位置，讓圖示跟文字對齊在中線 */
+                        }
+                    </style>
                 {% endblock %}
             </div>
             <div class="end">
