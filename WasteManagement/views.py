@@ -31,7 +31,12 @@ logger = logging.getLogger(__name__)
 
 import sqlite3
 import time
-from datetime import datetime, timedelta
+import json
+from datetime import datetime
+from django.http import JsonResponse
+from collections import defaultdict
+from django.db.models import Sum, Avg
+from datetime import datetime
 from collections import Counter
 
 from django.contrib import messages
@@ -2619,550 +2624,144 @@ def visualize_department_data(request):
     except Exception as e:
         logger.error(f"Department visualization data error: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': f'資料處理失敗: {str(e)}'})
-    
 
-transport_batches = TransportRecord.objects.filter().order_by('-settle_time')
-
-@require_POST
-@login_required
-def delete_records(request):
+# ==========================================
+# --- 載運紀錄圖表專用 API (讀取模擬資料版) ---
+# ==========================================
+def api_visualize_transport_data(request):
+    """
+    處理前端傳來的「廢棄物載運紀錄」圖表生成請求
+    這版會直接去讀取 dashboard_extension.views 裡面的假資料
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': '只允許 POST 請求'})
+        
     try:
-        # 從 POST 資料中取得 IDs
-        ids_str = request.POST.get('ids', '')
-        if ids_str:
-            id_list = ids_str.split(',')
-            # 執行資料庫刪除
-            WasteRecord_New.objects.filter(id__in=id_list).delete()
-            return JsonResponse({'status': 'success'})
-        return JsonResponse({'status': 'error', 'message': 'No IDs provided'}, status=400)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
-@require_POST
-@login_required
-def settlement_process(request):
-    ids_str = request.POST.get('selected_ids'); p_id = request.POST.get('process_agency'); c_id = request.POST.get('clear_agency')
-    if ids_str and p_id and c_id:
-        try:
-            with transaction.atomic():
-                new_transport = TransportRecord.objects.create(settler=request.user, process_agency_id=p_id, clear_agency_id=c_id)
-                updated = WasteRecord_New.objects.filter(id__in=ids_str.split(',')).update(is_transported=True, transportrecord=new_transport)
-                messages.success(request, f'成功結算 {updated} 筆資料！')
-        except Exception as e: messages.error(request, f'結算失敗：{str(e)}')
-    return redirect('WasteManagement:settlement_view')
-    print("=== 1. 進入 settlement_process ===") 
-    ids_str = request.POST.get('selected_ids')
-    process_agency_id = request.POST.get('process_agency')
-    clear_agency_id = request.POST.get('clear_agency')
-    print(f"=== 2. 接收到的資料: IDs={ids_str}, Process={process_agency_id}, Clear={clear_agency_id} ===")
-    if ids_str and process_agency_id and clear_agency_id:
-        try:
-            print("=== 3. 準備建立 TransportRecord ===")
-            new_transport = TransportRecord.objects.create(
-                settler_id=request.user.id,
-                process_agency_id=process_agency_id,
-                clear_agency_id=clear_agency_id,  
-            )
-            print(f"=== 4. TransportRecord 建立成功 ID: {new_transport.id} ===")
-            id_list = ids_str.split(',')
-            
-            updated_count = WasteRecord_New.objects.filter(id__in=id_list).update(
-                is_transported=True,
-                transportrecord=new_transport
-            )
-            print("=== 5. WasteRecord 更新成功 ===")
-            messages.success(request, f'成功結算 {updated_count} 筆資料，並建立清運單 #{new_transport.id}！')
-
-        except Exception as e:
-            messages.error(request, f'結算失敗：{str(e)}')
-    else:
+        # ⚠️ 關鍵：從您的 dashboard_extension 匯入假資料
+        from dashboard_extension.views import transport_batches
         
-        messages.error(request, '資料不完整，請選擇機構並確認有勾選資料。')
-        
-    return redirect('management:settlement_view') 
+        # 1. 解析前端傳來的 JSON 設定
+        data = json.loads(request.body)
+        y_axis = data.get('y_axis', 'kilogram')
+        x_axis = data.get('x_axis', 'month_sum')
+        datasets = data.get('datasets', [])
+        title = data.get('title', '載運趨勢分析')
+        show_values = data.get('show_values', True)
 
+        categories_set = set() 
+        series_data = []       
 
-@login_required
-def settlement_view(request):
-    departments_list = Department.objects.all()
-    locations_list = LocationPoint.objects.all()
-    weighers_list = UserProfile.objects.all()
-    process_agencies = processAgency.objects.all()
-    clear_agencies = clearAgency.objects.all()
-    Waste_types = WasteType.objects.all()
-    all_records =  WasteRecord_New.objects.filter().order_by('-create_time')
-    f_start_date = request.GET.get('start_date', '')
-    f_end_date = request.GET.get('end_date', '')
-    f_location = request.GET.get('location', '')
-    f_dept = request.GET.get('dept', '')
-    f_weigher = request.GET.get('weigher', '')
-    f_waste_type = request.GET.get('waste_type', '')
-    sort_by = request.GET.get('sort_by', 'newest') # 預設排序：最新
+        # 2. 針對每一條線段進行資料過濾與加總
+        for dataset in datasets:
+            start_date_str = dataset.get('start_date')
+            end_date_str = dataset.get('end_date')
+            name = dataset.get('name')
+            color = dataset.get('color')
 
-    filtered_records =  []
-    
-    for r in all_records:
-        match = True
-        
-        # 1. 日期區間篩選
-        if f_start_date:
-            try:
-                naive_sd = datetime.strptime(f_start_date, '%Y-%m-%d')
-                sd = timezone.make_aware(naive_sd)
-                if r.create_time < sd: match = False
-            except ValueError: pass
-        if f_end_date:
-            try:
-                # 結束日期包含當天，所以加一天變成當日 23:59:59 的概念
-                naive_ed = datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1)
-                ed = timezone.make_aware(naive_ed)
-                if r.create_time >= ed: match = False
-            except ValueError: pass
+            dataset_values = defaultdict(float)
+            record_counts = defaultdict(int)
 
-        # 2. 定點/部門/人員篩選 (比對 ID)
-        if f_location and str(r.location_id) != str(f_location): match = False
-        if f_dept and str(r.department_id) != str(f_dept): match = False
-        if f_weigher and str(r.creator_id) != str(f_weigher): match = False
-        if f_waste_type and str(r.waste_type_id) != str(f_waste_type): match = False
-
-        if match:
-            filtered_records.append(r)
-
-    if sort_by == 'newest':
-        # 預設使用當前時間防止 key error (若資料庫欄位名不同請修改)
-        filtered_records.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=True)
-    elif sort_by == 'oldest':
-        filtered_records.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=False)
-    elif sort_by == 'weight_desc':
-        filtered_records.sort(key=lambda x: getattr(x, 'weight', 0), reverse=True)
-    elif sort_by == 'weight_asc':
-        filtered_records.sort(key=lambda x: getattr(x, 'weight', 0), reverse=False)
-
-    page_size_param = request.GET.get('page_size', '10')
-    try:
-        page_size = int(page_size_param)
-    except ValueError:
-        page_size = 10
-
-    paginator = Paginator(filtered_records, page_size)
-    page_number = request.GET.get('page', 1)
-
-    try:
-        page_obj = paginator.page(page_number)
-    except (PageNotAnInteger, EmptyPage):
-        # 若頁數錯誤，預設回傳第一頁
-        page_obj = paginator.page(1)
-
-    context = {
-        'page_obj': page_obj,
-        'current_page_size': page_size,
-        
-        'start_date': f_start_date,
-        'end_date': f_end_date,
-        'selected_location': f_location,
-        'selected_dept': f_dept,
-        'selected_weigher': f_weigher,
-        'selected_waste_type': f_waste_type,
-        'current_sort': sort_by,
-
-        'departments': departments_list,
-        'locations': locations_list,
-        'weighers': weighers_list,
-        'waste_types': Waste_types,
-        'process_agencies': process_agencies,
-        'clear_agencies': clear_agencies,
-    }
-
-    return render(request, 'management/settlement_fragment.html', context)
-
-
-@login_required
-def transportation_view(request):
-    
-    f_start_date = request.GET.get('start_date', '')
-    f_end_date = request.GET.get('end_date', '')
-    f_agency = request.GET.get('agency', '') 
-    sort_by = request.GET.get('sort_by', 'newest')
-    
-    try: 
-        page_size = int(request.GET.get('page_size', '10'))
-    except ValueError: 
-        page_size = 10
-
-    batches = TransportRecord.objects.select_related(
-        'clear_agency', 'process_agency', 'settler'
-    ).annotate(
-        db_total_weight=Sum('wasterecord_new__weight'),  
-        db_item_count=Count('wasterecord_new')
-    ).prefetch_related('wasterecord_new_set')
-    
-    if f_start_date:
-        try:
-            start_dt = timezone.make_aware(datetime.strptime(f_start_date, '%Y-%m-%d'))
-            batches = batches.filter(settle_time__gte=start_dt)
-        except ValueError: pass
-        
-    if f_end_date:
-        try:
-            end_dt = timezone.make_aware(datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1))
-            batches = batches.filter(settle_time__lt=end_dt)
-        except ValueError: pass
-    agency_id = None
-    if f_agency:
-        try:
-            agency_type, agency_id = f_agency.split('_')
-            f_agency = agency_type
-            agency_id = int(agency_id)
-            if agency_type == 'clear':
-                batches = batches.filter(clear_agency_id=agency_id)
+            # 迴圈跑每一筆假資料
+            for batch in transport_batches:
+                batch_date = batch['settle_time']
                 
-            elif agency_type == 'process':
-                batches = batches.filter(process_agency_id=agency_id)
-        except ValueError:
-            pass
+                if not batch_date:
+                    continue
 
-    weight_data = batches.aggregate(weight_sum=Sum('db_total_weight'))
-    raw_weight = weight_data['weight_sum'] or 0
-    total_weight_sum = round(raw_weight, 2)
-    if sort_by == 'newest':
-        batches = batches.order_by('-settle_time')
-    elif sort_by == 'oldest':
-        batches = batches.order_by('settle_time')
-    elif sort_by == 'weight_desc':
-        batches = batches.order_by('-db_total_weight')
-    elif sort_by == 'weight_asc':
-        batches = batches.order_by('db_total_weight')
-    else:
-        batches = batches.order_by('-settle_time')
+                label = ""
+                is_in_range = False
+                
+                # 根據前端選擇的 X 軸單位，判斷這筆資料有沒有在選擇的年份/月份內
+                if x_axis.startswith('year'):
+                    if int(start_date_str) <= batch_date.year <= int(end_date_str):
+                        label = batch_date.strftime("%Y")
+                        is_in_range = True
+                        
+                elif x_axis.startswith('month'):
+                    batch_month_str = batch_date.strftime("%Y-%m")
+                    if start_date_str <= batch_month_str <= end_date_str:
+                        label = batch_month_str
+                        is_in_range = True
+                        
+                elif x_axis.startswith('quarter'):
+                    batch_month_str = batch_date.strftime("%Y-%m")
+                    if start_date_str <= f"{batch_date.year}-{(batch_date.month-1)//3+1}" <= end_date_str:
+                        q = (batch_date.month - 1) // 3 + 1
+                        label = f"{batch_date.year}-Q{q}"
+                        is_in_range = True
 
-    paginator = Paginator(batches, page_size) 
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+                # 如果資料在範圍內，就把它加總起來
+                if is_in_range:
+                    categories_set.add(label)
+                    
+                    val = float(batch['total_weight'])
+                    if y_axis == 'metric_ton':
+                        val = val / 1000.0
+                    elif y_axis == 'new_taiwan_dollar':
+                        val = val * 35  
+                        
+                    dataset_values[label] += val
+                    record_counts[label] += 1
 
-    # 8. 準備下拉選單資料
-    try:
-        process_agencies = processAgency.objects.filter()
-        clear_agencies = clearAgency.objects.filter()
-    except:
-        process_agencies = []
-        clear_agencies = []
+            if 'avg' in x_axis:
+                for lbl in dataset_values:
+                    if record_counts[lbl] > 0:
+                        dataset_values[lbl] = dataset_values[lbl] / record_counts[lbl]
 
-    context = {
-        'agency_ids': agency_id,
-        'page_obj': page_obj, 
-        'start_date': f_start_date, 
-        'end_date': f_end_date,
-        'selected_agency': f_agency, 
-        'current_page_size': page_size,
-        'current_sort': sort_by,
-        'total_weight_sum': round(total_weight_sum, 2),
-        'clear_agencies': clear_agencies,
-        'process_agencies': process_agencies,
-    }
-    
-    return render(request, 'management/transportation.html', context)
+            for lbl in dataset_values:
+                dataset_values[lbl] = round(dataset_values[lbl], 2)
 
-@login_required
-def mobile_station_view(request):
-    locations_list = list(LocationPoint.objects.values('id', 'name'))
-    context = {
-        # 這裡傳 list 給模板
-        'locations': locations_list,
-    }
-    return render(request, 'management/mobile/station.html', context)
+            series_data.append({
+                "name": name,
+                "color": color,
+                "values": dict(dataset_values)
+            })
 
-@require_POST
-@login_required
-def delete_records_api(request):
-    try:
-        # 1. 解析前端傳來的 JSON 資料
-        data = json.loads(request.body)
-        ids = data.get('ids', [])
+        # 3. 排序 X 軸標籤
+        sorted_categories = sorted(list(categories_set))
 
-        if not ids:
-            return JsonResponse({'status': 'error', 'message': '未提供 ID'}, status=400)
-
-        # 2. 找出要取消的「載運單」 (TransportRecord)
-        batches_to_delete = TransportRecord.objects.filter(id__in=ids)
-        
-        # === 🔥 關鍵安全邏輯：還原廢棄物狀態 ===
-        # 在刪除載運單前，先把關聯的廢棄物紀錄恢復成「未載運」狀態
-        # 這樣它們才會回到原本的列表，而不是跟著單據一起消失
-        WasteRecord_New.objects.filter(transportrecord__in=batches_to_delete).update(
-            is_transported=False, 
-            transportrecord=None
-        )
-
-        # 3. 廢棄物安全後，才正式刪除載運單 (Batch)
-        deleted_count, _ = batches_to_delete.delete()
-        
-        return JsonResponse({'status': 'success', 'deleted': deleted_count})
-
-    except Exception as e:
-        # 發生錯誤時，印出錯誤訊息方便除錯
-        print(f"API 刪除錯誤: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-@require_POST
-@login_required
-def delete_batches_api(request):
-    try:
-        data = json.loads(request.body); ids = data.get('ids', [])
-        WasteRecord_New.objects.filter(transportrecord_id__in=ids).update(is_transported=False, transportrecord=None)
-        TransportRecord.objects.filter(id__in=ids).delete()
-        return JsonResponse({'status': 'success'})
-    except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-@ensure_csrf_cookie
-@permission_required("registrar")
-def db_department_index(request):
-    config = DepartmentWasteConfiguration.get_configuration_data()
-    return render(request, 'management/db-department.html', config)
-
-@require_POST
-def batch_import_departments(request):
-    try:
-        data = json.loads(request.body.decode('utf-8')); rows = data.get("rows", [])
-        dept_mapping = DepartmentWasteConfiguration.get_department_mapping()
-        target_wt = WasteType.objects.filter(is_active=True).first()
-        all_dates = [r.get("date") for r in rows if r.get("date")]
-        conflict_map = {(rec.date, rec.department_id): rec.amount for rec in WasteRecord.objects.filter(date__in=all_dates, waste_type=target_wt)}
-        records_to_create = []
-        for row in rows:
-            date = row.get("date")
-            for d_name, amt in row.items():
-                if d_name == "date" or not amt: continue
-                d_id = dept_mapping.get(d_name)
-                if d_id and (date, d_id) not in conflict_map:
-                    records_to_create.append(WasteRecord(date=date, department_id=d_id, waste_type=target_wt, amount=float(amt)))
-        with transaction.atomic(): WasteRecord.objects.bulk_create(records_to_create, batch_size=100)
-        return JsonResponse({"success": True, "results": {"success": len(records_to_create)}})
-    except Exception as e: return JsonResponse({"success": False, "error": str(e)})
-
-# =========================================================
-# 6. 視覺化報表
-# =========================================================
-
-@ensure_csrf_cookie
-def visualize_index(request):
-    if request.method == 'GET':
-        fields, table_names = {}, {}
-        for table_name in TABLE_MAPPING.keys():
-            model, _, f_info = get_model_info(table_name)
-            if model: fields[table_name] = f_info; table_names[table_name] = model._meta.verbose_name
-        return render(request, 'management/visualize.html', {'fields': json.dumps(fields, ensure_ascii=False), 'table_names': json.dumps(table_names, ensure_ascii=False)})
-    
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            is_valid, error_msg, cleaned_data = VisualizeRequestValidator.validate_chart_request(data)
-            if not is_valid: return JsonResponse({'success': False, 'error': error_msg})
-            chart_type = cleaned_data['chart_type']; y_axis = cleaned_data['y_axis']
-            x_axis = cleaned_data['x_axis']; datasets = cleaned_data['datasets']
-            all_starts = [d['start_date'][:7] for d in datasets]; all_ends = [d['end_date'][:7] for d in datasets]
-            global_labels = generate_date_range(min(all_starts), max(all_ends))
-            chart_data = []
-            for ds in datasets:
-                model_class, _, field_info = get_model_info(ds.get('table'))
-                row_data = VisualizeDataService.get_optimized_data(model_class, field_info, y_axis, ds.get('start_date'), ds.get('end_date'), x_axis, ds.get('field'), {})
-                chart_data.append({'name': ds.get('name'), 'data': row_data['data'], 'color': ds.get('color', '#2185d0')})
-            return JsonResponse({'success': True, 'chart_type': chart_type, 'x_axis_labels': global_labels, 'series': chart_data})
-        except Exception as e: return JsonResponse({'success': False, 'error': str(e)})
-
-# =========================================================
-# 7. 輔助功能與 API
-# =========================================================
-
-@login_required
-def alert_record_view(request):
-    all_alerts = WasteRecord_New.objects.filter(weight__gt=50).order_by('-create_time')
-    paginator = Paginator(all_alerts, 10)
-    return render(request, 'management/alert_record.html', {'page_obj': paginator.get_page(request.GET.get('page', 1)), 'weighers': UserProfile.objects.all(), 'current_page_size': 10, 'current_sort': 'newest'})
-
-def mobile_station_view(request): return render(request, 'management/mobile/station.html', {'locations': list(LocationPoint.objects.values('id', 'name'))})
-# --- 1. QR Code 列印頁面 (這是原本就在的頁面) ---
-def qrcode_print_view(request): 
-    return render(request, 'management/qrcode_print.html', {
-        'departments': Department.objects.all(), 
-        'waste_types': WasteType.objects.all()
-    })
-
-# --- 2. 刪除載運單 API (這是我們新加的功能) ---
-@require_POST
-@login_required
-def delete_records_api(request):
-    try:
-        # 解析前端傳來的 JSON 資料
-        data = json.loads(request.body)
-        ids = data.get('ids', [])
-
-        if not ids:
-            return JsonResponse({'status': 'error', 'message': '未提供 ID'}, status=400)
-
-        # 找出要刪除的載運單
-        batches_to_delete = TransportRecord.objects.filter(id__in=ids)
-        
-        # === 🔥 關鍵安全邏輯：還原廢棄物狀態 ===
-        # 在刪除載運單前，先把裡面的廢棄物紀錄狀態還原，讓它們回到「未載運」狀態
-        WasteRecord_New.objects.filter(transportrecord__in=batches_to_delete).update(
-            is_transported=False,  
-            transportrecord=None   
-        )
-
-        # 安全之後，才執行刪除載運單
-        deleted_count, _ = batches_to_delete.delete()
-        
-        return JsonResponse({'status': 'success', 'deleted': deleted_count})
-
-    except Exception as e:
-        print(f"API 刪除錯誤: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
-@require_POST
-@login_required
-def record_waste_api(request):
-    try:
-        data = json.loads(request.body)
-        WasteRecord_New.objects.create(location_id=data.get('location_id'), department=Department.objects.get(name=data.get('dept')), weight=data.get('weight'), waste_type=WasteType.objects.get(name=data.get('waste_type')), creator=request.user, updater=request.user)
-        return JsonResponse({'status': 'success'})
-    except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
-
-def location_management_view(request): return render(request, 'management/location_management.html', {})
-def generate_date_range(start_str, end_str):
-    start = datetime.strptime(start_str, '%Y-%m'); end = datetime.strptime(end_str, '%Y-%m')
-    labels = []; curr = start
-    while curr <= end: labels.append(curr.strftime('%Y-%m')); curr += relativedelta(months=1)
-    return labels
-
-@require_GET
-def get_month_status(request): return JsonResponse({'success': True})
-def get_department_data(request): return JsonResponse({'success': True})
-def api_save_location(request): return JsonResponse({'success': True})
-def api_delete_location(request): return JsonResponse({'success': True})
-def api_save_agency(request): return JsonResponse({'success': True})
-def api_delete_agency(request): return JsonResponse({'success': True})
-def locations_api(request): return JsonResponse({'locations': []})
-def api_delete_alert_records(request): return JsonResponse({'status': 'success'})
-def visualize_department_index(request): return render(request, 'management/vis-department.html', {})
-def visualize_department_config(request): return JsonResponse({'success': True})
-def visualize_department_data(request): return JsonResponse({'success': True})
-def export_department_data(request): return JsonResponse({'success': True})
-def save_department_data(request): return JsonResponse({'success': True})
-def delete_department_data(request): return JsonResponse({'success': True})
-def batch_import(request): return JsonResponse({'success': True})
-# =========================================================
-# 1. 基礎 API
-# =========================================================
-def get_server_time(request): 
-    return JsonResponse({'serverTime': datetime.now().isoformat()})
-
-@require_POST
-@login_required
-def add_record_api(request):
-    """這是從你程式碼中救回來的『新增紀錄』功能"""
-    try:
-        data = json.loads(request.body)
-        dept = data.get('dept')
-        waste_type_name = data.get('waste_type')
-        loc_id = data.get('location_id')
-        weight = data.get('weight')
-
-        if not all([loc_id, weight, dept, waste_type_name]):
-            return JsonResponse({'status': 'error', 'message': '資料不完整'})
-
-        # 寫入資料庫邏輯
-        loc_obj = LocationPoint.objects.get(id=loc_id)
-        dept_obj = Department.objects.get(name=dept)
-        waste_obj = WasteType.objects.get(name=waste_type_name)
-        
-        WasteRecord_New.objects.create(
-            location=loc_obj,
-            department=dept_obj,
-            weight=weight,
-            waste_type=waste_obj,
-            creator=request.user,
-            updater=request.user
-        )
-        return JsonResponse({'status': 'success'})
-
-    except LocationPoint.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': '地點不存在'})
-    except Department.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': '部門不存在'})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)})
-
-@require_GET
-@login_required
-def locations_api(request):
-    try:
-        # 修正點：必須使用 .values() 將資料庫物件轉成 JSON 格式
-        locations_list = list(LocationPoint.objects.values('id', 'name', 'code'))
-        return JsonResponse({'locations': locations_list})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-# =========================================================
-# 2. 定點與機構管理
-# =========================================================
-@login_required
-def location_management_view(request):
-    context = {
-        'locations': LocationPoint.objects.all(),
-        'clear_agencies': clearAgency.objects.all(),
-        'process_agencies': processAgency.objects.all(),
-    }
-    return render(request, 'management/location_management.html', context)
-
-@require_POST
-@login_required
-def api_save_location(request):
-    try:
-        data = json.loads(request.body)
-        loc_id = data.get('id')
-        name = data.get('name', '').strip()
-        code = data.get('code', '').strip() 
+        # 4. 對齊每一條線段的數據
+        formatted_series = []
+        for series in series_data:
+            data_array = []
+            for cat in sorted_categories:
+                data_array.append(series['values'].get(cat, 0))
             
-        if not name or not code: 
-            return JsonResponse({'success': False, 'error': '名稱與代碼不能為空'})
+            formatted_series.append({
+                "name": series["name"],
+                "color": series["color"],
+                "data": data_array
+            })
 
-        if loc_id and loc_id != 'new':
-            # 修正點：直接使用 update 效率更高，不用跑迴圈
-            LocationPoint.objects.filter(id=loc_id).update(name=name, code=code)
-        else:
-            LocationPoint.objects.create(name=name, code=code)      
-        return JsonResponse({'success': True, 'message': '定點儲存成功'})
+        # 5. 產生表格專用的資料結構
+        table_data = []
+        for cat in sorted_categories:
+            row_dict = {"category": cat, "values": {}}
+            for series in formatted_series:
+                idx = sorted_categories.index(cat)
+                row_dict["values"][series["name"]] = series["data"][idx]
+            table_data.append(row_dict)
+
+        # 6. 回傳給前端
+        y_axis_unit = '公斤'
+        if y_axis == 'metric_ton':
+            y_axis_unit = '公噸'
+        elif y_axis == 'new_taiwan_dollar':
+            y_axis_unit = '新台幣'
+
+        return JsonResponse({
+            "success": True,
+            "title": title,
+            "chart_type": "line", 
+            "x_axis_labels": sorted_categories, 
+            "series": formatted_series,
+            "table_data": table_data,
+            "show_values": show_values,
+            "y_axis": y_axis,
+            "y_axis_unit": y_axis_unit
+        })
+
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)})
-
-@require_POST
-@login_required
-def api_delete_location(request):
-    try:
-        data = json.loads(request.body)
-        ids = [int(i) for i in data.get('ids', [])]
-        LocationPoint.objects.filter(id__in=ids).delete()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-# ... api_save_agency 與 api_delete_agency 邏輯看起來正常，可保留原本的 ...
-
-# =========================================================
-# 3. QR Code 列印頁面
-# =========================================================
-def qrcode_print_view(request):
-    # 確保即使用戶沒登入（測試時）也不會報錯
-    if request.user.is_authenticated:
-        full_name = f"{request.user.first_name}{request.user.last_name}".strip()
-        current_user = full_name if full_name else request.user.username
-    else:
-        current_user = '測試人員'
-        
-    context = {
-        'departments': Department.objects.all(),
-        'waste_types': WasteType.objects.all(),
-        'current_user': current_user
-    }
-    return render(request, 'management/qrcode_print.html', context)

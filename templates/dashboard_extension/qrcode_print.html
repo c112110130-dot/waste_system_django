@@ -1,0 +1,521 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}醫療廢棄物暨資源管理系統 - QR code列印{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/dashboard/qrcode_print.css' %}">
+{% endblock %}
+
+{% block content %}
+<style>
+    /* 隱藏原生數字輸入框的上下箭頭 */
+    #input-qty::-webkit-outer-spin-button,
+    #input-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #input-qty[type=number] { -moz-appearance: textfield; }
+    button[onclick^="changeQty"]:hover { background: var(--ts-gray-200) !important; }
+
+    /* 藍牙按鈕樣式 (配合系統設計風格) */
+    .btn-bluetooth {
+        background: #8a8bc1; border: 1px solid var(--ts-gray-300); color: white;
+        font-size: 1rem; height: 40px; padding: 0 20px; border-radius: 6px; font-weight: bold;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+    }
+    .btn-bluetooth:hover { background: #6b6da8; }
+    
+    /* 🌟 連線成功狀態，以及滑鼠移過去提示可以「斷開」的紅色警告感 */
+    .btn-bluetooth.connected { background: #21ba45; border-color: #21ba45; color: white; }
+    .btn-bluetooth.connected:hover { background: #db2828; border-color: #db2828; }
+</style>
+
+<div class="ts-container has-vertically-spaced-large" style="--width: 1400px; padding-top: 20px;">
+    <div class="ts-grid is-evenly-divided is-relaxed">
+        
+        <div class="column">
+            <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="ts-header is-large is-heavy has-bottom-spaced" style="width: 100%;">條碼預覽</div>
+                
+                <div id="printable-label" style="width: 100%; max-width: 480px; background-color: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <div id="qrcode-img" style="width: 140px; height: 140px; background-color: #fff; display: flex; align-items: center; justify-content: center;"></div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 14px; font-size: 1.15rem; color: #333;">
+                        <div><strong>清潔人員：</strong> <span id="preview-user">{{ current_user }}</span></div>
+                        <div><strong>廢棄物種類：</strong> <span id="preview-type" style="color: #aaa;">請選擇種類</span></div>
+                        <div><strong>部門：</strong> <span id="preview-dept" style="color: #aaa;">請選擇部門</span></div>
+                        <div style="font-size: 0.95rem; color: #888; margin-top: 10px;">
+                            <strong>列印時間：</strong> <span id="preview-time-display" style="font-family: monospace;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px; position: relative;">
+                
+                <div style="position: absolute; right: 50px; top: 50px; display: flex; align-items: center; gap: 10px;">
+                    <span id="bt-status-text" style="color: var(--ts-gray-600); font-size: 0.9rem; font-weight: bold;">尚未連線</span>
+                    <button class="btn-bluetooth" id="btn-bt-connect" onclick="togglePrinterConnection()">
+                        <span class="ts-icon is-bluetooth-icon"></span>
+                        <span id="bt-btn-text">連線標籤機</span>
+                    </button>
+                </div>
+
+                <div class="ts-header is-large is-heavy has-bottom-spaced">列印設定</div>
+                
+                <div class="ts-grid is-stacked has-vertically-spaced-large" style="margin-top: 20px;">
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">操作人員</label></div>
+                            <div class="column is-9-wide">
+                                <div class="ts-input is-solid is-fluid is-large">
+                                    <input type="text" value="{{ current_user }}" readonly style="background-color: var(--ts-gray-100); color: var(--ts-gray-700);">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">所屬部門</label></div>
+                            <div class="column is-9-wide">
+                                <div class="ts-select is-fluid is-large">
+                                    <select id="select-dept" onchange="updatePreview()">
+                                        <option value="" disabled selected>請選擇產出部門</option>
+                                        {% for dept in departments %}
+                                        <option value="{{ dept.name }}">{{ dept.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">廢棄物種類</label></div>
+                            <div class="column is-9-wide">
+                                <div class="ts-select is-fluid is-large">
+                                    <select id="select-type" onchange="updatePreview()">
+                                        <option value="" disabled selected>請選擇廢棄物種類</option>
+                                        {% for type in waste_types %}
+                                        <option value="{{ type.name }}">{{ type.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="column">
+                        <div class="ts-grid is-middle-aligned">
+                            <div class="column is-3-wide"><label style="font-size: 1.1rem; font-weight: bold;">列印張數</label></div>
+                            <div class="column is-9-wide">
+                                <div style="display: flex; align-items: stretch; height: 46px; border-radius: 6px; overflow: hidden; border: 1px solid var(--ts-gray-300);">
+                                    <button type="button" onclick="changeQty(-1)" style="width: 50px; background: var(--ts-gray-100); border: none; border-right: 1px solid var(--ts-gray-300); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <span class="ts-icon is-minus-icon" style="color: var(--ts-gray-700);"></span>
+                                    </button>
+                                    <input type="number" id="input-qty" value="1" min="1" max="500" style="flex: 1; text-align: center; font-weight: bold; font-size: 1.3rem; border: none; outline: none; margin: 0; padding: 0; color: var(--ts-gray-800);">
+                                    <button type="button" onclick="changeQty(1)" style="width: 50px; background: var(--ts-gray-100); border: none; border-left: 1px solid var(--ts-gray-300); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <span class="ts-icon is-plus-icon" style="color: var(--ts-gray-700);"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="column" style="margin-top: 30px;">
+                        <div class="ts-text is-description is-small" style="text-align: right; margin-bottom: 8px; color: var(--ts-gray-600);" id="print-hint-msg">
+                            <span class="ts-icon is-circle-info-icon"></span> 請先點擊右上角連接藍牙標籤機
+                        </div>
+                        <button class="ts-button is-positive is-large" id="btn-do-print" style="width: 100%; font-size: 1.3rem; letter-spacing: 10px;" onclick="handleBluetoothPrint()" disabled>
+                            <span class="ts-icon is-print-icon" style="margin-right: 8px;"></span> 列 印
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<canvas id="hidden-canvas" style="display: none;"></canvas>
+<img id="hidden-qr-image" crossorigin="anonymous" style="display: none;" />
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ==========================================
+    // 1. 介面與 QR Code 生成邏輯 (🌟 搭載高頻時間偵測系統)
+    // ==========================================
+    let currentCompactTime = '';
+    let currentDisplayTime = '';
+
+    function updateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const date = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
+        currentDisplayTime = `${year}/${month}/${date} ${hours}:${minutes}`;
+        document.getElementById('preview-time-display').innerText = currentDisplayTime;
+        currentCompactTime = `${year}${month}${date}${hours}${minutes}`;
+    }
+
+    function generateQRCode() {
+        const typeVal = document.getElementById('select-type').value || '未選擇';
+        const deptVal = document.getElementById('select-dept').value || '未選擇';
+        const userVal = document.getElementById('preview-user').innerText;
+
+        const qrDataString = `dept:${deptVal},type:${typeVal},clea:${userVal},time:${currentCompactTime}`;
+        const encodedData = encodeURIComponent(qrDataString);
+        
+        const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=1&data=${encodedData}`;
+        
+        const qDiv = document.getElementById('qrcode-img');
+        qDiv.innerHTML = `<img src="${apiUrl}" alt="QR Code" style="width: 140px; height: 140px; border-radius: 4px;" />`;
+
+        const hiddenImg = document.getElementById('hidden-qr-image');
+        hiddenImg.src = apiUrl;
+    }
+
+    function updatePreview() {
+        const typeVal = document.getElementById('select-type').value;
+        const deptVal = document.getElementById('select-dept').value;
+        
+        document.getElementById('preview-type').innerText = typeVal || '請選擇種類';
+        document.getElementById('preview-type').style.color = typeVal ? '#333' : '#aaa';
+        document.getElementById('preview-dept').innerText = deptVal || '請選擇部門';
+        document.getElementById('preview-dept').style.color = deptVal ? '#333' : '#aaa';
+        
+        updateTime(); generateQRCode(); 
+    }
+
+    function changeQty(amount) {
+        const input = document.getElementById('input-qty');
+        let currentVal = parseInt(input.value) || 0;
+        let newVal = currentVal + amount;
+        if (newVal < 1) newVal = 1; if (newVal > 500) newVal = 500; 
+        input.value = newVal;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateTime();
+        generateQRCode(); 
+        
+        // 🌟 自動變動時間系統：每秒檢查一次，只要「分鐘」改變了就馬上重繪標籤！
+        setInterval(() => {
+            const prevTime = currentDisplayTime;
+            updateTime();
+            // 如果時間字串跟上一秒不一樣，代表跳分了
+            if (prevTime !== currentDisplayTime) {
+                // 檢查如果使用者已經有選資料了，就更新 QR Code 內含的時間
+                if (document.getElementById('select-type').value || document.getElementById('select-dept').value) {
+                    generateQRCode();
+                }
+            }
+        }, 1000);
+    });
+
+    // ==========================================
+    // 2. 藍牙通訊核心與連線 (🌟 搭載斷開連線功能)
+    // ==========================================
+    const SVC_UUID    = "0000ae30-0000-1000-8000-00805f9b34fb";
+    const CMD_UUID    = "0000ae01-0000-1000-8000-00805f9b34fb";
+    const NOTIFY_UUID = "0000ae02-0000-1000-8000-00805f9b34fb";
+    const DATA_UUID   = "0000ae03-0000-1000-8000-00805f9b34fb";
+
+    const FLOW_STOP_SIGNALS = ["5178ae0101001070ff", "2221a800010020e0ff", "2221ae0101001070ff"];
+    const FLOW_GO_SIGNALS   = ["5178ae0101000000ff", "2221a80001003090ff", "2221ae0101000000ff"];
+
+    let btDevice = null;
+    let charCmd = null;
+    let charData = null;
+    let charNotify = null;
+    
+    let flowGo = true;
+    let isPrintReady = false;
+    let isPrintDone = false;
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    const hexToBytes = (hex) => {
+        let bytes = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+        return bytes;
+    };
+
+    function handleNotifications(event) {
+        const value = event.target.value;
+        const hexStr = Array.from(new Uint8Array(value.buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        if (FLOW_STOP_SIGNALS.includes(hexStr)) flowGo = false;
+        else if (FLOW_GO_SIGNALS.includes(hexStr)) flowGo = true;
+        else if (hexStr.startsWith("2221a9")) isPrintReady = true;
+        else if (hexStr.startsWith("2221aa")) isPrintDone = true;
+    }
+
+    async function sendCmd(dataBytes) {
+        for (let i = 0; i < dataBytes.length; i += 20) {
+            await charCmd.writeValueWithoutResponse(dataBytes.slice(i, i + 20));
+            await sleep(20);
+        }
+    }
+
+    // 🌟 連線/斷線 切換控制器
+    async function togglePrinterConnection() {
+        const btn = document.getElementById('btn-bt-connect');
+        const icon = btn.querySelector('.ts-icon');
+        const text = document.getElementById('bt-btn-text');
+        const statusText = document.getElementById('bt-status-text');
+        const printBtn = document.getElementById('btn-do-print');
+
+        // 如果目前是連線狀態，就執行「斷開連線」！
+        if (btDevice && btDevice.gatt.connected) {
+            btDevice.gatt.disconnect();
+            return; // 斷開後，會由下面的 gattserverdisconnected 事件處理後續 UI 恢復
+        }
+
+        try {
+            icon.className = 'ts-icon is-spinner-icon is-spinning';
+            text.innerText = '搜尋中...';
+
+            btDevice = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: [SVC_UUID]
+            });
+
+            // 🌟 註冊斷線處理機制 (不論是手動斷開，還是機器沒電，都會觸發這裡)
+            btDevice.addEventListener('gattserverdisconnected', () => {
+                btn.className = 'btn-bluetooth';
+                text.innerText = '連線標籤機';
+                statusText.innerText = '已斷線，可重新連接';
+                statusText.style.color = '#db2828';
+                icon.className = 'ts-icon is-bluetooth-icon';
+                printBtn.disabled = true;
+                btDevice = null;
+                document.getElementById('print-hint-msg').innerHTML = '<span class="ts-icon is-circle-info-icon"></span> 請先點擊右上角連接藍牙標籤機';
+            });
+
+            statusText.innerText = '連線服務中...';
+            const server = await btDevice.gatt.connect();
+            const service = await server.getPrimaryService(SVC_UUID);
+
+            charCmd = await service.getCharacteristic(CMD_UUID);
+            charNotify = await service.getCharacteristic(NOTIFY_UUID);
+            charData = await service.getCharacteristic(DATA_UUID);
+
+            await charNotify.startNotifications();
+            charNotify.addEventListener('characteristicvaluechanged', handleNotifications);
+
+            // 連線成功 UI 變更為「斷開連線」
+            btn.className = 'btn-bluetooth connected';
+            icon.className = 'ts-icon is-link-slash-icon'; // 換成表示斷開連結的圖示
+            text.innerText = '斷開連線';
+            statusText.innerText = '設備就緒';
+            statusText.style.color = '#21ba45';
+            printBtn.disabled = false;
+            document.getElementById('print-hint-msg').innerHTML = '<span class="ts-icon is-check-circle-icon"></span> 標籤機已連線，可開始列印！';
+
+        } catch (error) {
+            console.error(error);
+            icon.className = 'ts-icon is-bluetooth-icon';
+            text.innerText = '連線標籤機';
+            
+            statusText.innerText = '錯誤: ' + error.message; 
+            statusText.style.color = '#db2828';
+            printBtn.disabled = true;
+            btDevice = null;
+        }
+    }
+
+    // ==========================================
+    // 3. 終極排版：動態折行與完美置中魔法
+    // ==========================================
+    function getWrappedLines(ctx, title, content, maxW) {
+        const titleStr = title + ": ";
+        const indentW = ctx.measureText(titleStr).width;
+        const contentW = maxW - indentW;
+        const lines = [];
+        let currentLine = "";
+        let isFirstLine = true;
+
+        for (let i = 0; i < content.length; i++) {
+            const char = content[i];
+            if (ctx.measureText(currentLine + char).width <= contentW) {
+                currentLine += char;
+            } else {
+                if (isFirstLine) {
+                    lines.push({ title: titleStr, content: currentLine, indent: indentW });
+                    isFirstLine = false;
+                } else {
+                    lines.push({ title: "", content: currentLine, indent: indentW });
+                }
+                currentLine = char;
+            }
+        }
+        if (currentLine || isFirstLine) {
+            lines.push({ title: isFirstLine ? titleStr : "", content: currentLine, indent: indentW });
+        }
+        return lines;
+    }
+
+    async function handleBluetoothPrint() {
+        const typeVal = document.getElementById('select-type').value;
+        const deptVal = document.getElementById('select-dept').value;
+        const userVal = document.getElementById('preview-user').innerText;
+        const qty = parseInt(document.getElementById('input-qty').value) || 1;
+
+        if (!typeVal || !deptVal) {
+            alert("請先選擇「所屬部門」與「廢棄物種類」才能列印！");
+            return;
+        }
+
+        if (!charCmd || !charData) {
+            alert("請先點擊上方按鈕連接藍牙標籤機！");
+            return;
+        }
+
+        const printBtn = document.getElementById('btn-do-print');
+        const originalBtnHTML = printBtn.innerHTML;
+        
+        printBtn.innerHTML = '<span class="ts-icon is-spinner-icon is-spinning" style="margin-right:8px; letter-spacing: normal; display: inline-block;"></span> 處理資料中...';
+        printBtn.disabled = true;
+
+        try {
+            const canvas = document.getElementById('hidden-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const physicalWidth = 384;
+            const physicalHeight = 700; 
+            canvas.width = physicalWidth;
+            canvas.height = physicalHeight;
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, physicalWidth, physicalHeight);
+
+            ctx.save();
+            ctx.translate(physicalWidth, 0);
+            ctx.rotate(90 * Math.PI / 180);
+
+            const logicalWidth = physicalHeight;  
+            const logicalHeight = physicalWidth;  
+
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(4, 4, logicalWidth - 8, logicalHeight - 8);
+
+            const qrImg = document.getElementById('hidden-qr-image');
+            if (!qrImg.complete) {
+                await new Promise(resolve => { qrImg.onload = resolve; });
+            }
+            const qrSize = 280;
+            const qrX = 30;
+            const qrY = (logicalHeight - qrSize) / 2;
+            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+            ctx.fillStyle = "black";
+            ctx.font = "bold 28px 'Microsoft JhengHei', '微軟正黑體', sans-serif";
+            ctx.textBaseline = "top"; 
+
+            const textX = qrX + qrSize + 30;
+            const maxTextWidth = logicalWidth - textX - 20;
+
+            let allLines = [];
+            allLines.push(...getWrappedLines(ctx, "人員", userVal, maxTextWidth));
+            allLines.push(...getWrappedLines(ctx, "種類", typeVal, maxTextWidth));
+            allLines.push(...getWrappedLines(ctx, "部門", deptVal, maxTextWidth));
+            allLines.push(...getWrappedLines(ctx, "時間", currentDisplayTime, maxTextWidth));
+
+            const lineSpacing = 40;
+            const totalTextHeight = allLines.length * lineSpacing;
+            let currentY = (logicalHeight - totalTextHeight) / 2 + 5; 
+
+            for (const item of allLines) {
+                if (item.title) {
+                    ctx.fillText(item.title, textX, currentY);
+                }
+                ctx.fillText(item.content, textX + item.indent, currentY);
+                currentY += lineSpacing;
+            }
+
+            ctx.restore(); 
+
+            const imgData = ctx.getImageData(0, 0, physicalWidth, physicalHeight).data;
+            const allRows = new Uint8Array(physicalHeight * 48); 
+
+            for (let y = 0; y < physicalHeight; y++) {
+                for (let xBytes = 0; xBytes < 48; xBytes++) {
+                    let byte = 0;
+                    for (let bit = 0; bit < 8; bit++) {
+                        const x = xBytes * 8 + bit;
+                        const pixelIdx = (y * physicalWidth + x) * 4;
+                        const brightness = (imgData[pixelIdx] + imgData[pixelIdx + 1] + imgData[pixelIdx + 2]) / 3;
+                        if (brightness < 128) {
+                            byte |= (1 << bit); 
+                        }
+                    }
+                    allRows[y * 48 + xBytes] = byte;
+                }
+            }
+
+            for (let copy = 0; copy < qty; copy++) {
+                printBtn.innerHTML = `<span class="ts-icon is-spinner-icon is-spinning" style="margin-right:8px; letter-spacing: normal; display: inline-block;"></span> 正在列印第 ${copy + 1} / ${qty} 張...`;
+                
+                await sendCmd(hexToBytes("2221a70000000000")); await sleep(200);
+                await sendCmd(hexToBytes("2221b10001000000ff")); await sleep(200);
+                await sendCmd(hexToBytes("2221a10001000000ff")); await sleep(1500);
+                await sendCmd(hexToBytes("2221a20001006229ff")); await sleep(300);
+
+                const rowsLo = physicalHeight & 0xFF;
+                const rowsHi = (physicalHeight >> 8) & 0xFF;
+                const printReq = new Uint8Array([0x22, 0x21, 0xA9, 0x00, 0x04, 0x00, rowsLo, rowsHi, 0x30, 0x00]);
+                
+                let ready = false;
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    isPrintReady = false;
+                    await sendCmd(printReq);
+                    for (let wait = 0; wait < 40; wait++) {
+                        if (isPrintReady) { ready = true; break; }
+                        await sleep(100);
+                    }
+                    if (ready) break;
+                }
+                if (!ready) throw new Error("印表機無回應列印請求");
+
+                isPrintDone = false;
+                flowGo = true; 
+                for (let i = 0; i < allRows.length; i += 48) {
+                    while (!flowGo) await sleep(10);
+                    const chunk = allRows.slice(i, i + 48);
+                    await charData.writeValueWithoutResponse(chunk);
+                    await sleep(15); 
+                }
+
+                await sleep(500);
+                await sendCmd(hexToBytes("2221ad000100000000"));
+
+                for (let wait = 0; wait < 100; wait++) {
+                    if (isPrintDone) break;
+                    await sleep(100);
+                }
+                
+                if (copy < qty - 1) await sleep(1000); 
+            }
+
+            printBtn.innerHTML = '<span class="ts-icon is-check-icon" style="margin-right:8px; letter-spacing: normal; display: inline-block;"></span> 列印完成！';
+            setTimeout(() => {
+                printBtn.innerHTML = originalBtnHTML;
+                printBtn.disabled = false;
+            }, 3000);
+
+        } catch (error) {
+            console.error("列印發生錯誤:", error);
+            alert("列印失敗：" + error.message);
+            printBtn.innerHTML = originalBtnHTML;
+            printBtn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}
