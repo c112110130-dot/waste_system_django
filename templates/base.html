@@ -20,15 +20,19 @@
 
                 function applyThemeClass(theme) {
                     htmlRoot.classList.remove('is-light', 'is-dark');
+
                     const actualTheme = (theme === 'system') ? getSystemTheme() : theme;
                     htmlRoot.classList.add(actualTheme === 'dark' ? 'is-dark' : 'is-light');
+
                     return actualTheme;
                 }
 
                 function updateUsernameSpan(actualTheme) {
                     const usernameSpan = document.getElementById('username-span');
                     if (!usernameSpan) return;
+
                     usernameSpan.classList.remove('is-mark', 'color-{{ permission_hi }}-inverted', 'color-{{ permission_hi }}');
+
                     if (actualTheme === 'light') {
                         usernameSpan.classList.add('is-mark', 'color-{{ permission_hi }}-inverted');
                     } else {
@@ -42,6 +46,7 @@
                     return actualTheme;
                 }
 
+                // Get initial theme
                 let initialTheme;
                 {% if user.is_authenticated %}
                     initialTheme = '{% current_theme %}';
@@ -49,8 +54,10 @@
                     initialTheme = localStorage.getItem('theme') || 'system';
                 {% endif %}
 
+                // Apply immediately (before CSS loads)
                 const initialActualTheme = applyThemeClass(initialTheme);
 
+                // Export public API
                 return {
                     getSystemTheme: getSystemTheme,
                     applyTheme: applyTheme,

@@ -9,6 +9,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from datetime import timedelta
 from django.utils import timezone
+from django.db import models
 from django.db.models import Sum  
 from django.conf import settings 
 
@@ -50,6 +51,10 @@ class GeneralWasteProduction(models.Model): # 一般事業廢棄物產出表
     @classmethod
     def get_field_config(cls):
         """Load field configuration from JSON file"""
+        import json
+        import os
+        from django.conf import settings
+
         config_path = os.path.join(settings.BASE_DIR, 'field_config.json')
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
@@ -165,6 +170,7 @@ class PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenue(models.Mo
 #   DB - Department
 ########################################################################################################################
 
+
 class Department(models.Model):
     """Department entity - Dynamic management of hospital departments"""
     id = models.AutoField(primary_key=True)
@@ -188,6 +194,7 @@ class Department(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class WasteType(models.Model):
     """Waste type entity - Support multiple waste types"""
@@ -344,6 +351,10 @@ class LocationPoint(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}" 
 
+    class Meta:
+        db_table = 'location' # 資料庫裡的表格名稱
+        verbose_name = "定點"
+
 class clearAgency(models.Model):
     id = models.AutoField(primary_key=True)        #清理機構ID
     code = models.CharField(max_length=100)        #清理機構代碼
@@ -397,6 +408,12 @@ class TransportRecord(models.Model):
     def item_count(self):
         return self.wasterecord_new_set.count()
         
+    @property
+    def items(self):
+        return self.wasterecord_new_set.all()
+    @property
+    def item_count(self):
+        return self.wasterecord_new_set.count()
     class Meta:
         db_table = 'transport_record' # 資料庫裡的表格名稱
         verbose_name = "載運紀錄"
@@ -408,6 +425,9 @@ class WasteRecord_New(models.Model):
     id = models.AutoField(primary_key=True)
     is_transported = models.BooleanField(default=False)
     
+class WasteRecord_New(models.Model):
+    id = models.AutoField(primary_key=True)
+    is_transported = models.BooleanField(default=False)
     @property
     def is_expired(self):
         if hasattr(self, 'TransportRecord_id') and self.TransportRecord_id:
@@ -424,6 +444,9 @@ class WasteRecord_New(models.Model):
     def can_delete(self):
         return not self.is_transported and not self.is_expired
         
+    @property
+    def can_delete(self):
+        return not self.is_transported and not self.is_expired
     weight = models.DecimalField(max_digits=5,decimal_places=2)
     department = models.ForeignKey(
         Department,
@@ -469,3 +492,6 @@ class WasteRecord_New(models.Model):
 
     def __str__(self):
         return f"{self.create_time.strftime('%Y-%m-%d %H:%M')} - {self.department.name} ({self.weight}kg)"
+    class Meta:
+        db_table = 'waste_record' # 資料庫裡的表格名稱
+        verbose_name = "廢棄物紀錄"
