@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}醫療廢棄物暨資源管理系統 - QR code列印{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - QR code列印{% endblock %}
 
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/qrcode_print.css' %}">
@@ -32,23 +32,39 @@
     .info-wrap div { white-space: normal; word-break: break-all; line-height: 1.4; }
 </style>
 
-<div class="ts-container has-vertically-spaced-large" style="--width: 1400px; padding-top: 20px;">
+<div class="ts-container has-vertically-spaced-large" style="--width: 1850px;">
+    <div style="margin-bottom: 30px;">
+        <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+            <div style="background: #a333c8; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(163, 51, 200, 0.3);">
+                <span class="ts-icon is-qrcode-icon"></span>
+            </div>
+            <div>
+                廢棄物 QR Code 標籤列印
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">設定產出資訊，並透過藍牙連接專屬標籤機進行 QR Code 貼紙列印</div>
+            </div>
+        </div>
+    </div>
     <div class="ts-grid is-evenly-divided is-relaxed">
         
         <div class="column">
-            <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px; display: flex; flex-direction: column;">
+                
                 <div class="ts-header is-large is-heavy has-bottom-spaced" style="width: 100%;">條碼預覽</div>
-                <div id="printable-label" style="background-color: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                    <img id="qrcode-preview-img" src="" alt="QR Code" crossorigin="anonymous">
-                    <div class="info-wrap" style="display: flex; flex-direction: column; gap: 14px; font-size: 1.15rem; color: #333;">
-                        <div><strong>清潔人員：</strong> <span id="preview-user">{{ request.user.get_full_name|default:request.user.username }}</span></div>
-                        <div><strong>種類：</strong> <span id="preview-type" style="color: #aaa;">請選擇種類</span></div>
-                        <div><strong>部門：</strong> <span id="preview-dept" style="color: #aaa;">請選擇部門</span></div>
-                        <div style="font-size: 0.95rem; color: #888; margin-top: 10px;">
-                            <strong>列印時間：</strong> <span id="preview-time-display" style="font-family: monospace;"></span>
+                
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%;">
+                    
+                    <div id="printable-label" style="background-color: #fff; border: 2px solid #ddd; border-radius: 8px; padding: 30px; display: flex; align-items: center; gap: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                        <img id="qrcode-preview-img" src="" alt="QR Code" crossorigin="anonymous">
+                        <div class="info-wrap" style="display: flex; flex-direction: column; gap: 14px; font-size: 1.15rem; color: #333;">
+                            <div><strong>清潔人員：</strong> <span id="preview-user">{{ request.user.get_full_name|default:request.user.username }}</span></div>
+                            <div><strong>種類：</strong> <span id="preview-type" style="color: #aaa;">請選擇種類</span></div>
+                            <div><strong>部門：</strong> <span id="preview-dept" style="color: #aaa;">請選擇部門</span></div>
+                            <div style="font-size: 0.95rem; color: #888; margin-top: 10px;">
+                                <strong>列印時間：</strong> <span id="preview-time-display" style="font-family: monospace;"></span>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </div> 
             </div>
         </div>
 

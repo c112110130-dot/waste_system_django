@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 行動裝置{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統 - 行動裝置登記{% endblock %}
 {% load humanize %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/mobile_style.css' %}">
@@ -8,142 +8,130 @@
 {% block content %}
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-<div class="station-container">
-    <div class="left-panel">
-        <button class="btn-camera-stop" id="btn-stop-cam" onclick="stopScanner()">
-            <span class="ts-icon is-circle-xmark-icon" style="margin-right: 5px;"></span>關閉鏡頭
-        </button>
-        <div id="reader"></div>
-        <div class="camera-placeholder" id="cam-placeholder">
-            <button class="btn-camera-start" id="btn-scan-qr" onclick="startScanner()">
-                <span class="ts-icon is-camera-icon" style="font-size: 2.5rem; margin-bottom: 5px;"></span>
-                掃描 QR code
-            </button>
-            <div style="margin-top: 15px;">點擊開啟以掃描 QR Code</div>
+<div class="ts-container" style="--width: 1830px; padding-top: 20px;">
+    
+    <div style="margin-bottom: 20px;">
+        <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+            <div style="background: #00b5ad; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0, 181, 173, 0.3);">
+                <span class="ts-icon is-mobile-screen-icon"></span>
+            </div>
+            <div>
+                行動裝置登記
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">透過行動裝置鏡頭掃描廢棄物 QR Code，並結合藍牙磅秤進行快速過磅登記</div>
+            </div>
         </div>
     </div>
 
-    <div class="right-panel">
-        
-        <div class="info-card">
-            <div class="card-header">
-                <span class="header-title">SCRAP INFO</span>
-                <span id="scan-status-badge" class="ts-badge is-small is-disabled">等待掃描</span>
-            </div>
-            <div class="field-row"><span class="field-label">部門 Dept.</span><span class="field-value" id="disp_dept">---</span></div>
-            <div class="field-row"><span class="field-label">廢棄物種類 Type</span><span class="field-value" id="disp_waste_type">---</span></div>
-            <div class="field-row"><span class="field-label">清潔人員 Cleaner</span><span class="field-value" id="disp_cleaner">---</span></div>
-            <div class="field-row"><span class="field-label">打包時間 Time</span><span class="field-value" id="disp_time">---</span></div>
-            <div class="field-row">
-                <span class="field-label">定點 Loc.</span>
-                <select id="select_loc_id" class="field-value">
-                    <option value="">-- 請選擇定點 --</option>
-                    {% for loc in locations %}
-                    <option value="{{ loc.id }}">{{ loc.name }}</option>
-                    {% endfor %}
-                </select>
+    <div class="station-container" style="height: calc(100vh - 140px); padding: 0; background: transparent; margin: 0;">
+        <div class="left-panel">
+            <button class="btn-camera-stop" id="btn-stop-cam" onclick="stopScanner()">
+                <span class="ts-icon is-circle-xmark-icon" style="margin-right: 5px;"></span>關閉鏡頭
+            </button>
+            <div id="reader"></div>
+            <div class="camera-placeholder" id="cam-placeholder">
+                <button class="btn-camera-start" id="btn-scan-qr" onclick="startScanner()">
+                    <span class="ts-icon is-camera-icon" style="font-size: 2.5rem; margin-bottom: 5px;"></span>
+                    掃描 QR code
+                </button>
+                <div style="margin-top: 15px;">點擊開啟以掃描 QR Code</div>
             </div>
         </div>
 
-        <div class="info-card">
-            <div class="card-header" style="border:none; padding-bottom:5px;">
-                <span class="header-title">WEIGHT CONTROL</span>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-scale-name" onclick="toggleInputNameModal(true)" title="設定磅秤名稱">
-                        <span id="bt-status" class="ts-badge is-small is-subtle" title="磅秤名稱">磅秤名稱：未連線</span>
-                    </button>
+        <div class="right-panel">
+            <div class="info-card">
+                <div class="card-header">
+                    <span class="header-title">SCRAP INFO</span>
+                    <span id="scan-status-badge" class="ts-badge is-small is-disabled">等待掃描</span>
+                </div>
+                <div class="field-row"><span class="field-label">部門 Dept.</span><span class="field-value" id="disp_dept">---</span></div>
+                <div class="field-row"><span class="field-label">廢棄物種類 Type</span><span class="field-value" id="disp_waste_type">---</span></div>
+                <div class="field-row"><span class="field-label">清潔人員 Cleaner</span><span class="field-value" id="disp_cleaner">---</span></div>
+                <div class="field-row"><span class="field-label">打包時間 Time</span><span class="field-value" id="disp_time">---</span></div>
+                <div class="field-row">
+                    <span class="field-label">定點 Loc.</span>
+                    <select id="select_loc_id" class="field-value">
+                        <option value="">-- 請選擇定點 --</option>
+                        {% for loc in locations %}
+                        <option value="{{ loc.id }}">{{ loc.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
 
-            <div class="weight-display-container">
-                <input type="number" class="big-input" id="weight_input" placeholder="0.0" readonly>
-                <span class="unit-tag" id="current-unit">G</span>
-            </div>
-            
-            <div class="help-header">
-        {% comment %} <button class="btn-help" onclick="toggleHelpModal(true)" title="功能說明">
-            <span class="ts-icon is-circle-question-icon"></span>
-        </button> {% endcomment %}
-        </div>
-        
-            <div class="control-grid-main">
-                <button class="btn-op" id="btn-zero">
-                    <span class="ts-icon is-calculator-icon"></span> 歸零
-                </button>
-                <button class="btn-op" id="btn-open-factor" onclick="toggleInputValueModal(true)">
-                    <span class="ts-icon is-circle-xmark-icon"></span> 校正磅秤
-                </button>
-                <button class="btn-op" id="btn-unit" >切換單位</button>
-                <button class="btn-op" id="btn-bt-connect">
+            <div class="info-card">
+                <div class="card-header" style="border:none; padding-bottom:5px;">
+                    <span class="header-title">WEIGHT CONTROL</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btn-scale-name" onclick="toggleInputNameModal(true)" title="設定磅秤名稱">
+                            <span id="bt-status" class="ts-badge is-small is-subtle" title="磅秤名稱">磅秤名稱：未連線</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="weight-display-container">
+                    <input type="number" class="big-input" id="weight_input" placeholder="0.0" readonly>
+                    <span class="unit-tag" id="current-unit">G</span>
+                </div>
+                
+                <div class="help-header">
+                </div>
+                
+                <div class="control-grid-main">
+                    <button class="btn-op" id="btn-zero">
+                        <span class="ts-icon is-calculator-icon"></span> 歸零
+                    </button>
+                    <button class="btn-op" id="btn-open-factor" onclick="toggleInputValueModal(true)">
+                        <span class="ts-icon is-circle-xmark-icon"></span> 校正磅秤
+                    </button>
+                    <button class="btn-op" id="btn-unit">切換單位</button>
+                    <button class="btn-op" id="btn-bt-connect">
                         <span class="ts-icon is-bluetooth-icon"></span>
                         <span id="bt-text">連線磅秤</span>
-                </button>
+                    </button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn-large btn-record" style="background: #8a8bc1; margin-top: 10px; color: white;" id="btn-record-weight">
+                        <span class="ts-icon is-weight-scale-icon"></span>記錄重量
+                    </button>
+                </div>
                 
-            </div>
-            <div style="control-grid-main; margin-top: 10px;">
-                <button class="btn-large btn-record" style="background: #8a8bc1; margin-top: 10px; color: white;" id="btn-record-weight">
-                    <span class="ts-icon is-weight-scale-icon"></span>記錄重量
-                </button>
+                <div style="margin-top: 10px;">
+                    <button class="btn-large btn-submit" id="btn-submit-record">
+                        <span class="ts-icon is-cloud-arrow-up-icon"></span>確認上傳 (Upload)
+                    </button>
+                </div>
             </div>
             
-            <div style="control-grid-main; margin-top: 10px;">
-                
-                <button class="btn-large btn-submit" id="btn-submit-record">
-                    <span class="ts-icon is-cloud-arrow-up-icon"></span>確認上傳 (Upload)
-                </button>
-            </div>
+            <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; opacity: 1; pointer-events: auto;"></div>
         </div>
-        
-        <!-- Toast Container -->
-        <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; opacity: 1; pointer-events: auto;"></div>
-    </div>
-
-    {% comment %} <div id="help-modal" class="custom-modal-overlay">
-        <div class="custom-modal" onclick="event.stopPropagation()">
-            <span class="ts-icon is-xmark-icon modal-close" onclick="toggleHelpModal(false)"></span>
-            <div class="modal-title">
-                <span class="ts-icon is-circle-info-icon"></span> 操作功能說明
-            </div>
-            <div class="modal-content-text">
-                <ul>
-                    <li><strong>歸零：</strong> 將當前重量歸為 0.00。</li>
-                    <li><strong>切換單位：</strong> 按一下循環切換 (G/KG)。</li>
-                    <li><strong>校正磅秤：</strong> 進行磅秤校正程序，確保重量準確。</li>
-                    <li><strong>連線磅秤：</strong> 透過藍牙連線到支援的智能磅秤，實時讀取重量數據。</li>
-                </ul>
-            </div>
+    </div> </div> <div id="inputValue" class="custom-modal-overlay">
+    <div class="custom-modal" onclick="event.stopPropagation()">
+        <span class="ts-icon is-xmark-icon modal-close" onclick="toggleInputValueModal(false)"></span>
+        <div class="modal-title">
+            <span class="ts-icon is-calculator-icon"></span> 校正參數 
         </div>
-    </div> {% endcomment %}
-
-    <div id="inputValue" class="custom-modal-overlay">
-        <div class="custom-modal" onclick="event.stopPropagation()">
-            <span class="ts-icon is-xmark-icon modal-close" onclick="toggleInputValueModal(false)"></span>
-            <div class="modal-title">
-                <span class="ts-icon is-calculator-icon"></span> 校正參數 
-            </div>
-            <div class="modal-content-text">
-                <p>請輸入已知物品重量（公克）以校正磅秤：</p>
-                <input type="number" id="calibration-factor-input" class="field-value" placeholder="例如：500 (克)" style="width: 100%; margin-top: 10px;">
-                <button class="btn-large"  id="btn-reset-factor" style="background: #2185d0; margin-top: 15px; color: white; width: 100%;">
-                    <span id="btn-reset-factor-text">確認校正</span>
-                </button>
-            </div>
+        <div class="modal-content-text">
+            <p>請輸入已知物品重量（公克）以校正磅秤：</p>
+            <input type="number" id="calibration-factor-input" class="field-value" placeholder="例如：500 (克)" style="width: 100%; margin-top: 10px;">
+            <button class="btn-large" id="btn-reset-factor" style="background: #2185d0; margin-top: 15px; color: white; width: 100%;">
+                <span id="btn-reset-factor-text">確認校正</span>
+            </button>
         </div>
     </div>
+</div>
 
-    <div id="inputName" class="custom-modal-overlay">
-        <div class="custom-modal" onclick="event.stopPropagation()">
-            <span class="ts-icon is-xmark-icon modal-close" onclick="toggleInputNameModal(false)"></span>
-            <div class="modal-title">
-                <span class="ts-icon is-calculator-icon"></span> 磅秤名稱 
-            </div>
-            <div class="modal-content-text">
-                <p>請輸入磅秤名稱：(20字符內)  更改名稱後須重新刷新頁面</p>
-                <input type="text" id="scale-name-input" class="field-value" placeholder="例如：磅秤A" style="width: 100%; margin-top: 10px;">
-                <button class="btn-large"  id="btn-reset-name" style="background: #2185d0; margin-top: 15px; color: white; width: 100%;">
-                    <span id="btn-reset-name-text">確認</span>
-                </button>
-            </div>
+<div id="inputName" class="custom-modal-overlay">
+    <div class="custom-modal" onclick="event.stopPropagation()">
+        <span class="ts-icon is-xmark-icon modal-close" onclick="toggleInputNameModal(false)"></span>
+        <div class="modal-title">
+            <span class="ts-icon is-calculator-icon"></span> 磅秤名稱 
+        </div>
+        <div class="modal-content-text">
+            <p>請輸入磅秤名稱：(20字符內)  更改名稱後須重新刷新頁面</p>
+            <input type="text" id="scale-name-input" class="field-value" placeholder="例如：磅秤A" style="width: 100%; margin-top: 10px;">
+            <button class="btn-large" id="btn-reset-name" style="background: #2185d0; margin-top: 15px; color: white; width: 100%;">
+                <span id="btn-reset-name-text">確認</span>
+            </button>
         </div>
     </div>
 </div>

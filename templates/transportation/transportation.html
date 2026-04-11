@@ -2,14 +2,25 @@
 {% load static %}
 {% load custom_filters_get_item %}
 {% load humanize %}
-{% block title %}醫療廢棄物暨資源管理系統 - 聯單管理{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 聯單管理{% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/transportation/transportation.css' %}">
     <link rel="stylesheet" href="{% static 'css/management/database.css' %}">
 {% endblock %}
 {% block content %}
     <!-- Select Category -->
-    <div class="ts-container" style="--width: 1750px">
+    <div class="ts-container" style="--width: 1800px; padding: 15px 15px;">
+        <div style="margin-bottom: 30px; margin-top: 10px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+                <div style="background: #00b5ad; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0, 181, 173, 0.3);">
+                    <span class="ts-icon is-file-contract-icon"></span>
+                </div>
+                <div>
+                    聯單管理
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">管理及匯入環保署廢棄物清除單與再利用單紀錄</div>
+                </div>
+            </div>
+        </div>
         <div class="ts-grid is-3-columns">
             <div class="column">
                 <div class="ts-box has-shadow category-box overall-category current-display" id="overallCategory">

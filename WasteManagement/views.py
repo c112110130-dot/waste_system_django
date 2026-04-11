@@ -242,25 +242,54 @@ def transportation_view(request):
         if f_agency.startswith('clear_'): query &= Q(clear_agency_id=f_agency.split('_')[1])
         elif f_agency.startswith('process_'): query &= Q(process_agency_id=f_agency.split('_')[1])
 
+    # 1. 先抓出符合條件的資料
     batches = TransportRecord.objects.filter(query)
     
-    # 🌟 修正處 1：排序時使用正確的關聯名稱 wasterecord_new 🌟
+    # 🌟 修正處：將 annotate 變數名稱改為 'total_w'，避免與 Model 中的 @property 同名衝突
+    batches = batches.annotate(total_w=Sum('wasterecord_new__weight'))
+    
+    # 2. 排序 (使用 total_w)
     if f_sort == 'newest': batches = batches.order_by('-settle_time')
     elif f_sort == 'oldest': batches = batches.order_by('settle_time')
-    elif f_sort == 'weight_desc': batches = batches.annotate(total_w=Sum('wasterecord_new__weight')).order_by('-total_w')
-    elif f_sort == 'weight_asc': batches = batches.annotate(total_w=Sum('wasterecord_new__weight')).order_by('total_w')
+    elif f_sort == 'weight_desc': batches = batches.order_by('-total_w')
+    elif f_sort == 'weight_asc': batches = batches.order_by('total_w')
     
-    # 🌟 修正處 2：計算總重量時使用正確的關聯名稱 wasterecord_new 🌟
-    total_weight_sum = batches.aggregate(total=Sum('wasterecord_new__weight'))['total'] or 0
+    # 3. 計算整個查詢結果的總重量 (使用 total_w)
+    total_weight_sum = batches.aggregate(total=Sum('total_w'))['total'] or 0
 
+    # =========================================================
+    # 🌟 將查詢結果打包成 JSON
+    # =========================================================
+    export_data = []
+    for batch in batches.select_related('clear_agency', 'process_agency', 'settler'):
+        export_data.append({
+            'id': batch.id,
+            'settle_time': batch.settle_time.strftime('%Y-%m-%d %H:%M') if batch.settle_time else '',
+            # 這裡改讀取剛才 annotate 產生出來的 total_w
+            'total_weight': float(batch.total_w) if hasattr(batch, 'total_w') and batch.total_w else 0.0,
+            'clear_agency': batch.clear_agency.name if batch.clear_agency else '-',
+            'process_agency': batch.process_agency.name if batch.process_agency else '-',
+            'settler': batch.settler.username if batch.settler else '-'
+        })
+        
+    all_filtered_data_json = json.dumps(export_data)
+
+    # 4. 分頁處理
     paginator = Paginator(batches, f_size)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
+    # 5. 準備 Context
     context = {
-        'page_obj': page_obj, 'current_page_size': f_size, 'current_sort': f_sort,
-        'start_date': f_start, 'end_date': f_end, 'selected_agency': f_agency,
-        'clear_agencies': clearAgency.objects.all(), 'process_agencies': processAgency.objects.all(),
+        'page_obj': page_obj, 
+        'current_page_size': f_size, 
+        'current_sort': f_sort,
+        'start_date': f_start, 
+        'end_date': f_end, 
+        'selected_agency': f_agency,
+        'clear_agencies': clearAgency.objects.all(), 
+        'process_agencies': processAgency.objects.all(),
         'total_weight_sum': total_weight_sum,
+        'all_filtered_data': all_filtered_data_json, # JSON 包裝！
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':

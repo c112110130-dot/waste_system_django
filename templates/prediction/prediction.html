@@ -2,7 +2,7 @@
 {% load static %}
 {% load custom_filters_pred %}
 {% load humanize %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物預測{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物預測{% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/database.css' %}">
     <link rel="stylesheet" href="{% static 'css/prediction/override-database.css' %}">
@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block headline %}
-    <div class="ts-container has-top-spaced-big" style="--width: 1800px">
+    <div class="ts-container" style="--width: 1830px; padding-top: 21px;">
         <div class="ts-tab is-large is-pilled">
             {% if user_is_over_reg %}
             <a class="item is-active" data-tab="databaseContainer">資料輸入</a>
@@ -22,9 +22,19 @@
         </div>
     </div>
 {% endblock %}
-
 {% block content %}
-    <div class="ts-container" style="--width: 1800px">
+    <div class="ts-container" style="--width: 1830px; padding-top: 21px;">
+        <div style="margin-bottom: 25px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+                <div style="background: #5c5ed7; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(92, 94, 215, 0.3);">
+                    <span class="ts-icon is-chart-line-icon"></span>
+                </div>
+                <div>
+                    廢棄物產量預測
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">利用歷史數據訓練機器學習模型，進行變數相關性分析並精準預測未來廢棄物產量趨勢</div>
+                </div>
+            </div>
+        </div>
         <!-- Database Container - Only show to registrars or higher -->
         {% if user_is_over_reg %}
         <div id="databaseContainer" data-tab-content="databaseContainer">

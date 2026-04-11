@@ -1,13 +1,24 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物管理(部門){% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物管理(部門){% endblock %}
 
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/db-department.css' %}">
 {% endblock %}
 
 {% block content %}
-    <div class="ts-container" style="--width: 1800px">
+    <div class="ts-container" style="--width: 1820px; padding: 15px 15px;">
+        <div style="margin-bottom: 30px; margin-top: 10px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+                <div style="background: #673ab7; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(103, 58, 183, 0.3);">
+                    <span class="ts-icon is-sitemap-icon"></span>
+                </div>
+                <div>
+                    廢棄物管理 (部門)
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視、管理及批次匯入各部門別之廢棄物產出紀錄</div>
+                </div>
+            </div>
+        </div>
         <!-- Global Action -->
         <div class="ts-box has-shadow has-padded">
             <!-- Add & Import data -->

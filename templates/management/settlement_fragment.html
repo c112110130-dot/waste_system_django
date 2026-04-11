@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物結算{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物過磅紀錄檢視{% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
 {% endblock %}
@@ -87,10 +87,20 @@
     }
 </style>
 
-<div class="ts-container is-fluid" style="padding: 20px 30px;">
+<div class="ts-container" style="--width: 1800px; padding: 23px 15px;">
     
     <div class="print-header-title" style="display:none; text-align:center; font-size:2rem; font-weight:bold; margin-bottom:20px;">醫療廢棄物過磅結算報表</div>
-
+    <div style="margin-bottom: 30px;">
+        <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main);">
+            <div style="background: #21ba45; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(33, 186, 69, 0.3);">
+                <span class="ts-icon is-clipboard-list-icon"></span>
+            </div>
+            <div>
+                廢棄物過磅紀錄檢視
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視、匯出及結算院內廢棄物過磅數據資料</div>
+            </div>
+        </div>
+    </div>
     <div class="daring-layout">
         <div class="filter-sidebar">
             <div class="dashboard-panel sidebar-box">
@@ -202,7 +212,7 @@
         </div>
         <p style="margin-bottom: 20px; color: var(--my-text-sub);">將建立包含 <strong id="modalSelectedCount" style="color: #db2828; font-size: 1.1rem;">0</strong> 筆資料的載運單。</p>
 
-        <form action="{% url 'WasteManagement:settlement_process' %}" method="post">
+        <form id="settlementForm" action="{% url 'WasteManagement:settlement_process' %}" method="post">
             {% csrf_token %}
             <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
 
@@ -589,5 +599,36 @@
         document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); 
         updateUI(); 
     }
+
+    // =====================================================================
+    // 🌟 新增：攔截結算表單，改用背景送出以保留 page_size 狀態 🌟
+    // =====================================================================
+    document.addEventListener("DOMContentLoaded", function() {
+        const settlementForm = document.getElementById('settlementForm');
+        if (settlementForm) {
+            settlementForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // 🛑 阻止傳統跳轉
+
+                // 關閉彈窗
+                document.getElementById('settlementModal').close();
+
+                // 在背景送出資料
+                fetch(this.action, {
+                    method: 'POST',
+                    body: new FormData(this),
+                    redirect: 'follow'
+                })
+                .then(() => {
+                    // 🚀 處理完畢後，直接「就地重新整理」當前網址！
+                    window.location.reload();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('結算時發生錯誤，請稍後再試。');
+                    window.location.reload();
+                });
+            });
+        }
+    });
 </script>
 {% endblock %}

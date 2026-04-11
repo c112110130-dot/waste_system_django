@@ -1,9 +1,18 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 警報紀錄管理{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 警報紀錄管理{% endblock %}
 
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
+{% endblock %}
+
+{% block navbar-start %}
+    <div class="ts-tab" style="">
+        <div class="item tab-item" data-href="{% url 'main' %}">
+            <span class="ts-icon is-huge is-arrow-left-icon"></span>
+        </div>
+        <div class="item is-text">警報紀錄管理</div>
+    </div>
 {% endblock %}
 
 {% block content %}
@@ -163,7 +172,6 @@
 <div class="ts-container is-fluid" style="padding: 30px;">
     
     <div class="print-header-title">警報紀錄報表</div>
-
     <div class="dashboard-panel control-panel">
         <form method="get" id="searchForm">
             <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
