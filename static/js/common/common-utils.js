@@ -101,6 +101,10 @@ class CommonUtils {
         if (fromUnit === toUnit) return value;
         if (fromUnit === 'metric_ton' && toUnit === 'kilogram') return value * 1000;
         if (fromUnit === 'kilogram' && toUnit === 'metric_ton') return value / 1000;
+        if (fromUnit === 'gram' && toUnit === 'kilogram') return value / 1000;
+        if (fromUnit === 'kilogram' && toUnit === 'gram') return value * 1000;
+        if (fromUnit === 'gram' && toUnit === 'metric_ton') return value / 1000000;
+        if (fromUnit === 'metric_ton' && toUnit === 'gram') return value * 1000000; 
         return value; // Default: no conversion
     }
     

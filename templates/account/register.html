@@ -4,7 +4,7 @@
 {% block title %}新增帳號{% endblock %}
 {% block navbar-start %}
     <div class="ts-tab" style="">
-        <div class="item tab-item" data-action="back">
+        <div class="item tab-item" data-href="{% url 'account:manage' %}">
             <span class="ts-icon is-huge is-arrow-left-icon"></span>
         </div>
         <div class="item is-text">新增帳號</div>
@@ -60,7 +60,7 @@
                 </div>
             </div>
             <!-- Password & Permission -->
-            <div class="ts-grid is-relaxed is-2-columns has-bottom-padded-big">
+            <div class="ts-grid is-relaxed is-4-columns has-bottom-padded-big">
                 <div class="column">
                     <div class="ts-text is-label is-required">密碼</div>
                     <div class="ts-input is-underlined has-top-spaced input-required monospace">
@@ -73,6 +73,12 @@
                             <div class="item"><b>建議不要</b>與帳號名稱高度相似</div>
                             <div class="item"><b>建議至少</b>需要一個非數字字元</div>
                         </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="ts-text is-label">代碼</div>
+                    <div class="ts-input is-underlined has-top-spaced">
+                        <input type="code" name="code">
                     </div>
                 </div>
                 <div class="column">

@@ -113,7 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 display_type: displayTypeSelect.value,
                 datasets: datasets,
                 title: finalTitle,
-                show_values: showValuesCheckbox.checked
+                show_values: showValuesCheckbox.checked,
+                // 保留舊格式參數用於向後相容
+                y_axis: yAxisSelect.value,
+                x_axis: xAxisSelect.value,
+                display_type: displayTypeSelect.value === 'priority' ? 'separate' : 'combine'
             };
 
             console.log('[Department Visualization] Request data:', requestData);
@@ -277,8 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dataBoxes.forEach((box, index) => {
             try {
-                const startDateInput = box.querySelector('.start-date');
-                const endDateInput = box.querySelector('.end-date');
                 const nameInput = box.querySelector('.data-name');
                 const colorInput = box.querySelector('.color-picker');
                 

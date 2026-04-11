@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物載運紀錄{% endblock %}
+
+{% block stylesheet %}
+    <link rel="stylesheet" href="{% static 'css/dashboard/transportation.css' %}">
+{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+    /* ========================================= */
+    /* 1. 智慧顏色與佈局變數                     */
+    /* ========================================= */
+    :root {
+        --my-bg-main: #f0f2f5; --my-bg-panel: #ffffff; --my-bg-input: #f9f9f9;
+        --my-text-main: #333333; --my-text-sub: #666666;
+        --my-border: #e0e0e0; --my-hover: rgba(0, 0, 0, 0.03);
+        --my-modal-bg: #ffffff;
+    }
+    html.is-dark {
+        --my-bg-main: #2b2b2b; --my-bg-panel: #363636; --my-bg-input: #222222;
+        --my-text-main: #ffffff; --my-text-sub: #cccccc;
+        --my-border: #555555; --my-hover: rgba(255, 255, 255, 0.05);
+        --my-modal-bg: #2b2b2b;
+    }
+
+    body { background-color: var(--my-bg-main); }
+
+    /* 🌟 版面核心佈局 🌟 */
+    .daring-layout { display: flex; gap: 25px; align-items: flex-start; margin-top: 10px; }
+    
+    .filter-sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 20px; z-index: 10; }
+    .filter-sidebar .ts-select, .filter-sidebar .ts-input input, .filter-sidebar .flatpickr-input { 
+        height: 42px !important; font-size: 1rem !important; width: 100% !important;
+        background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important;
+        color: var(--my-text-main) !important; border-radius: 6px !important; padding-left: 12px !important; box-sizing: border-box;
+    }
+    html.is-dark .flatpickr-calendar { filter: invert(1) hue-rotate(180deg); }
+
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+    .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+    .sidebar-box { padding: 25px; }
+
+    label { color: var(--my-text-sub); font-size: 0.95rem; margin-bottom: 8px; display: block; font-weight: bold; }
+    .ts-button { border-radius: 8px !important; font-size: 1rem !important; font-weight: bold !important; height: 42px !important; }
+    
+    /* 🌟 批次操作橫向工具列 🌟 */
+    .batch-panel { border-left: 4px solid #2185d0 !important; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-radius: 8px; }
+    .btn-batch-white { background-color: transparent !important; color: var(--my-text-main) !important; border: 1px solid var(--my-border) !important; }
+    .btn-batch-white:hover { background-color: var(--my-hover) !important; border-color: #2185d0 !important; color: #2185d0 !important; }
+    .btn-batch-red { background-color: #fff9f9 !important; color: #db2828 !important; border: 1px solid #f8d0cb !important; }
+    .btn-batch-red:hover { background-color: #db2828 !important; color: white !important; }
+
+    /* 🌟 漸層數據卡片 🌟 */
+    .stat-card { border-radius: 12px; padding: 15px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); transition: transform 0.3s ease; height: 100px; color: white; position: relative; overflow: hidden; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.2); }
+    .stat-card::after { content: ''; position: absolute; right: -20px; bottom: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+    .card-green { background: linear-gradient(135deg, #21ba45, #14802c); }
+    .card-yellow { background: linear-gradient(135deg, #fbbd08, #d69800); }
+    .card-blue { background: linear-gradient(135deg, #2185d0, #145d94); }
+    .card-purple { background: linear-gradient(135deg, #a333c8, #8c25aa); }
+    .card-red { background: linear-gradient(135deg, #db2828, #9c1c1c); }
+    /* 👇 縮小一點點 icon，並加上 flex-shrink: 0 防止變形 */
+    .stat-icon { background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; z-index: 1; flex-shrink: 0; }
+    .stat-info { flex: 1; z-index: 1; overflow: hidden; }
+    /* 👇 標題加上 white-space: nowrap 防止換行 */
+    .stat-title { font-size: 0.9rem; font-weight: bold; opacity: 0.9; margin-bottom: 5px; white-space: nowrap; }
+    /* 👇 把數字字體從 2.2rem 縮小到 1.75rem，完美塞下長數字 */
+    .stat-value { font-size: 1.75rem; font-weight: 900; line-height: 1; }
+
+    /* 🌟 表格區域 🌟 */
+    .data-panel { padding: 0; border-left: 4px solid #2185d0 !important; border-radius: 8px; min-height: 300px; transition: opacity 0.2s; }
+    .sub-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .sub-table th, .sub-table td { padding: 8px; border-bottom: 1px solid var(--my-border); color: var(--my-text-main); text-align: left; }
+    .sub-table th { background: rgba(0,0,0,0.03); font-weight: bold; color: var(--my-text-sub); }
+
+    @media (max-width: 1200px) {
+        .daring-layout { flex-direction: column; }
+        .filter-sidebar { width: 100%; position: static; }
+    }
+
+    /* 網頁列印淨化 */
+    @media print {
+        nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, .filter-sidebar, .dashboard-panel:not(.data-panel), .top-pagination-bar, .bottom-pagination-bar, .bottom-weight-bar, .stat-card-container, .batch-panel { display: none !important; }
+        @page { size: A4 landscape; margin: 15mm; }
+        body, html { background: white !important; color: black !important; }
+        .ts-container, .main-content { padding: 0 !important; margin: 0 !important; max-width: 100% !important; width: 100% !important; }
+        .data-panel { border: none !important; box-shadow: none !important; }
+        .no-print-row { display: none !important; }
+        .print-header-title { display: block !important; text-align: center; font-size: 1.8rem; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: black !important; border-bottom: 2px solid black; padding-bottom: 10px; }
+        .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; border-top: 2px solid #000; }
+    }
+    .print-header-title, .print-summary-box { display: none; } 
+</style>
+
+<div class="ts-container transport-page" style="--width: 1750px; padding: 30px 20px;">
+    <div class="print-header-title">廢棄物載運紀錄報表</div>
+    <div style="margin-bottom: 30px;">
+        <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main);">
+            <div style="background: #2185d0; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(33, 133, 208, 0.3);">
+                <span class="ts-icon is-truck-fast-icon"></span>
+            </div>
+            <div>
+                廢棄物載運紀錄管理
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視及管理已結算之廢棄物載運單，並支援 AJAX 局部更新與證明文件產出</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="daring-layout">
+        <div class="filter-sidebar">
+            <div class="dashboard-panel sidebar-box">
+                <div class="ts-header is-large is-heavy" style="margin-bottom: 20px; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
+                    <span class="ts-icon is-filter-icon" style="color: #2185d0;"></span> 條件篩選
+                </div>
+                <form method="get" id="searchForm" style="display: flex; flex-direction: column; gap: 15px;">
+                    <input type="hidden" name="page_size" value="{{ current_page_size }}">
+                    <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
+
+                    <div>
+                        <label>結算日期 (起)</label>
+                        <div class="date-picker-wrapper">
+                            <input type="text" id="start_date" name="start_date" value="{{ start_date|default:'' }}" placeholder="YYYY-MM-DD">
+                        </div>
+                    </div>
+                    <div>
+                        <label>結算日期 (迄)</label>
+                        <div class="date-picker-wrapper">
+                            <input type="text" id="end_date" name="end_date" value="{{ end_date|default:'' }}" placeholder="YYYY-MM-DD">
+                        </div>
+                    </div>
+                    <div>
+                        <label>機構名稱 (清理/處理)</label>
+                        <select name="agency" class="ts-select">
+                            <option value="">全部機構</option> 
+                            {% for agency in clear_agencies %}
+                                <option value="clear_{{ agency.id }}" {% if selected_agency == "clear" and agency_ids == agency.id %}selected{% endif %}>{{ agency.name }}</option>
+                            {% endfor %}
+                            {% for agency in process_agencies %}
+                                <option value="process_{{ agency.id }}" {% if selected_agency == "process" and agency_ids == agency.id %}selected{% endif %}>{{ agency.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 5px; justify-content: flex-start;">
+                        <button type="submit" class="ts-button is-primary" style="width: 120px;">
+                            <span class="ts-icon is-magnifying-glass-icon" style="margin-right: 5px;"></span> 查詢
+                        </button>
+                        <button type="button" class="ts-button is-secondary" onclick="clearAllFilters()" style="width: 50px; padding: 0;" title="重置">
+                            <span class="ts-icon is-rotate-left-icon"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="ts-grid is-relaxed is-5-columns stat-card-container">
+                <div class="column"><div class="stat-card card-green"><div class="stat-icon"><span class="ts-icon is-truck-fast-icon"></span></div><div class="stat-info"><div class="stat-title">總趟數</div><div class="stat-value" id="cardTotalBatches">0</div></div></div></div>
+                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-weight-scale-icon"></span></div><div class="stat-info"><div class="stat-title">總重量 (kg)</div><div class="stat-value" id="cardTotalWeight">0.000</div></div></div></div>
+                <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-scale-balanced-icon"></span></div><div class="stat-info"><div class="stat-title">單趟平均 (kg)</div><div class="stat-value" id="cardAvgWeight">0.000</div></div></div></div>
+                <div class="column"><div class="stat-card card-purple"><div class="stat-icon"><span class="ts-icon is-truck-icon"></span></div><div class="stat-info"><div class="stat-title">清理機構數</div><div class="stat-value" id="cardClearAgencies">0</div></div></div></div>
+                <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-industry-icon"></span></div><div class="stat-info"><div class="stat-title">處理機構數</div><div class="stat-value" id="cardProcessAgencies">0</div></div></div></div>
+            </div>
+
+            <div class="dashboard-panel batch-panel">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
+                        <span class="ts-icon is-bolt-icon" style="color: #2185d0;"></span> 批次操作
+                        <span id="batchCountBadge" class="ts-badge is-small is-circular" style="background: #db2828; color: white; padding: 2px 8px; font-size: 1rem;">0</span>
+                    </div>
+                    <div style="width: 1px; height: 24px; background: var(--my-border);"></div>
+                    <div style="font-size: 1rem; color: var(--my-text-sub);">
+                        已選取重量: <strong id="batchSelectedWeight" style="color: #21ba45; font-size: 1.3rem;">0.000</strong> kg
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <div style="position: relative;">
+                        <button id="exportBtn" class="ts-button btn-batch-white" data-dropdown="export-menu">
+                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出報表
+                            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
+                        </button>
+                        <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
+                            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel</button>
+                            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF</button>
+                            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG</button>
+                        </div>
+                    </div>
+                    <button class="ts-button btn-batch-white" onclick="printSelectedReport()">
+                        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印
+                    </button>
+                    <button class="ts-button btn-batch-red" onclick="openBatchDelete()">
+                        <span class="ts-icon is-rotate-left-icon" style="margin-right: 6px;"></span> 取消載運
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-panel data-panel" id="table-container">
+                {% include 'management/transportation_table_content.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<dialog id="warningModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999;">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
+        <div class="ts-icon is-circle-exclamation-icon" style="font-size: 3rem; color: #fbbd08; margin-bottom: 15px;"></div>
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.25rem;">系統提示</div>
+        <p id="warningModalText" style="margin-bottom: 20px; color: var(--my-text-sub); line-height: 1.5; font-size: 1rem;"></p>
+        <button type="button" class="ts-button is-fluid" onclick="document.getElementById('warningModal').close()">我知道了</button>
+    </div>
+</dialog>
+
+<dialog id="deleteModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
+        <div class="ts-icon is-rotate-left-icon" style="font-size: 3rem; color: #db2828; margin-bottom: 15px;"></div>
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.25rem;">確認取消載運</div>
+        <p style="margin-bottom: 25px; color: var(--my-text-sub); line-height: 1.6;">
+            確定要取消選取的載運單嗎？<br>
+            單內的廢棄物將會恢復成「未載運」狀態。
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button type="button" class="ts-button is-outlined" onclick="document.getElementById('deleteModal').close()">返回</button>
+            <button type="button" class="ts-button is-negative" onclick="confirmDelete()">確定取消</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog id="detailModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 800px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="ts-content custom-modal-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; position: relative;">
+        <button class="ts-close" style="position: absolute; top: 15px; right: 15px;" onclick="document.getElementById('detailModal').close()"></button>
+        <div class="ts-header is-heavy" style="margin-bottom: 15px; font-size: 1.25rem;">
+            <span class="ts-icon is-list-icon"></span> 載運單明細
+        </div>
+        <div id="modalBody" style="overflow-y: auto; max-height: 60vh; padding-right: 10px;"></div>
+    </div>
+</dialog>
+
+<script>
+    // =====================================================================
+    // 🌟 1. 核心資料庫 (JSON 解析引擎) 🌟
+    // =====================================================================
+    window.allFilteredData = [];
+
+    function syncDataAndCards() {
+        const rawDataElement = document.getElementById('raw-filtered-data');
+        window.allFilteredData = []; 
+
+        // 🚨 關鍵修正：因為標籤換成了 <script>，所以必須用 .textContent 來讀取！
+        if (rawDataElement && rawDataElement.textContent && rawDataElement.textContent.trim() !== '') {
+            try {
+                window.allFilteredData = JSON.parse(rawDataElement.textContent);
+            } catch (e) {
+                console.error("JSON解析失敗 (請檢查後端 views.py 是否正確傳遞):", e);
+            }
+        }
+
+        let totalBatches = window.allFilteredData.length;
+        let totalWeight = 0;
+        
+        let clearAgencies = new Set();
+        let processAgencies = new Set();
+
+        window.allFilteredData.forEach(item => {
+            totalWeight += parseFloat(item.total_weight) || 0;
+            
+            // 收集清理機構
+            if(item.clear_agency && item.clear_agency !== '' && item.clear_agency !== '-') {
+                clearAgencies.add(item.clear_agency);
+            }
+            
+            // 收集處理機構
+            if(item.process_agency && item.process_agency !== '' && item.process_agency !== '-') {
+                processAgencies.add(item.process_agency);
+            }
+        });
+
+        let avgWeight = totalBatches > 0 ? (totalWeight / totalBatches) : 0;
+        
+        // 更新 5 張卡片的動畫數據
+        animateValue("cardTotalBatches", totalBatches, 0);
+        animateValue("cardTotalWeight", totalWeight, 3);
+        animateValue("cardAvgWeight", avgWeight, 3);
+        animateValue("cardClearAgencies", clearAgencies.size, 0);
+        animateValue("cardProcessAgencies", processAgencies.size, 0);
+    }
+
+    function animateValue(id, end, decimals) {
+        let obj = document.getElementById(id);
+        if(obj) obj.innerText = end.toFixed(decimals);
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        flatpickr("#start_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
+        flatpickr("#end_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
+        syncDataAndCards(); // 網頁載入時解析一次 JSON 並更新卡片
+    });
+
+    // =====================================================================
+    // 🌟 2. AJAX 局部更新與表單攔截 🌟
+    // =====================================================================
+    function refreshTable(url) {
+        const container = document.getElementById('table-container');
+        if(!container) return;
+        container.style.opacity = '0.5'; container.style.pointerEvents = 'none';
+
+        fetch(url, { headers: { 'x-requested-with': 'XMLHttpRequest' } })
+        .then(res => res.text())
+        .then(html => {
+            container.innerHTML = html;
+            container.style.opacity = '1'; container.style.pointerEvents = 'auto';
+            
+            syncDataAndCards(); // 🌟 表格更新後，重新解析新的 JSON 並更新卡片！
+            window.history.pushState(null, '', url);
+            updateUI(); 
+        })
+        .catch(err => {
+            console.error(err); alert('更新失敗，請檢查網路連線。');
+            container.style.opacity = '1'; container.style.pointerEvents = 'auto';
+        });
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new URLSearchParams(new FormData(this));
+        const selects = document.querySelectorAll('.top-pagination-bar select');
+        if (selects.length >= 2) {
+            formData.set('page_size', selects[0].value);
+            formData.set('sort_by', selects[1].value);
+        }
+        refreshTable(`${window.location.pathname}?${formData.toString()}`);
+    });
+
+    window.goToPage = function(p) {
+        const u = new URLSearchParams(window.location.search); u.set('page', p);
+        refreshTable(`${window.location.pathname}?${u.toString()}`);
+    }
+    window.changePageSize = function(s) {
+        const u = new URLSearchParams(window.location.search); u.set('page_size', s); u.set('page', 1);
+        refreshTable(`${window.location.pathname}?${u.toString()}`);
+    }
+    window.submitWithSort = function(v) {
+        const u = new URLSearchParams(window.location.search); u.set('sort_by', v); u.set('page', 1);
+        refreshTable(`${window.location.pathname}?${u.toString()}`);
+    }
+    window.clearAllFilters = function() { 
+        const form = document.getElementById('searchForm'); form.reset(); 
+        document.querySelectorAll('#searchForm input[type="text"]').forEach(i => i.value = '');
+        document.querySelectorAll('#searchForm select').forEach(s => s.value = '');
+        const u = new URLSearchParams();
+        const selects = document.querySelectorAll('.top-pagination-bar select');
+        if (selects.length >= 2) { u.set('page_size', selects[0].value); u.set('sort_by', selects[1].value); }
+        refreshTable(`${window.location.pathname}?${u.toString()}`); 
+    }
+
+    // =====================================================================
+    // 🌟 3. 批次操作與 UI 狀態更新 🌟
+    // =====================================================================
+    window.toggleAll = function(src) { document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); updateUI(); }
+    
+    window.updateUI = function() {
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+        let selectedWeight = 0;
+        checkboxes.forEach(cb => { selectedWeight += parseFloat(cb.getAttribute('data-weight')) || 0; });
+        const weightEl = document.getElementById('batchSelectedWeight');
+        const badgeEl = document.getElementById('batchCountBadge');
+        if(weightEl) weightEl.innerText = selectedWeight.toFixed(3);
+        if(badgeEl) badgeEl.innerText = checkboxes.length;
+    }
+    
+    window.jumpToPage = function(pos) {
+        let p = parseInt(document.getElementById('jump-page-input-' + pos).value);
+        let m = parseInt(document.getElementById('jump-page-input-' + pos).max) || 1;
+        window.goToPage(isNaN(p) || p < 1 ? 1 : p > m ? m : p);
+    }
+
+    // =====================================================================
+    // 🌟 4. 匯出與列印引擎 (資料直接來自 JSON) 🌟
+    // =====================================================================
+    function getExportData() {
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        let html = `
+            <div id="print-wrapper" style="width: 1040px; padding: 20px; background: white; color: black; font-family: sans-serif; box-sizing: border-box;">
+                <style>
+                    .export-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; table-layout: fixed; word-wrap: break-word; }
+                    .export-table th, .export-table td { padding: 10px 8px; border-bottom: 1px solid #e0e0e0; text-align: left; }
+                    .export-table th { border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; background-color: #f9f9f9; }
+                </style>
+                <h2 style="text-align: center; margin-bottom: 5px;">廢棄物載運紀錄報表</h2>
+                <div style="text-align: center; font-size: 14px; color: #555; margin-bottom: 20px;">報表產出時間：${dateStr}</div>
+                <table class="export-table">
+                    <colgroup>
+                        <col style="width: 20%;"> <col style="width: 15%;"> <col style="width: 25%;"> <col style="width: 25%;"> <col style="width: 15%;">
+                    </colgroup>
+                    <thead>
+                        <tr><th>結算時間</th><th>總重量 (kg)</th><th>清理機構</th><th>處理機構</th><th>結算人員</th></tr>
+                    </thead>
+                    <tbody>`;
+
+        let hasData = false;
+        let printWeight = 0;
+        let exportTargets = [];
+        const checked = document.querySelectorAll('.record-checkbox:checked');
+
+        // 邏輯：如果有勾選，只匯出有勾選的 id；如果沒勾選，匯出全部 window.allFilteredData
+        if (checked.length > 0) {
+            const checkedIds = Array.from(checked).map(cb => String(cb.value));
+            exportTargets = window.allFilteredData.filter(item => checkedIds.includes(String(item.id)));
+        } else {
+            exportTargets = window.allFilteredData;
+        }
+
+        if (exportTargets.length > 0) {
+            hasData = true;
+            exportTargets.forEach(item => {
+                let w = parseFloat(item.total_weight) || 0;
+                printWeight += w;
+                html += `<tr><td>${item.settle_time}</td><td>${w.toFixed(3)}</td><td>${item.clear_agency}</td><td>${item.process_agency}</td><td>${item.settler}</td></tr>`;
+            });
+        }
+        
+        html += `</tbody></table><div style="text-align:right; font-size:16px; font-weight:bold; margin-top:20px;">總計載運重量：${printWeight.toFixed(3)} kg</div></div>`;
+        return { htmlString: html, hasData, dateStr: dateStr.replace(/[: ]/g, ''), targetData: exportTargets };
+    }
+
+    window.exportToPDF = function() {
+        const res = getExportData(); 
+        if(!res.hasData) {
+            document.getElementById('warningModalText').innerText = '目前沒有符合的資料可以匯出喔！';
+            document.getElementById('warningModal').showModal();
+            return;
+        }
+        const opt = { margin: 10, filename: `載運紀錄_${res.dateStr}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
+        html2pdf().set(opt).from(res.htmlString).save();
+    }
+
+    window.exportToPNG = function() {
+        const res = getExportData(); 
+        if(!res.hasData) {
+            document.getElementById('warningModalText').innerText = '目前沒有符合的資料可以匯出喔！';
+            document.getElementById('warningModal').showModal();
+            return;
+        }
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed'; iframe.style.top = '-9999px'; iframe.style.width = '1200px'; iframe.style.height = '2000px';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow.document;
+        doc.open(); doc.write(`<html><body style="margin:0; background:white;">${res.htmlString}</body></html>`); doc.close();
+        setTimeout(() => {
+            html2canvas(doc.getElementById('print-wrapper'), { scale: 2 }).then(canvas => {
+                const link = document.createElement('a'); link.download = `載運紀錄_${res.dateStr}.png`; link.href = canvas.toDataURL(); link.click();
+                document.body.removeChild(iframe);
+            });
+        }, 300);
+    }
+
+    window.exportToExcel = function() {
+        const res = getExportData();
+        if(!res.hasData) {
+            document.getElementById('warningModalText').innerText = '目前沒有符合的資料可以匯出喔！';
+            document.getElementById('warningModal').showModal();
+            return;
+        }
+        const rows = [["結算時間", "總重量 (kg)", "清理機構", "處理機構", "結算人員"]];
+        res.targetData.forEach(item => {
+            rows.push([item.settle_time, parseFloat(item.total_weight)||0, item.clear_agency, item.process_agency, item.settler]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄"); XLSX.writeFile(wb, `載運紀錄_${res.dateStr}.xlsx`);
+    }
+
+    window.printSelectedReport = function() {
+        const res = getExportData(); 
+        if(!res.hasData) {
+            document.getElementById('warningModalText').innerText = '目前沒有符合的資料可以匯出喔！';
+            document.getElementById('warningModal').showModal();
+            return;
+        }
+        const iframe = document.createElement('iframe'); iframe.style.display = 'none'; document.body.appendChild(iframe);
+        const pri = iframe.contentWindow;
+        pri.document.open(); pri.document.write(`<html><head><style>@media print { @page { size: landscape A4; margin: 1cm; } }</style></head><body>${res.htmlString}</body></html>`); pri.document.close();
+        pri.focus(); setTimeout(() => { pri.print(); document.body.removeChild(iframe); }, 300);
+    }
+
+    // =====================================================================
+    // 🌟 5. 刪除與明細查看邏輯 🌟
+    // =====================================================================
+    window.pendingDeleteIds = null;
+    window.openBatchDelete = function() {
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+        
+        // 🌟 換成精美的彈出視窗
+        if (checkboxes.length === 0) {
+            document.getElementById('warningModalText').innerText = '請至少選取一筆要取消的載運單！';
+            document.getElementById('warningModal').showModal();
+            return;
+        }
+        
+        window.pendingDeleteIds = Array.from(checkboxes).map(cb => cb.value);
+        document.getElementById('deleteModal').showModal();
+    }
+    
+    window.deleteSingleBatch = function(id) { window.pendingDeleteIds = [id]; document.getElementById('deleteModal').showModal(); }
+    
+    window.confirmDelete = function() {
+        if (!window.pendingDeleteIds) return;
+        fetch("{% url 'WasteManagement:delete_batches_api' %}", {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ ids: window.pendingDeleteIds })
+        }).then(res => res.json()).then(data => { if (data.status === 'success') window.location.reload(); else alert('操作失敗'); });
+    }
+    
+    window.openDetailModal = function(id) {
+        const tmpl = document.getElementById('tmpl-' + id);
+        if (tmpl) { document.getElementById('modalBody').innerHTML = tmpl.innerHTML; document.getElementById('detailModal').showModal(); }
+    }
+</script>
+{% endblock %}

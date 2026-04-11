@@ -110,10 +110,7 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Update username span now that DOM is ready
                 themeManager.updateUsernameSpan(themeManager.initialActualTheme);
-
-                // Setup system theme change listener if needed
                 if (themeManager.initialTheme === 'system') {
                     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
                         themeManager.applyTheme('system');
@@ -215,7 +212,15 @@
                             {% if user_is_over_mod %}
                                 <button class="item" data-href="{% url 'account:database' %}">
                                     <span class="ts-icon is-file-lines-icon"></span>
-                                    部門廢棄物資料表管理
+                                    廢棄物種類和部門管理
+                                </button>
+                                <button class="item" data-href="{% url 'WasteManagement:location_management' %}">
+                                    <span class="ts-icon is-location-dot-icon"></span>
+                                    秤重定點和處理清運機構管理
+                                </button>
+                                <button class="item" data-href="/WasteManagement/alert_record/">
+                                    <span class="ts-icon is-bell-icon"></span>
+                                    警報紀錄管理
                                 </button>
                             {% endif %}
                             {% if user_is_over_mod %}
@@ -248,12 +253,9 @@
                             </button>
                         </div>
                     {% else %}
-                        <span class="ts-text is-large has-end-spaced-large">
-                            您正在以訪客身份使用中，按下右邊的按鈕登入帳號&emsp;<span class="ts-icon is-arrow-right-icon"></span>
-                        </span>
                         <button class="ts-button is-start-icon is-primary" data-href="{% url 'account:login' %}">
                             <span class="ts-icon is-arrow-right-to-bracket-icon"></span>
-                            登入
+                            登出
                         </button>
                     {% endif %}
                 {% endblock %}
@@ -270,7 +272,6 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Handle data-href buttons
                 document.addEventListener('click', function(event) {
                     const target = event.target.closest('[data-href]');
                     if (target && target.dataset.href) {
@@ -279,7 +280,6 @@
                 });
             });
         </script>
-
         {% block scripts %}{% endblock %}
     </body>
 </html>

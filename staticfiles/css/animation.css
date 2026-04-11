@@ -1,0 +1,82 @@
+/* Navbar style: On hover */
+.ts-tab .tab-item:hover {
+    background-color: #FFFFFF;
+    color: #000000;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.is-dark {
+    .ts-tab .tab-item:hover {
+        background-color: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+}
+
+/* Button animations (moved from transportation.css) */
+.ts-button {
+    transition: all 0.2s ease;
+}
+
+.ts-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px #00000026;
+}
+
+/* Manifest item animations */
+.manifest-item {
+    transition: all 0.2s ease;
+}
+
+.manifest-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px #00000026;
+}
+
+/* Snackbar style */
+.ts-snackbar {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    /* 使用 CSS 動畫控制進場與出場 */
+    animation: slideUp 0.5s forwards, fadeout 0.5s 3s forwards;
+}
+
+@keyframes slideUp {
+    from {
+        top: 60px;
+        opacity: 0;
+    }
+    to {
+        top: 20px;
+        opacity: 1;
+    }
+}
+
+@keyframes fadeout {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Filter chip animations */
+.ts-chip {
+    transition: all 0.2s ease;
+}
+
+.ts-chip:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 4px #0000001A;
+}
+
+/* Focus animations */
+.has-shadow {
+    box-shadow: 4px 4px 8px #00000014, 2px 2px 6px #0000000F;
+}

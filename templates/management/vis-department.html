@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物報表生成(部門){% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物報表生成(部門){% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/color-picker.css' %}">
     <link rel="stylesheet" href="{% static 'css/management/visualize.css' %}">
@@ -61,25 +61,25 @@
                 <div class="ts-box has-shadow">
                     <div class="ts-content">
                         <div class="ts-control is-stacked">
-                            
-                            <div class="label is-bold" style="color: #2185d0;">資料來源</div>
+                            <!-- Data Source Selection -->
+                            <div class="label is-bold">資料來源</div>
                             <div class="content">
                                 <div class="ts-select is-fluid">
                                     <select id="dataSource">
-                                        <option value="department" selected>部門廢棄物產出</option>
-                                        <option value="transportation">廢棄物載運紀錄</option>
+                                        <option value="management_and_weighing">部門廢棄物產出(管理+過磅)</option>
+                                        <option value="management_only">部門廢棄物產出(管理)</option>
+                                        <option value="weighing_only">部門廢棄物產出(過磅)</option>
+                                        <option value="transport">廢棄物載運量</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="ts-divider has-spaced-small"></div>
-
+                            </div>    
+                            
                             <div class="label is-bold">計量單位</div>
                             <div class="content">
                                 <div class="ts-select is-fluid">
                                     <select id="yAxis">
-                                        <option value="metric_ton" selected>以重量劃分 - 公噸</option>
-                                        <option value="kilogram">以重量劃分 - 公斤</option>
-                                        <option value="new_taiwan_dollar">以金額劃分 - 新台幣</option>
+                                        <option value="metric_ton" selected>公噸</option>
+                                        <option value="kilogram">公斤</option>
                                     </select>
                                 </div>
                             </div>
@@ -100,8 +100,8 @@
                             <div class="content">
                                 <div class="ts-select is-fluid">
                                     <select id="displayType">
-                                        <option value="separate" selected>依照優先級</option>
-                                        <option value="combine">合併</option>
+                                        <option value="priority" selected>優先度</option>
+                                        <option value="merge">合併</option>
                                     </select>
                                 </div>
                             </div>

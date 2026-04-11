@@ -1,0 +1,43 @@
+.scatter-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.scatter-cell svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 120px;
+    margin: 0 auto;
+}
+
+.background-coefficient {
+    background-color: lightyellow !important;
+}
+
+.background-this {
+    background-color: aliceblue !important;
+}
+
+.background-next {
+    background-color: azure !important;
+}
+
+.is-dark {
+    .background-coefficient {
+        background-color: #542505 !important;
+    }
+
+    .background-this {
+        background-color: #283B5F !important;
+    }
+
+    .background-next {
+        background-color: #194B42 !important;
+    }
+}

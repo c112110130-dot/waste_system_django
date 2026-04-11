@@ -3,8 +3,15 @@
 #     kilogram: 公斤
 #     new_taiwan_dollar: 新台幣(NTD/TWD)
 
+import json
+import os
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import timedelta
+from django.utils import timezone
+from django.db import models
+from django.db.models import Sum  
+from django.conf import settings 
 
 class GeneralWasteProduction(models.Model): # 一般事業廢棄物產出表
     date = models.CharField(max_length=7, primary_key=True) # YYYY-MM
@@ -168,6 +175,7 @@ class Department(models.Model):
     """Department entity - Dynamic management of hospital departments"""
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, unique=True)
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True)  # Optional code field for integration
     display_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -175,11 +183,12 @@ class Department(models.Model):
 
     class Meta:
         db_table = 'departments'
-        ordering = ['display_order', 'name']
+        ordering = ['display_order', 'name','code']
         verbose_name = "部門"
         verbose_name_plural = "部門"
         indexes = [
             models.Index(fields=['name']),
+            models.Index(fields=['code']),  
             models.Index(fields=['is_active'])
         ]
 
@@ -218,15 +227,12 @@ class WasteType(models.Model):
         """Get unit display name in Chinese"""
         return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
 
-
-
-
 class WasteRecord(models.Model):
     """Waste record entity - Core transaction table (depends on Department and WasteType)"""
     id = models.AutoField(primary_key=True)
     date = models.CharField(max_length=7)  # YYYY-MM format
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
-    waste_type = models.ForeignKey(WasteType, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='management_records')
+    waste_type = models.ForeignKey(WasteType, on_delete=models.CASCADE, related_name='management_types')
     amount = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -249,15 +255,14 @@ class WasteRecord(models.Model):
     def __str__(self):
         return f"{self.date} - {self.department.name} - {self.waste_type.name}"
     
-
-
 class DepartmentWasteConfiguration:
     """Dynamic configuration management system"""
 
     # Unit translation mapping
     UNIT_TRANSLATION = {
         'metric_ton': {'display': '公噸', 'symbol': 'T'},
-        'kilogram': {'display': '公斤', 'symbol': 'kg'}
+        'kilogram': {'display': '公斤', 'symbol': 'kg'},
+        'gram': {'display': '公克', 'symbol': 'g'}
     }
 
     # Default department list
@@ -332,3 +337,161 @@ class DepartmentWasteConfiguration:
             'unit_translations': cls.UNIT_TRANSLATION,
             'department_mapping': cls.get_department_mapping()
         }
+    
+class LocationPoint(models.Model):
+    id = models.AutoField(primary_key=True)        # 定點ID
+    code = models.CharField(max_length=100)       # 定點代碼
+    name = models.CharField(max_length=100)       # 定點名稱
+    created_time = models.DateTimeField(auto_now_add=True)     # 建立時間   
+
+    class Meta:
+        db_table = 'location' 
+        verbose_name = "定點"
+
+    def __str__(self):
+        return f"{self.code} - {self.name}" 
+
+    class Meta:
+        db_table = 'location' # 資料庫裡的表格名稱
+        verbose_name = "定點"
+
+class clearAgency(models.Model):
+    id = models.AutoField(primary_key=True)        #清理機構ID
+    code = models.CharField(max_length=100)        #清理機構代碼
+    name = models.CharField(max_length=100)        #清理機構名稱
+    class Meta:
+        db_table = 'clear_agency' # 資料庫裡的表格名稱
+        verbose_name = "清理機構"
+
+    def __str__(self):
+        return self.name
+
+class processAgency(models.Model):
+    id = models.AutoField(primary_key=True)      #處理機構ID
+    code = models.CharField(max_length=100)      #處理機構代碼
+    name = models.CharField(max_length=100)      #處理機構名稱
+    class Meta:
+        db_table = 'process_agency' # 資料庫裡的表格名稱
+        verbose_name = "處理機構"
+
+    def __str__(self):
+        return self.name
+
+class TransportRecord(models.Model):
+    id = models.AutoField(primary_key=True)          
+    settler = models.ForeignKey(
+        settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
+        on_delete=models.CASCADE,
+        related_name='transport_records',
+        verbose_name="結算人員"
+    ) #使用者ID (外來鍵)
+    clear_agency = models.ForeignKey(
+        clearAgency,
+        on_delete=models.CASCADE
+    ) #清理機構ID
+    process_agency = models.ForeignKey(
+        processAgency,
+        on_delete=models.CASCADE
+    ) #處理機構ID
+    settle_time = models.DateTimeField(auto_now_add=True)
+    
+    @property
+    def total_weight(self):
+        result = self.wasterecord_new_set.aggregate(total=Sum('weight'))
+        return round(result['total'], 2) if result['total'] is not None else 0
+    
+    @property
+    def items(self):
+        return self.wasterecord_new_set.all()
+    
+    @property
+    def item_count(self):
+        return self.wasterecord_new_set.count()
+        
+    @property
+    def items(self):
+        return self.wasterecord_new_set.all()
+    @property
+    def item_count(self):
+        return self.wasterecord_new_set.count()
+    class Meta:
+        db_table = 'transport_record' # 資料庫裡的表格名稱
+        verbose_name = "載運紀錄"
+
+    def __str__(self):
+        return f"載運單 #{self.id} ({self.settle_time.strftime('%Y-%m-%d')})"
+
+class WasteRecord_New(models.Model):
+    id = models.AutoField(primary_key=True)
+    is_transported = models.BooleanField(default=False)
+    
+class WasteRecord_New(models.Model):
+    id = models.AutoField(primary_key=True)
+    is_transported = models.BooleanField(default=False)
+    @property
+    def is_expired(self):
+        if hasattr(self, 'TransportRecord_id') and self.TransportRecord_id:
+            return False
+        if self.is_transported:
+            return False
+        if not self.create_time:
+            return False
+        if timezone.now() > self.create_time + timedelta(days=3):
+            return True
+        return False
+        
+    @property
+    def can_delete(self):
+        return not self.is_transported and not self.is_expired
+        
+    @property
+    def can_delete(self):
+        return not self.is_transported and not self.is_expired
+    weight = models.DecimalField(max_digits=5,decimal_places=2)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.CASCADE,
+        related_name='extension_records'
+    )  # 部門ID（外來鍵）
+    location = models.ForeignKey(
+        LocationPoint,
+        on_delete=models.CASCADE
+    )  # 定點ID（外來鍵）
+    transportrecord = models.ForeignKey(
+        TransportRecord,
+        null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    waste_type = models.ForeignKey(
+        WasteType,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='extension_types'
+    )  # 廢棄物種類（外來鍵）
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
+        on_delete=models.CASCADE,
+        related_name='created_records',
+        verbose_name="過磅人員"
+    )  # 過磅人員 (建立者)
+        
+    updater = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, # 人員被刪除時，紀錄保留，只是變空
+        null=True, blank=True,
+        related_name='updated_records',
+        verbose_name="更新人員"
+    )
+
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name="過磅時間")
+    update_time = models.DateTimeField(auto_now=True, verbose_name="更新時間")
+    
+    class Meta:
+        db_table = 'waste_record' # 資料庫裡的表格名稱
+        verbose_name = "廢棄物紀錄"
+
+    def __str__(self):
+        return f"{self.create_time.strftime('%Y-%m-%d %H:%M')} - {self.department.name} ({self.weight}kg)"
+    class Meta:
+        db_table = 'waste_record' # 資料庫裡的表格名稱
+        verbose_name = "廢棄物紀錄"

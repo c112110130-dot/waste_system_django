@@ -109,7 +109,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('基本資訊', {
-            'fields': ('name', 'display_order', 'is_active')
+            'fields': ('name', 'code', 'display_order', 'is_active')
         }),
         ('系統資訊', {
             'fields': ('created_at',),
@@ -185,3 +185,12 @@ admin.site.register(DialysisBucketSoftBagProductionAndDisposalCosts,
 admin.site.register(PharmaceuticalGlassProductionAndDisposalCosts, PharmaceuticalGlassProductionAndDisposalCostsAdmin)
 admin.site.register(PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenue,
                     PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenueAdmin)
+
+admin.site.register(WasteRecord_New)
+
+admin.site.register(LocationPoint)
+
+
+admin.site.register(clearAgency)
+admin.site.register(processAgency)
+admin.site.register(TransportRecord)

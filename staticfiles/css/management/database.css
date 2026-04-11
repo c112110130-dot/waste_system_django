@@ -1,0 +1,128 @@
+#optionArea {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* Ensures it stays above other content */
+}
+
+.ts-grid.is-relaxed {
+    margin-bottom: 1rem;
+}
+
+.ts-dropdown .menu {
+    position: absolute;
+    background: #333;
+    padding: 1rem;
+    width: 200px;
+    right: 0;
+}
+
+/* Fixed width columns - use fixed widths instead of percentages for horizontal scroll */
+.checkbox-column, .checkbox-cell {
+    width: 3em !important;
+    min-width: 3em !important;
+}
+.date-column, .date-cell {
+    width: 8em !important;
+    min-width: 8em !important;
+}
+.action-column, .action-cell {
+    width: 12em !important;
+    min-width: 12em !important;
+}
+
+/* Dynamic data columns share 60% width */
+.data-column, .data-cell {
+    min-width: 10em !important; /* Fixed minimum width for horizontal scrolling */
+    width: calc(60% / var(--field-count, 1)) !important; /* Dynamic width based on field count */
+}
+
+/* Ensure inputs fit within cells */
+.ts-input.is-basic {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Override checkbox theme */
+.ts-checkbox input[type="checkbox"]:not(:checked) {
+    background-color: var(--ts-gray-50);
+    border: 2px solid var(--ts-gray-400) !important;
+}
+
+.ts-checkbox input[type="checkbox"]:not(:checked):disabled {
+    background-color: var(--ts-gray-400) !important;
+}
+
+/* Table Sorting */
+.sortable {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.sortable:hover {
+    background-color: ghostwhite !important;
+}
+
+.is-dark {
+    .sortable:hover {
+        background-color: darkslategray !important;
+    }
+}
+
+/* Ensure icons are properly aligned */
+.sortable .ts-icon {
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+/* Hide inactive sort icons */
+.sortable[data-sort=""] .ts-icon.is-sort-up-icon,
+.sortable[data-sort=""] .ts-icon.is-sort-down-icon,
+.sortable[data-sort="asc"] .ts-icon.is-sort-icon,
+.sortable[data-sort="asc"] .ts-icon.is-sort-down-icon,
+.sortable[data-sort="desc"] .ts-icon.is-sort-icon,
+.sortable[data-sort="desc"] .ts-icon.is-sort-up-icon {
+    display: none;
+}
+
+.sortable[data-sort="asc"] .sort-indicator::after {
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 6px solid #333;
+}
+
+.sortable[data-sort="desc"] .sort-indicator::after {
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid #333;
+}
+
+.ts-progress .bar {
+    width: calc(var(--value) * 1%);
+    transition: width 0.3s ease; /* Optional: smooth transition */
+}
+
+
+/* Horizontal scroll for data tables */
+.ts-box:has(> #dataTable) {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+#dataTable {
+    table-layout: auto; /* Auto layout to respect min-width */
+    min-width: 100%; /* Table can expand beyond container */
+}
+
+/* Prevent cell content from wrapping - ensure consistent column widths */
+#dataTable .data-column,
+#dataTable .data-cell {
+    white-space: nowrap;
+}
+
+/* Auto-calculated field placeholder styling */
+.auto-calculated-placeholder {
+    color: var(--ts-gray-500);
+    font-style: italic;
+    opacity: 0.7;
+}

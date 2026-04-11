@@ -16,6 +16,17 @@
                 },
                 parser: (value) => value ? parseFloat(value) : null
             },
+            gram: {
+                display: '克',
+                symbol: 'g',
+                inputType: 'number',
+                inputAttributes: { step: 'any' },
+                formatter: (value) => {
+                    if (value === null || value === undefined || value === '') return '';
+                    return parseFloat(value).toString().replace(/\.0$/, '');
+                },
+                parser: (value) => value ? parseFloat(value) : null
+            },
             kilogram: {
                 display: '公斤',
                 symbol: 'kg',
@@ -144,6 +155,9 @@
                             case 'kilogram':
                                 sampleValue = (i * 25.5).toFixed(1);
                                 break;
+                            case 'gram':
+                                sampleValue = (i * 500).toString();
+                                break;
                             default:
                                 sampleValue = `資料${i}`;
                         }
@@ -176,7 +190,11 @@
             // Define conversion rules
             const conversions = {
                 'metric_ton_to_kilogram': (v) => v * 1000,
-                'kilogram_to_metric_ton': (v) => v / 1000
+                'kilogram_to_metric_ton': (v) => v / 1000,
+                'gram_to_kilogram': (v) => v / 1000,
+                'kilogram_to_gram': (v) => v * 1000,
+                'gram_to_metric_ton': (v) => v / 1000000,
+                'metric_ton_to_gram': (v) => v * 1000000
             };
 
             const key = `${fromUnit}_to_${toUnit}`;

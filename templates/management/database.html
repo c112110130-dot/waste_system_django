@@ -2,12 +2,23 @@
 {% load static %}
 {% load custom_filters_get_item %}
 {% load humanize %}
-{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物管理(實體){% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物管理(院內){% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/database.css' %}">
 {% endblock %}
 {% block content %}
-    <div class="ts-container" style="--width: 1650px">
+    <div class="ts-container" style="--width: 1820px; padding: 15px 15px;">
+        <div style="margin-bottom: 30px; margin-top: 10px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+                <div style="background: #f2711c; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(242, 113, 28, 0.3);">
+                    <span class="ts-icon is-database-icon"></span>
+                </div>
+                <div>
+                    廢棄物管理 (院內)
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">管理、新增及批次匯入各類廢棄物產出與回收收入等實體資料庫紀錄</div>
+                </div>
+            </div>
+        </div>
         <form method="POST" action="{% url 'WasteManagement:database_index' %}" id="dataForm">
             {% csrf_token %}
             <input type="hidden" name="table" value="{{ selected_table }}">
@@ -132,6 +143,7 @@
                                     {{ info.name }}
                                     {% if info.unit == 'metric_ton' %}(公噸)
                                     {% elif info.unit == 'kilogram' %}(公斤)
+                                    {% elif info.unit == 'gram' %}(克)
                                     {% elif info.unit == 'new_taiwan_dollar' %}(新台幣)
                                     {% endif %}
                                 </th>
