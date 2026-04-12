@@ -8,7 +8,7 @@
 {% block content %}
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-<div class="ts-container" style="--width: 1830px; padding-top: 20px;">
+<div class="ts-container" style="--width: 1830px; padding: 20px 15px;">
     
     <div style="margin-bottom: 20px;">
         <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
@@ -147,7 +147,7 @@
         StationMobile.init({
             locations: locations,
             api: {
-                recordUrl: "{% url 'management:api_record_waste' %}"
+                recordUrl: "{% url 'WasteManagement:api_record_waste' %}"
             }
         });
     });

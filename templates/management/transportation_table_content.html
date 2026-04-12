@@ -174,8 +174,6 @@
     </div>
 </div>
 
-<script id="raw-filtered-data" type="application/json">{{ all_filtered_data|safe }}</script>
-
 {% for batch in page_obj %}
 <template id="tmpl-{{ batch.id }}">
     <div style="margin-bottom: 15px; color: var(--my-text-sub); font-size: 1rem;">
@@ -205,3 +203,4 @@
     </div>
 </template>
 {% endfor %}
+<script id="raw-filtered-data" type="application/json">{{ all_filtered_data|safe }}</script>

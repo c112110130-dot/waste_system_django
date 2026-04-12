@@ -1,0 +1,136 @@
+<div class="ts-content is-secondary is-fitted rwd-toolbar top-pagination-bar" style="background-color: var(--my-bg-panel); border-bottom: 1px solid var(--my-border); padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+    <div class="page-size-wrap rwd-group" style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--my-text-sub); font-size: 0.95rem; white-space: nowrap;">每頁顯示：</span>
+        <select class="ts-select is-small" style="background-color: var(--my-bg-input); color: var(--my-text-main); border-color: var(--my-border); width: 80px !important; height: 32px !important; padding: 0 10px !important;" onchange="changePageSize(this.value)">
+            <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+            <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
+            <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+        </select>
+    </div>
+    
+    <div class="ts-pagination is-small is-secondary rwd-group" style="display: flex; align-items: center;">
+        {% if page_obj.has_previous %}
+            <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
+            <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+        {% else %}
+            <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+            <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+        {% endif %}
+
+        <span class="item is-text" style="padding: 0 8px; white-space: nowrap;">
+            第
+            <input type="number" class="page-jump-input" id="jump-page-input-top" value="{{ page_obj.number }}" min="1" max="{{ page_obj.paginator.num_pages|default:1 }}" title="輸入頁碼後按 Enter 跳轉" onkeypress="if(event.key === 'Enter') jumpToPage('top')" style="width: 50px; height: 28px; text-align: center; margin: 0 8px; border: 1px solid var(--my-border); background: var(--my-bg-input); color: var(--my-text-main); border-radius: 4px; outline: none; box-sizing: border-box;">
+            / {{ page_obj.paginator.num_pages|default:1 }} 頁
+        </span>
+
+        {% if page_obj.has_next %}
+            <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+            <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+        {% else %}
+            <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+            <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="ts-content is-fitted" style="overflow-x: auto;">
+    <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable" style="min-width: 900px; table-layout: fixed;">
+        <thead>
+            <tr>
+                <th class="collapsing is-center-aligned" style="width: 5%;">
+                    <label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label>
+                </th>
+                <th class="is-center-aligned" style="width: 7%;">序號</th>
+                <th style="width: 15%;">警示時間</th>
+                <th style="width: 15%;">過磅人員</th>
+                <th style="width: 25%;">警報名稱</th>
+                <th style="width: 15%;">警報類型</th>
+                <th class="is-center-aligned" style="width: 10%;">嚴重度</th>
+                <th class="collapsing is-center-aligned" style="width: 8%;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in page_obj %}
+            <tr id="row_{{ alert.id }}">
+                <td class="collapsing is-center-aligned">
+                    <label class="ts-checkbox">
+                        <input type="checkbox" name="record_ids" value="{{ alert.id }}" class="record-checkbox" onchange="updateUI()">
+                    </label>
+                </td>
+                <td class="is-center-aligned">{{ forloop.counter }}</td>
+                <td>{{ alert.create_time|date:"Y-m-d H:i" }}</td>
+                <td class="truncate-text" title="{{ alert.weigher.get_full_name|default:alert.weigher.username }}">{{ alert.weigher.get_full_name|default:alert.weigher.username }}</td>
+                <td class="truncate-text" title="{{ alert.alert_name|default:'重量異常' }}">{{ alert.alert_name|default:"重量異常" }}</td>
+                <td class="truncate-text" title="{{ alert.alert_type|default:'設備異常' }}">{{ alert.alert_type|default:"設備異常" }}</td>
+                <td class="is-center-aligned">
+                    {% if alert.severity == 'High' or '失敗' in alert.alert_name %}
+                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #db2828; font-weight: bold; font-size: 1rem;">
+                            <span class="severity-light light-red" style="margin: 0; box-shadow: 0 0 5px rgba(219,40,40,0.5);"></span> 嚴重
+                        </div>
+                    {% else %}
+                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #d69800; font-weight: bold; font-size: 1rem;">
+                            <span class="severity-light light-yellow" style="margin: 0; box-shadow: 0 0 5px rgba(251,189,8,0.5);"></span> 警告
+                        </div>
+                    {% endif %}
+                </td>
+                <td class="collapsing is-center-aligned">
+                    <button class="ts-button is-negative is-small is-dense" type="button" onclick="deleteRecord({{ alert.id }})" style="padding: 0 15px; height: 32px !important;">
+                        刪除
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center !important; padding: 60px 0;">
+                    <div class="ts-icon is-bell-slash-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5; color: var(--my-text-sub);"></div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: var(--my-text-sub);">目前沒有警報紀錄</div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="print-summary-box">
+        總計列印筆數：<span id="printTotalCount">0</span> 筆
+    </div>
+</div>
+
+<div class="ts-content is-secondary bottom-pagination-bar rwd-toolbar" style="background-color: var(--my-bg-panel); border-top: 1px solid var(--my-border); padding: 12px 25px; border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+    <div class="page-size-wrap rwd-group" style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--my-text-sub); font-size: 0.95rem; white-space: nowrap;">每頁顯示：</span>
+        <select class="ts-select is-small" style="background-color: var(--my-bg-input); color: var(--my-text-main); border-color: var(--my-border); width: 80px !important; height: 32px !important; padding: 0 10px !important;" onchange="changePageSize(this.value)">
+            <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+            <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
+            <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+        </select>
+    </div>
+    
+    <div class="rwd-group" style="justify-content: flex-end;">
+        <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
+            {% if page_obj.has_previous %}
+                <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
+                <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+            {% endif %}
+
+            <span class="item is-text" style="padding: 0 8px; white-space: nowrap;">
+                第
+                <input type="number" class="page-jump-input" id="jump-page-input-bottom" value="{{ page_obj.number }}" min="1" max="{{ page_obj.paginator.num_pages|default:1 }}" title="輸入頁碼後按 Enter 跳轉" onkeypress="if(event.key === 'Enter') jumpToPage('bottom')" style="width: 50px; height: 28px; text-align: center; margin: 0 8px; border: 1px solid var(--my-border); background: var(--my-bg-input); color: var(--my-text-main); border-radius: 4px; outline: none; box-sizing: border-box;">
+                / {{ page_obj.paginator.num_pages|default:1 }} 頁
+            </span>
+
+            {% if page_obj.has_next %}
+                <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{{ all_filtered_data|json_script:"alert-data-json" }}
