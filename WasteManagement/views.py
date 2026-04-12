@@ -44,6 +44,11 @@ def settlement_view(request):
     f_end = request.GET.get('end_date', '')
     f_waste_type = request.GET.get('waste_type', '')
     f_dept = request.GET.get('dept', '')
+    
+    # 🌟 補上抓取「定點」與「人員」參數
+    f_location = request.GET.get('location', '')
+    f_weigher = request.GET.get('weigher', '')
+    
     f_sort = request.GET.get('sort_by', 'newest')
     f_size = int(request.GET.get('page_size', 10))
 
@@ -52,6 +57,10 @@ def settlement_view(request):
     if f_end: query &= Q(create_time__date__lte=f_end)
     if f_waste_type: query &= Q(waste_type_id=f_waste_type)
     if f_dept: query &= Q(department_id=f_dept)
+    
+    # 🌟 將這兩個條件加入資料庫的過濾器中
+    if f_location: query &= Q(location_id=f_location)
+    if f_weigher: query &= Q(creator_id=f_weigher)
 
     records = WasteRecord_New.objects.filter(query).select_related('department', 'location', 'waste_type', 'creator')
     
@@ -61,6 +70,7 @@ def settlement_view(request):
     all_data_list = []
     for r in records:
         all_data_list.append({
+            'id': r.id,
             'weight': float(r.weight),
             'status': '已載運' if r.is_transported else '未載運',
             'waste_type': r.waste_type.name if r.waste_type else '',
@@ -78,10 +88,15 @@ def settlement_view(request):
         'page_obj': page_obj, 'current_page_size': f_size, 'current_sort': f_sort,
         'start_date': f_start, 'end_date': f_end,
         'selected_waste_type': f_waste_type, 'selected_dept': f_dept,
+        
+        # 🌟 把它們傳回前端，這樣下拉選單才不會在查詢後跑掉！
+        'selected_location': f_location,
+        'selected_weigher': f_weigher,
+        
         'departments': Department.objects.all(), 'locations': LocationPoint.objects.all(),
         'waste_types': WasteType.objects.all(), 'process_agencies': processAgency.objects.all(),
         'clear_agencies': clearAgency.objects.all(), 'weighers': UserProfile.objects.all(),
-        'all_filtered_data': all_data_list, # 傳遞 list，給 json_script 處理
+        'all_filtered_data': all_data_list, 
         'total_weight_sum': round(total_w, 3),
     }
     
