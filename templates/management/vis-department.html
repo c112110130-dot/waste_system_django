@@ -8,7 +8,19 @@
 {% block content %}
     {% csrf_token %}
     
-    <div class="ts-container has-top-padded-large" style="--width: 1650px">
+    <!-- Chart Select -->
+    <div class="ts-container has-top-padded-large" style="--width: 1800px; padding: 30px 15px;">
+        <div style="margin-bottom: 20px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
+                <div style="background: #673ab7; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(103, 58, 183, 0.3);">
+                    <span class="ts-icon is-chart-pie-icon"></span>
+                </div>
+                <div>
+                    廢棄物報表生成 (部門)
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">針對個別部門之廢棄物產出數據進行深度分析，並產出部門對比圖表與統計報表</div>
+                </div>
+            </div>
+        </div>
         <div class="ts-grid is-middle-aligned">
             <div class="column is-3-wide ts-procedure is-start-aligned has-top-spaced-large has-bottom-spaced">
                 <div class="item"><div class="content"><div class="indicator">1</div><div class="label">新增圖表<div class="description">

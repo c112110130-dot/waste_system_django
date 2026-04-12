@@ -27,5 +27,4 @@ urlpatterns = [
     path('management/', include('WasteManagement.urls', namespace='management'), name='management_legacy'),
     
     path('prediction/', include('WastePrediction.urls', namespace='prediction'), name='prediction'),
-    path('dashboard/', include('dashboard_extension.urls', namespace='dashboard'), name='dashboard'), # Our new dashboard extension
 ]

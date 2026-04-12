@@ -43,12 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const showValuesCheckbox = document.getElementById('showValues');
     const includeTableCheckbox = document.getElementById('includeTable');
     
-    // Y-axis, time, and source settings
-    const yAxisSelect = document.getElementById('yAxis');
-    const xAxisSelect = document.getElementById('xAxis');
-    const displayTypeSelect = document.getElementById('displayType');
+    // ========== 新增：新的選擇器參考 ==========
+    // 資料來源、計量單位、時間單位、顯示方法
+    const dataSourceSelect = document.getElementById('dataSource');  // 資料來源
+    const yAxisSelect = document.getElementById('yAxis');             // 計量單位
+    const xAxisSelect = document.getElementById('xAxis');             // 時間單位
+    const displayTypeSelect = document.getElementById('displayType');  // 顯示方法
+    
+    // Y-axis and time settings (保留用於向後相容)
     const showFullGridCheckbox = document.getElementById('showFullGrid');
-    const dataSourceSelect = document.getElementById('dataSource'); // 🌟 新增
+
 
     // Load configuration on page load
     async function loadDepartmentConfig() {
@@ -105,12 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputTitle = chartTitleInput.value.trim();
             const finalTitle = inputTitle || chartTitleInput.placeholder || generateDepartmentAutoTitle();
 
-            // Prepare request data 🌟 加入 data_source 參數
+            // Prepare request data with new format
             const requestData = {
-                data_source: currentSource,
-                y_axis: yAxisSelect.value,
-                x_axis: xAxisSelect.value,
-                display_type: displayTypeSelect.value,
+                // 新格式參數
+                data_source: dataSourceSelect.value,      // 資料來源
+                unit: yAxisSelect.value,                  // 計量單位
+                time_unit: xAxisSelect.value,             // 時間單位
+                display_method: displayTypeSelect.value,  // 顯示方法
+                // 共通參數
                 datasets: datasets,
                 title: finalTitle,
                 show_values: showValuesCheckbox.checked,
@@ -276,8 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🌟 更新：收集資料時也要考慮資料來源
     function collectDepartmentDatasets() {
         const datasets = [];
-        const dataBoxes = document.querySelectorAll('#dataList .data-row-item');
-        const currentSource = dataSourceSelect ? dataSourceSelect.value : 'department';
+        const dataBoxes = document.querySelectorAll('#dataList .ts-box:not(#addChartBtnContainer)');
+        const xAxisValue = xAxisSelect ? xAxisSelect.value : 'year_sum';
 
         dataBoxes.forEach((box, index) => {
             try {
@@ -289,28 +295,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rankingTypeSelect = box.querySelector('.ranking-type-select');
                 const rankingCountInput = box.querySelector('.ranking-count-input');
 
-                if (!startDateInput || !endDateInput || !nameInput || !colorInput) {
-                    console.warn(`[Department Visualization] Missing core elements in dataset ${index + 1}`);
+                // 根據時間單位收集不同格式的日期
+                let startDate = '';
+                let endDate = '';
+
+                if (xAxisValue.startsWith('quarter')) {
+                    // 季度格式：YYYY-Q
+                    const startYear = box.querySelector('.start-date-year');
+                    const startQuarter = box.querySelector('.start-date-quarter');
+                    const endYear = box.querySelector('.end-date-year');
+                    const endQuarter = box.querySelector('.end-date-quarter');
+
+                    if (startYear && startQuarter && endYear && endQuarter) {
+                        startDate = `${startYear.value}-${startQuarter.value}`;
+                        endDate = `${endYear.value}-${endQuarter.value}`;
+                    }
+                } else if (xAxisValue.startsWith('month')) {
+                    // 月份格式：YYYY-MM
+                    const startMonthInput = box.querySelector('.start-date');
+                    const endMonthInput = box.querySelector('.end-date');
+
+                    if (startMonthInput && endMonthInput) {
+                        startDate = startMonthInput.value;
+                        endDate = endMonthInput.value;
+                    }
+                } else {
+                    // 年份格式：YYYY
+                    const startYearInput = box.querySelector('.start-date');
+                    const endYearInput = box.querySelector('.end-date');
+
+                    if (startYearInput && endYearInput) {
+                        startDate = startYearInput.value;
+                        endDate = endYearInput.value;
+                    }
+                }
+
+                if (!nameInput || !colorInput || !wasteTypeSelect || 
+                    !rankingTypeSelect || !rankingCountInput || !startDate || !endDate) {
+                    console.warn(`[Department Visualization] Missing elements in dataset ${index + 1}`);
                     return;
                 }
 
                 const customName = nameInput.value.trim();
                 let defaultName = customName;
 
-                if (!customName) {
-                    const startDate = startDateInput.value;
-                    const endDate = endDateInput.value;
-                    if (currentSource === 'department') {
-                        const wasteTypeName = wasteTypeSelect?.options[wasteTypeSelect.selectedIndex]?.text || '廢棄物';
-                        defaultName = startDate && endDate ? `${wasteTypeName} (${startDate} 至 ${endDate})` : `${wasteTypeName} 排名分析`;
+                if (customName) {
+                    defaultName = customName;
+                } else {
+                    // Create default name based on waste type and date range
+                    const wasteTypeName = wasteTypeSelect.options[wasteTypeSelect.selectedIndex]?.text || '廢棄物';
+
+                    // Format similar to visualize system
+                    if (startDate && endDate) {
+                        defaultName = `${wasteTypeName} (${startDate} 至 ${endDate})`;
                     } else {
                         defaultName = startDate && endDate ? `載運紀錄 (${startDate} 至 ${endDate})` : `載運趨勢分析`;
                     }
                 }
 
                 const dataset = {
-                    start_date: startDateInput.value,
-                    end_date: endDateInput.value,
+                    waste_type_id: wasteTypeSelect.value,
+                    start_date: startDate,
+                    end_date: endDate,
+                    ranking_type: rankingTypeSelect.value,
+                    ranking_count: rankingCountInput.value,
                     name: defaultName,
                     color: colorInput.value || '#007bff'
                 };
