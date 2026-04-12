@@ -212,4 +212,4 @@
     </div>
 </div>
 
-<script id="new-data-json" type="application/json">{{ all_filtered_data|safe }}</script>
+{{ all_filtered_data|json_script:"new-data-json" }}

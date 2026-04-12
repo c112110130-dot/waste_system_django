@@ -68,12 +68,9 @@
     .card-blue { background: linear-gradient(135deg, #2185d0, #145d94); }
     .card-purple { background: linear-gradient(135deg, #a333c8, #8c25aa); }
     .card-red { background: linear-gradient(135deg, #db2828, #9c1c1c); }
-    /* 👇 縮小一點點 icon，並加上 flex-shrink: 0 防止變形 */
     .stat-icon { background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; z-index: 1; flex-shrink: 0; }
     .stat-info { flex: 1; z-index: 1; overflow: hidden; }
-    /* 👇 標題加上 white-space: nowrap 防止換行 */
     .stat-title { font-size: 0.9rem; font-weight: bold; opacity: 0.9; margin-bottom: 5px; white-space: nowrap; }
-    /* 👇 把數字字體從 2.2rem 縮小到 1.75rem，完美塞下長數字 */
     .stat-value { font-size: 1.75rem; font-weight: 900; line-height: 1; }
 
     /* 🌟 表格區域 🌟 */
@@ -86,23 +83,9 @@
         .daring-layout { flex-direction: column; }
         .filter-sidebar { width: 100%; position: static; }
     }
-
-    /* 網頁列印淨化 */
-    @media print {
-        nav, header, footer, aside, .ts-app-navbar, .ts-app-sidebar, .ts-app-topbar, .filter-sidebar, .dashboard-panel:not(.data-panel), .top-pagination-bar, .bottom-pagination-bar, .bottom-weight-bar, .stat-card-container, .batch-panel { display: none !important; }
-        @page { size: A4 landscape; margin: 15mm; }
-        body, html { background: white !important; color: black !important; }
-        .ts-container, .main-content { padding: 0 !important; margin: 0 !important; max-width: 100% !important; width: 100% !important; }
-        .data-panel { border: none !important; box-shadow: none !important; }
-        .no-print-row { display: none !important; }
-        .print-header-title { display: block !important; text-align: center; font-size: 1.8rem; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: black !important; border-bottom: 2px solid black; padding-bottom: 10px; }
-        .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; border-top: 2px solid #000; }
-    }
-    .print-header-title, .print-summary-box { display: none; } 
 </style>
 
 <div class="ts-container transport-page" style="--width: 1750px; padding: 30px 20px;">
-    <div class="print-header-title">廢棄物載運紀錄報表</div>
     <div style="margin-bottom: 30px;">
         <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main);">
             <div style="background: #2185d0; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(33, 133, 208, 0.3);">
@@ -254,60 +237,23 @@
         const rawDataElement = document.getElementById('raw-filtered-data');
         window.allFilteredData = []; 
 
-        // ==========================================
-        // 1. 強化版 JSON 解析 (雙重防呆機制)
-        // ==========================================
         if (rawDataElement) {
-            try {
-                let rawContent = rawDataElement.textContent.trim();
-                if (rawContent) {
-                    let parsed = JSON.parse(rawContent);
-                    // 防呆：如果後端 json.dumps 導致解析出來還是字串，就再解開一次
-                    if (typeof parsed === 'string') {
-                        parsed = JSON.parse(parsed);
-                    }
-                    window.allFilteredData = parsed;
-                }
-            } catch (e) {
-                console.error("JSON 解析失敗，請檢查資料格式:", e);
-                console.log("原始字串內容為:", rawDataElement.textContent);
-            }
+            window.allFilteredData = JSON.parse(rawDataElement.textContent);
         }
 
-        // ==========================================
-        // 2. 初始化統計變數
-        // ==========================================
         let totalBatches = window.allFilteredData.length;
         let totalWeight = 0;
-        
-        // 使用 Set 來收集「不重複」的清理與處理機構
         let clearAgencies = new Set();
         let processAgencies = new Set();
 
-        // ==========================================
-        // 3. 迴圈計算與資料收集
-        // ==========================================
         window.allFilteredData.forEach(item => {
-            // 累加總重量 (確保轉換為浮點數，如果失敗則加 0)
             totalWeight += parseFloat(item.total_weight) || 0;
-            
-            // 收集有效的清理機構
-            if(item.clear_agency && item.clear_agency !== '' && item.clear_agency !== '-') {
-                clearAgencies.add(item.clear_agency);
-            }
-            
-            // 收集有效的處理機構
-            if(item.process_agency && item.process_agency !== '' && item.process_agency !== '-') {
-                processAgencies.add(item.process_agency);
-            }
+            if(item.clear_agency && item.clear_agency !== '' && item.clear_agency !== '-') clearAgencies.add(item.clear_agency);
+            if(item.process_agency && item.process_agency !== '' && item.process_agency !== '-') processAgencies.add(item.process_agency);
         });
 
-        // ==========================================
-        // 4. 計算平均值與更新 UI 卡片
-        // ==========================================
         let avgWeight = totalBatches > 0 ? (totalWeight / totalBatches) : 0;
         
-        // 確保你的程式碼中有 animateValue 這個函數，否則這裡會報錯
         animateValue("cardTotalBatches", totalBatches, 0);
         animateValue("cardTotalWeight", totalWeight, 3);
         animateValue("cardAvgWeight", avgWeight, 3);
@@ -323,7 +269,7 @@
     document.addEventListener("DOMContentLoaded", function() {
         flatpickr("#start_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
         flatpickr("#end_date", { locale: "zh_tw", dateFormat: "Y-m-d", allowInput: true });
-        syncDataAndCards(); // 網頁載入時解析一次 JSON 並更新卡片
+        syncDataAndCards(); 
     });
 
     // =====================================================================
@@ -339,8 +285,7 @@
         .then(html => {
             container.innerHTML = html;
             container.style.opacity = '1'; container.style.pointerEvents = 'auto';
-            
-            syncDataAndCards(); // 🌟 表格更新後，重新解析新的 JSON 並更新卡片！
+            syncDataAndCards(); 
             window.history.pushState(null, '', url);
             updateUI(); 
         })
@@ -405,18 +350,22 @@
     }
 
     // =====================================================================
-    // 🌟 4. 匯出與列印引擎 (資料直接來自 JSON) 🌟
+    // 🌟 4. 匯出與列印引擎 (防切邊完美版) 🌟
     // =====================================================================
     function getExportData() {
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
+        // 🌟 1. 將寬度鎖定在 1000px，移除置中屬性，讓它預設靠左
         let html = `
-            <div id="print-wrapper" style="width: 1040px; padding: 20px; background: white; color: black; font-family: sans-serif; box-sizing: border-box;">
+            <div id="print-wrapper" style="width: 1000px; padding: 20px; background: white; color: black; font-family: sans-serif; box-sizing: border-box;">
                 <style>
                     .export-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; table-layout: fixed; word-wrap: break-word; }
                     .export-table th, .export-table td { padding: 10px 8px; border-bottom: 1px solid #e0e0e0; text-align: left; }
                     .export-table th { border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; background-color: #f9f9f9; }
+                    
+                    /* 🌟 2. 靠 CSS 告訴 PDF 引擎：請不要從這裡把字切斷 */
+                    .export-table tr { page-break-inside: avoid; }
                 </style>
                 <h2 style="text-align: center; margin-bottom: 5px;">廢棄物載運紀錄報表</h2>
                 <div style="text-align: center; font-size: 14px; color: #555; margin-bottom: 20px;">報表產出時間：${dateStr}</div>
@@ -434,7 +383,6 @@
         let exportTargets = [];
         const checked = document.querySelectorAll('.record-checkbox:checked');
 
-        // 邏輯：如果有勾選，只匯出有勾選的 id；如果沒勾選，匯出全部 window.allFilteredData
         if (checked.length > 0) {
             const checkedIds = Array.from(checked).map(cb => String(cb.value));
             exportTargets = window.allFilteredData.filter(item => checkedIds.includes(String(item.id)));
@@ -462,8 +410,28 @@
             document.getElementById('warningModal').showModal();
             return;
         }
-        const opt = { margin: 10, filename: `載運紀錄_${res.dateStr}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
-        html2pdf().set(opt).from(res.htmlString).save();
+
+        // 🌟 3. 將 HTML 實體化並偷偷藏在畫面最左側外面，讓 html2canvas 拍照時不會找不到起點 (修正左邊切邊)
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px'; 
+        tempDiv.style.top = '0';
+        tempDiv.innerHTML = res.htmlString;
+        document.body.appendChild(tempDiv);
+
+        const opt = { 
+            margin: 10, 
+            filename: `載運紀錄_${res.dateStr}.pdf`, 
+            image: { type: 'jpeg', quality: 1 }, 
+            html2canvas: { scale: 2, useCORS: true }, 
+            pagebreak: { mode: 'css', avoid: 'tr' }, // 🌟 4. 啟動官方防切斷引擎
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+        };
+        
+        // 將剛剛建立的隱形容器裡的第一個元素 (print-wrapper) 拿來拍照，拍完後刪掉
+        html2pdf().set(opt).from(tempDiv.firstElementChild).save().then(() => {
+            document.body.removeChild(tempDiv);
+        });
     }
 
     window.exportToPNG = function() {
@@ -473,15 +441,18 @@
             document.getElementById('warningModal').showModal();
             return;
         }
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed'; iframe.style.top = '-9999px'; iframe.style.width = '1200px'; iframe.style.height = '2000px';
-        document.body.appendChild(iframe);
-        const doc = iframe.contentWindow.document;
-        doc.open(); doc.write(`<html><body style="margin:0; background:white;">${res.htmlString}</body></html>`); doc.close();
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px'; 
+        tempDiv.style.top = '0';
+        tempDiv.innerHTML = res.htmlString;
+        document.body.appendChild(tempDiv);
+        
         setTimeout(() => {
-            html2canvas(doc.getElementById('print-wrapper'), { scale: 2 }).then(canvas => {
+            html2canvas(tempDiv.firstElementChild, { scale: 2, useCORS: true }).then(canvas => {
                 const link = document.createElement('a'); link.download = `載運紀錄_${res.dateStr}.png`; link.href = canvas.toDataURL(); link.click();
-                document.body.removeChild(iframe);
+                document.body.removeChild(tempDiv);
             });
         }, 300);
     }
@@ -509,7 +480,7 @@
         }
         const iframe = document.createElement('iframe'); iframe.style.display = 'none'; document.body.appendChild(iframe);
         const pri = iframe.contentWindow;
-        pri.document.open(); pri.document.write(`<html><head><style>@media print { @page { size: landscape A4; margin: 1cm; } }</style></head><body>${res.htmlString}</body></html>`); pri.document.close();
+        pri.document.open(); pri.document.write(`<html><head><title>列印報表</title><style>body { font-family: sans-serif; margin: 0; padding: 20px; } @media print { @page { size: landscape A4; margin: 1cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>${res.htmlString}</body></html>`); pri.document.close();
         pri.focus(); setTimeout(() => { pri.print(); document.body.removeChild(iframe); }, 300);
     }
 
@@ -519,14 +490,11 @@
     window.pendingDeleteIds = null;
     window.openBatchDelete = function() {
         const checkboxes = document.querySelectorAll('.record-checkbox:checked');
-        
-        // 🌟 換成精美的彈出視窗
         if (checkboxes.length === 0) {
             document.getElementById('warningModalText').innerText = '請至少選取一筆要取消的載運單！';
             document.getElementById('warningModal').showModal();
             return;
         }
-        
         window.pendingDeleteIds = Array.from(checkboxes).map(cb => cb.value);
         document.getElementById('deleteModal').showModal();
     }

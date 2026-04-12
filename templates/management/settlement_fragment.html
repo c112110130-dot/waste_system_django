@@ -184,9 +184,9 @@
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
                         </button>
                         <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
-                            <button class="item" onclick="exportToExcel()">匯出 Excel</button>
-                            <button class="item" onclick="exportToPDF()">匯出 PDF</button>
-                            <button class="item" onclick="exportToPNG()">匯出 PNG</button>
+                            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel</button>
+                            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF</button>
+                            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG</button>
                         </div>
                     </div>
                     <button class="ts-button btn-batch-white" onclick="printSelectedReport()">
@@ -339,8 +339,11 @@
     });
 
     window.updateStatCards = function() {
-        const initialData = JSON.parse('{{ all_filtered_data|escapejs }}' || '[]');
-        updateStatCardsWithData(initialData);
+        const dataElement = document.getElementById('new-data-json');
+        if (dataElement) {
+            const initialData = JSON.parse(dataElement.textContent);
+            updateStatCardsWithData(initialData);
+        }
     }
 
     function updateStatCardsWithData(dataList) {
@@ -391,7 +394,6 @@
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
-        // 🌟 核心改變：我們只組裝 HTML「字串」，不掛載到畫面上，徹底阻絕本機螢幕干擾
         let html = `
             <div id="print-wrapper" style="width: 1040px; padding: 20px; background: white; color: black; font-family: sans-serif; box-sizing: border-box;">
                 <style>
@@ -435,130 +437,62 @@
         return { htmlString: html, hasData, dateStr: dateStr.replace(/[: ]/g, '') };
     }
 
-    // 1. Excel (無畫面問題)
     window.exportToExcel = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); if(!res.hasData) return alert("無資料可匯出");
         const rows = [["過磅時間", "重量 (kg)", "狀態", "種類", "部門", "定點", "過磅人員"]];
-        
-        // 為了 Excel，我們建一個臨時的 DOM 來抓取字串內的表格
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = res.htmlString;
         tempDiv.querySelectorAll('tbody tr').forEach(tr => { rows.push(Array.from(tr.querySelectorAll('td')).map(td => td.innerText)); });
-        
         const ws = XLSX.utils.aoa_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄"); XLSX.writeFile(wb, `過磅紀錄_${res.dateStr}.xlsx`);
     }
 
-    // 🌟 2. PDF (直接餵入 HTML 字串) 🌟
     window.exportToPDF = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); 
         if(!res.hasData) return alert("無資料可匯出");
-
-        const opt = {
-            margin:       10, 
-            filename:     `過磅紀錄_${res.dateStr}.pdf`,
-            image:        { type: 'jpeg', quality: 1 },
-            html2canvas:  { scale: 2, useCORS: true }, 
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } 
-        };
-
-        // 直接傳入 HTML「字串」(.from(res.htmlString))，讓套件在沙盒裡自己搞定！
+        const opt = { margin: 10, filename: `過磅紀錄_${res.dateStr}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
         html2pdf().set(opt).from(res.htmlString).save();
     }
 
-    // 🌟 3. PNG (使用超級巨大的隱形 Iframe 截圖) 🌟
     window.exportToPNG = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); 
         if(!res.hasData) return alert("無資料可匯出");
-        
         const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed'; 
-        iframe.style.top = '-9999px'; 
-        iframe.style.left = '-9999px'; 
-        iframe.style.width = '1200px';  // 強制給予大空間
-        iframe.style.height = '2000px'; 
+        iframe.style.position = 'fixed'; iframe.style.top = '-9999px'; iframe.style.left = '-9999px'; iframe.style.width = '1200px'; iframe.style.height = '2000px'; 
         document.body.appendChild(iframe);
-
         const doc = iframe.contentWindow.document;
-        doc.open();
-        doc.write(`<html><body style="margin:0; padding:0; background:white;">${res.htmlString}</body></html>`);
-        doc.close();
-
-        // 等待 Iframe 渲染完成後再截圖
+        doc.open(); doc.write(`<html><body style="margin:0; padding:0; background:white;">${res.htmlString}</body></html>`); doc.close();
         setTimeout(() => {
             const target = doc.getElementById('print-wrapper');
             html2canvas(target, { scale: 2, useCORS: true }).then(canvas => {
-                const link = document.createElement('a'); 
-                link.download = `過磅紀錄_${res.dateStr}.png`; 
-                link.href = canvas.toDataURL(); 
-                link.click(); 
-                document.body.removeChild(iframe); // 截圖完拆除 Iframe
+                const link = document.createElement('a'); link.download = `過磅紀錄_${res.dateStr}.png`; link.href = canvas.toDataURL(); link.click(); 
+                document.body.removeChild(iframe);
             });
         }, 300);
     }
 
-    // 🌟 4. 列印 (使用隱形 Iframe) 🌟
     window.printSelectedReport = function() {
         const res = getExportData('醫療廢棄物過磅紀錄');
         if(!res.hasData) return alert("無資料可列印");
-
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none'; 
         document.body.appendChild(iframe);
-
         const pri = iframe.contentWindow;
         pri.document.open();
-        pri.document.write(`
-            <html>
-            <head>
-                <title>列印報表</title>
-                <style>
-                    body { font-family: sans-serif; margin: 0; padding: 20px; }
-                    @media print {
-                        @page { size: landscape A4; margin: 1cm; }
-                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${res.htmlString}
-            </body>
-            </html>
-        `);
+        pri.document.write(`<html><head><title>列印報表</title><style>body { font-family: sans-serif; margin: 0; padding: 20px; } @media print { @page { size: landscape A4; margin: 1cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>${res.htmlString}</body></html>`);
         pri.document.close();
         pri.focus();
-
-        setTimeout(() => {
-            pri.print();
-            document.body.removeChild(iframe);
-        }, 300);
+        setTimeout(() => { pri.print(); document.body.removeChild(iframe); }, 300);
     }
 
-    // --- 🌟 結算與刪除防呆邏輯 🌟 ---
     window.openSettlementModal = function() {
         const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
-        let ids = [];
-        let hasTransported = false;
-
+        let ids = []; let hasTransported = false;
         checkedBoxes.forEach(cb => {
             ids.push(cb.value);
-            if (cb.getAttribute('data-transported') === 'true') {
-                hasTransported = true;
-            }
+            if (cb.getAttribute('data-transported') === 'true') hasTransported = true;
         });
-
-        if(ids.length === 0) { 
-            document.getElementById('warningModalText').innerText = '請至少選取一筆資料。'; 
-            document.getElementById('warningModal').showModal(); 
-            return; 
-        }
-        
-        // 🌟 防呆：阻擋已載運的紀錄重複結算 🌟
-        if(hasTransported) {
-            document.getElementById('warningModalText').innerText = '選取項目中包含「已載運」的紀錄，無法重複結算！請取消勾選。'; 
-            document.getElementById('warningModal').showModal(); 
-            return;
-        }
-
+        if(ids.length === 0) { document.getElementById('warningModalText').innerText = '請至少選取一筆資料。'; document.getElementById('warningModal').showModal(); return; }
+        if(hasTransported) { document.getElementById('warningModalText').innerText = '選取項目中包含「已載運」的紀錄，無法重複結算！請取消勾選。'; document.getElementById('warningModal').showModal(); return; }
         document.getElementById('modalSelectedCount').innerText = ids.length;
         document.getElementById('hiddenSelectedIds').value = ids.join(',');
         document.getElementById('settlementModal').showModal();
@@ -566,67 +500,27 @@
     
     window.openBatchDelete = function(){
         const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
-        let ids = [];
-        let hasTransported = false;
-
+        let ids = []; let hasTransported = false;
         checkedBoxes.forEach(cb => {
             ids.push(cb.value);
-            if (cb.getAttribute('data-transported') === 'true') {
-                hasTransported = true;
-            }
+            if (cb.getAttribute('data-transported') === 'true') hasTransported = true;
         });
-
-        if(ids.length === 0) { 
-            document.getElementById('warningModalText').innerText = '請先勾選要刪除的紀錄。'; 
-            document.getElementById('warningModal').showModal(); 
-            return; 
-        }
-
-        // 🌟 防呆：阻擋刪除已載運的紀錄 🌟
-        if(hasTransported) {
-            document.getElementById('warningModalText').innerText = '「已載運」的紀錄受到系統保護，無法刪除！請取消勾選。'; 
-            document.getElementById('warningModal').showModal(); 
-            return;
-        }
-
+        if(ids.length === 0) { document.getElementById('warningModalText').innerText = '請先勾選要刪除的紀錄。'; document.getElementById('warningModal').showModal(); return; }
+        if(hasTransported) { document.getElementById('warningModalText').innerText = '「已載運」的紀錄受到系統保護，無法刪除！請取消勾選。'; document.getElementById('warningModal').showModal(); return; }
         window.pendingDeleteIds = ids; 
         document.getElementById('deleteModalText').innerText = `確定要刪除選取的 ${ids.length} 筆資料嗎？`; 
         document.getElementById('deleteModal').showModal();
     }
 
-    // 匯出 / 列印 (完全放行，不阻擋)
-    window.toggleAll = function(src) { 
-        document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); 
-        updateUI(); 
-    }
-
-    // =====================================================================
-    // 🌟 新增：攔截結算表單，改用背景送出以保留 page_size 狀態 🌟
-    // =====================================================================
     document.addEventListener("DOMContentLoaded", function() {
         const settlementForm = document.getElementById('settlementForm');
         if (settlementForm) {
             settlementForm.addEventListener('submit', function(e) {
-                e.preventDefault(); // 🛑 阻止傳統跳轉
-
-                // 關閉彈窗
+                e.preventDefault();
                 document.getElementById('settlementModal').close();
-
-                // 在背景送出資料
-                fetch(this.action, {
-                    method: 'POST',
-                    body: new FormData(this),
-                    redirect: 'follow'
-                })
-                .then(() => {
-                    // 🚀 處理完畢後，直接「就地重新整理」當前網址！
-                    window.location.reload();
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert('結算時發生錯誤，請稍後再試。');
-                    window.location.reload();
-                });
+                fetch(this.action, { method: 'POST', body: new FormData(this), redirect: 'follow' })
+                .then(() => { window.location.reload(); })
+                .catch(err => { console.error(err); alert('結算時發生錯誤，請稍後再試。'); window.location.reload(); });
             });
         }
     });
