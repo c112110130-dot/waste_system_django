@@ -254,38 +254,60 @@
         const rawDataElement = document.getElementById('raw-filtered-data');
         window.allFilteredData = []; 
 
-        // 🚨 關鍵修正：因為標籤換成了 <script>，所以必須用 .textContent 來讀取！
-        if (rawDataElement && rawDataElement.textContent && rawDataElement.textContent.trim() !== '') {
+        // ==========================================
+        // 1. 強化版 JSON 解析 (雙重防呆機制)
+        // ==========================================
+        if (rawDataElement) {
             try {
-                window.allFilteredData = JSON.parse(rawDataElement.textContent);
+                let rawContent = rawDataElement.textContent.trim();
+                if (rawContent) {
+                    let parsed = JSON.parse(rawContent);
+                    // 防呆：如果後端 json.dumps 導致解析出來還是字串，就再解開一次
+                    if (typeof parsed === 'string') {
+                        parsed = JSON.parse(parsed);
+                    }
+                    window.allFilteredData = parsed;
+                }
             } catch (e) {
-                console.error("JSON解析失敗 (請檢查後端 views.py 是否正確傳遞):", e);
+                console.error("JSON 解析失敗，請檢查資料格式:", e);
+                console.log("原始字串內容為:", rawDataElement.textContent);
             }
         }
 
+        // ==========================================
+        // 2. 初始化統計變數
+        // ==========================================
         let totalBatches = window.allFilteredData.length;
         let totalWeight = 0;
         
+        // 使用 Set 來收集「不重複」的清理與處理機構
         let clearAgencies = new Set();
         let processAgencies = new Set();
 
+        // ==========================================
+        // 3. 迴圈計算與資料收集
+        // ==========================================
         window.allFilteredData.forEach(item => {
+            // 累加總重量 (確保轉換為浮點數，如果失敗則加 0)
             totalWeight += parseFloat(item.total_weight) || 0;
             
-            // 收集清理機構
+            // 收集有效的清理機構
             if(item.clear_agency && item.clear_agency !== '' && item.clear_agency !== '-') {
                 clearAgencies.add(item.clear_agency);
             }
             
-            // 收集處理機構
+            // 收集有效的處理機構
             if(item.process_agency && item.process_agency !== '' && item.process_agency !== '-') {
                 processAgencies.add(item.process_agency);
             }
         });
 
+        // ==========================================
+        // 4. 計算平均值與更新 UI 卡片
+        // ==========================================
         let avgWeight = totalBatches > 0 ? (totalWeight / totalBatches) : 0;
         
-        // 更新 5 張卡片的動畫數據
+        // 確保你的程式碼中有 animateValue 這個函數，否則這裡會報錯
         animateValue("cardTotalBatches", totalBatches, 0);
         animateValue("cardTotalWeight", totalWeight, 3);
         animateValue("cardAvgWeight", avgWeight, 3);

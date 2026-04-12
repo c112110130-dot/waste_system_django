@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}醫療廢棄物暨資源管理系統整合應用 - QR code列印{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統 - QR code列印{% endblock %}
 
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/qrcode_print.css' %}">
@@ -32,7 +32,7 @@
     .info-wrap div { white-space: normal; word-break: break-all; line-height: 1.4; }
 </style>
 
-<div class="ts-container has-vertically-spaced-large" style="--width: 1850px;">
+<div class="ts-container" style="--width: 1800px; padding: 18px 15px 0 15px;">
     <div style="margin-bottom: 30px;">
         <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
             <div style="background: #a333c8; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(163, 51, 200, 0.3);">
@@ -48,7 +48,7 @@
         
         <div class="column">
             <div class="ts-box" style="height: 100%; min-height: 600px; padding: 50px; display: flex; flex-direction: column;">
-                
+        
                 <div class="ts-header is-large is-heavy has-bottom-spaced" style="width: 100%;">條碼預覽</div>
                 
                 <div style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%;">
