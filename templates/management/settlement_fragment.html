@@ -158,7 +158,7 @@
         <div class="main-content">
             <div class="ts-grid is-relaxed is-4-columns stat-card-container">
                 <div class="column"><div class="stat-card card-green"><div class="stat-icon"><span class="ts-icon is-clipboard-list-icon"></span></div><div class="stat-info"><div class="stat-title">總過磅筆數</div><div class="stat-value" id="cardTotalCount">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-weight-scale-icon"></span></div><div class="stat-info"><div class="stat-title">區間總重量 (kg)</div><div class="stat-value" id="cardTotalWeight">0.000</div></div></div></div>
+                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-calendar-day-icon"></span></div><div class="stat-info"><div class="stat-title">昨日過磅總重 (kg)</div><div class="stat-value">{{ yesterday_total_weight|default:"0.000"|floatformat:3 }}</div></div></div></div>
                 <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-truck-fast-icon"></span></div><div class="stat-info"><div class="stat-title">已載運重量 (kg)</div><div class="stat-value" id="cardTransportedWeight">0.000</div></div></div></div>
                 <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-triangle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">未載運重量 (kg)</div><div class="stat-value" id="cardPendingWeight">0.000</div></div></div></div>
             </div>
@@ -353,7 +353,6 @@
             if (item.status === '已載運') transW += w; else pendW += w;
         });
         document.getElementById('cardTotalCount').innerText = dataList.length;
-        document.getElementById('cardTotalWeight').innerText = totalW.toFixed(3);
         document.getElementById('cardTransportedWeight').innerText = transW.toFixed(3);
         document.getElementById('cardPendingWeight').innerText = pendW.toFixed(3);
     }

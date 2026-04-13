@@ -259,6 +259,11 @@
         animateValue("cardAvgWeight", avgWeight, 3);
         animateValue("cardClearAgencies", clearAgencies.size, 0);
         animateValue("cardProcessAgencies", processAgencies.size, 0);
+
+        const bottomWeightDisplay = document.getElementById('displayTotalWeightBottom');
+        if (bottomWeightDisplay) {
+            bottomWeightDisplay.innerText = totalWeight.toFixed(3);
+        }
     }
 
     function animateValue(id, end, decimals) {
