@@ -193,23 +193,31 @@
     </div>
 </div>
 
-<dialog id="warningModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999;">
+<dialog id="warningModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
     <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
-        <div class="ts-icon is-circle-exclamation-icon" style="font-size: 3rem; color: #fbbd08; margin-bottom: 15px;"></div>
-        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.25rem;">系統提示</div>
-        <p id="warningModalText" style="margin-bottom: 20px; color: var(--my-text-sub); line-height: 1.5; font-size: 1rem;"></p>
+        
+        <div class="ts-icon is-circle-exclamation-icon" style="font-size: 3rem; color: #f2c037; margin-bottom: 15px;"></div>
+        
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.2rem; display: flex; justify-content: center; align-items: center;">提示</div>
+        
+        <p id="warningModalText" style="margin-bottom: 20px; color: var(--my-text-sub); line-height: 1.5;"></p>
+        
         <button type="button" class="ts-button is-fluid" onclick="document.getElementById('warningModal').close()">我知道了</button>
     </div>
 </dialog>
 
 <dialog id="deleteModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
     <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
+        
         <div class="ts-icon is-rotate-left-icon" style="font-size: 3rem; color: #db2828; margin-bottom: 15px;"></div>
-        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.25rem;">確認取消載運</div>
+        
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.25rem; display: flex; justify-content: center; align-items: center;">確認取消載運</div>
+        
         <p style="margin-bottom: 25px; color: var(--my-text-sub); line-height: 1.6;">
             確定要取消選取的載運單嗎？<br>
             單內的廢棄物將會恢復成「未載運」狀態。
         </p>
+        
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button type="button" class="ts-button is-outlined" onclick="document.getElementById('deleteModal').close()">返回</button>
             <button type="button" class="ts-button is-negative" onclick="confirmDelete()">確定取消</button>
