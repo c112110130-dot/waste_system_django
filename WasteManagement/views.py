@@ -67,6 +67,16 @@ def settlement_view(request):
     sort_map = {'newest': '-create_time', 'oldest': 'create_time', 'weight_desc': '-weight', 'weight_asc': 'weight'}
     records = records.order_by(sort_map.get(f_sort, '-create_time'))
 
+    # ==========================================
+    # 🌟 新增：計算「昨日」過磅總重量 (固定值)
+    # ==========================================
+    today_date = timezone.now().date()
+    yesterday_date = today_date - timedelta(days=1)
+    
+    yesterday_total = WasteRecord_New.objects.filter(
+        create_time__date=yesterday_date
+    ).aggregate(Sum('weight'))['weight__sum'] or 0.0
+
     all_data_list = []
     for r in records:
         all_data_list.append({
@@ -98,6 +108,9 @@ def settlement_view(request):
         'clear_agencies': clearAgency.objects.all(), 'weighers': UserProfile.objects.all(),
         'all_filtered_data': all_data_list, 
         'total_weight_sum': round(total_w, 3),
+        
+        # 🌟 新增這行：把算好的昨日總重傳給前端 HTML
+        'yesterday_total_weight': round(float(yesterday_total), 3),
     }
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
