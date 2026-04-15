@@ -529,6 +529,42 @@
         document.getElementById('deleteModal').showModal();
     }
 
+    // 🌟 尋回的單筆刪除函式 🌟
+    window.deleteRecord = function(id) {
+        window.pendingDeleteIds = [id];
+        document.getElementById('deleteModalText').innerText = '確定要刪除這筆過磅紀錄嗎？';
+        document.getElementById('deleteModal').showModal();
+    }
+
+    // 🌟 尋回的執行刪除函式 (呼叫後端 API) 🌟
+    window.executeBatchDelete = function() {
+        if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
+        
+        // 🌟 換成這行！呼叫專門刪除過磅資料的 API
+        fetch("{% url 'WasteManagement:delete_data' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : ''
+            },
+            body: JSON.stringify({ ids: window.pendingDeleteIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload(); // 成功後重新整理頁面
+            } else {
+                alert('刪除失敗：' + (data.message || '未知錯誤'));
+                document.getElementById('deleteModal').close();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('系統發生錯誤，請稍後再試。');
+            document.getElementById('deleteModal').close();
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         const settlementForm = document.getElementById('settlementForm');
         if (settlementForm) {
