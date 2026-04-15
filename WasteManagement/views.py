@@ -319,6 +319,38 @@ def visualize_department_config(request):
         return JsonResponse({'success': True, 'waste_types': w_types, 'departments': depts})
     except Exception as e: return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+def delete_data(request):
+    """
+    專門負責刪除「過磅紀錄 (WasteRecord_New)」的 API
+    接收格式: POST JSON -> {"ids": [1, 2, 3]}
+    """
+    if request.method == 'POST':
+        try:
+            # 1. 解析前端傳來的 JSON 資料
+            data = json.loads(request.body)
+            ids = data.get('ids', [])
+
+            if not ids:
+                return JsonResponse({'status': 'error', 'message': '沒有收到要刪除的資料 ID'})
+
+            # 2. 找出這些 ID 對應的過磅紀錄
+            # (根據你之前的報錯，模型名稱應該是 WasteRecord_New)
+            records_to_delete = WasteRecord_New.objects.filter(id__in=ids)
+            
+            # 3. 安全防護：為了怕誤刪，可以加個條件只刪除「未載運」的資料
+            # 如果你的欄位是 status='未載運' 或是 is_transported=False，請確保這裡的邏輯與你模型一致
+            # 這裡我們先單純執行刪除：
+            deleted_count, _ = records_to_delete.delete()
+
+            # 4. 回傳成功訊息給前端
+            return JsonResponse({'status': 'success', 'deleted_count': deleted_count})
+
+        except Exception as e:
+            # 發生錯誤時，把錯誤訊息傳給前端顯示
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': '只允許 POST 請求'})
+
 # 其餘預留
 def db_department_index(request): return render(request, 'management/db-department.html', {'departments': Department.objects.all(), 'waste_types': WasteType.objects.all()})
 def visualize_index(request): return render(request, 'management/visualize.html')
@@ -327,7 +359,6 @@ def qrcode_print_view(request): return render(request, 'management/qrcode_print.
 def api_visualize_transport_data(request): return JsonResponse({'success': True})
 def get_data(request): return JsonResponse({'success': True})
 def save_data(request): return JsonResponse({'success': True})
-def delete_data(request): return JsonResponse({'success': True})
 def batch_import(request): return JsonResponse({'success': True})
 def get_month_status(request): return JsonResponse({'success': True})
 def get_department_data(request): return JsonResponse({'success': True})
