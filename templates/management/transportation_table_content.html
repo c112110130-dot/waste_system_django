@@ -1,0 +1,206 @@
+<div class="ts-content is-secondary is-fitted rwd-toolbar top-pagination-bar" style="padding: 10px 20px; border-bottom: 1px solid var(--my-border); background-color: var(--my-bg-input); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-radius: 8px 8px 0 0;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--my-text-sub); font-size: 0.95rem; white-space: nowrap;">每頁顯示：</span>
+        <select class="ts-select" onchange="changePageSize(this.value)" style="width: 85px !important; height: 32px !important; padding: 0 5px !important; font-size: 0.95rem !important;">
+            <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+            <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
+            <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+        </select>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; justify-content: flex-end;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.95rem; color: var(--my-text-sub); white-space: nowrap;">排序：</span>
+            <select class="ts-select is-small" onchange="submitWithSort(this.value)" style="width: 145px !important; height: 32px !important; padding: 0 5px !important; font-size: 0.95rem !important;">
+                <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊)</option>
+                <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新)</option>
+                <option value="weight_desc" {% if current_sort == 'weight_desc' %}selected{% endif %}>重量 (重 → 輕)</option>
+                <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重)</option>
+            </select>
+        </div>
+
+        <div style="width: 1px; height: 20px; background: var(--my-border);"></div>
+
+        <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
+            {% if page_obj.has_previous %}
+                <a class="item" onclick="goToPage(1)" title="第一頁"><span class="ts-icon is-angles-left-icon"></span></a>
+                <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁"><span class="ts-icon is-angle-left-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+            {% endif %}
+            
+            <span class="item is-text" style="padding: 0 10px; white-space: nowrap;">
+                第 <input type="number" class="page-jump-input" id="jump-page-input-top" value="{{ page_obj.number }}" min="1" max="{{ page_obj.paginator.num_pages|default:1 }}" onkeypress="if(event.key === 'Enter') jumpToPage('top')" style="width: 45px; height: 26px; text-align: center; border: 1px solid var(--my-border); background: var(--my-bg-panel); color: var(--my-text-main); border-radius: 4px; margin: 0 4px;"> / {{ page_obj.paginator.num_pages|default:1 }} 頁
+            </span>
+
+            {% if page_obj.has_next %}
+                <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁"><span class="ts-icon is-angles-right-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="ts-content is-fitted" style="overflow-x: auto;">
+    
+    <style>
+        #dataTable { table-layout: fixed !important; }
+        #dataTable th, #dataTable td { white-space: normal !important; word-wrap: break-word !important; vertical-align: middle !important; }
+        
+        #dataTable .ts-checkbox input[type="checkbox"] { background-color: #ffffff !important; border: 1px solid #999 !important; filter: none !important; opacity: 1 !important; }
+        #dataTable .ts-checkbox input[type="checkbox"]:checked { background-color: #0064FF !important; border-color: #0064FF !important; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important; background-size: 100% 100% !important; }
+    </style>
+
+    <table class="ts-table is-striped is-fullwidth" id="dataTable" style="min-width: 900px;">
+        <colgroup>
+            <col style="width: 50px;">
+            <col style="width: 18%;">
+            <col style="width: 15%;">
+            <col style="width: 22%;">
+            <col style="width: 22%;">
+            <col style="width: 15%;">
+            <col style="width: 100px;">
+        </colgroup>
+
+        <thead>
+            <tr>
+                <th style="text-align: center;">
+                    <label class="ts-checkbox" title="全選/取消全選">
+                        <input type="checkbox" id="checkAll" onclick="toggleAll(this)">
+                    </label>
+                </th>
+                <th>結算時間</th>
+                <th>總重量 (KG)</th>
+                <th>清理機構</th>
+                <th>處理機構</th>
+                <th>結算人員</th>
+                <th style="text-align: center;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for batch in page_obj %}
+            <tr>
+                <td style="text-align: center;">
+                    <label class="ts-checkbox">
+                        <input type="checkbox" name="batch_ids" value="{{ batch.id }}" class="record-checkbox" data-weight="{{ batch.total_weight|floatformat:3 }}" onchange="updateUI()">
+                    </label>
+                </td>
+                <td>{{ batch.settle_time|date:"Y-m-d H:i" }}</td>
+                <td><span style="color: #db2828; font-weight: bold; font-size: 1.05rem;">{{ batch.total_weight|floatformat:3 }}</span></td>
+                <td>{{ batch.clear_agency.name }}</td>
+                <td>{{ batch.process_agency.name }}</td>
+                <td>{{ batch.settler.username|default:"-" }}</td>
+                <td style="text-align: center; vertical-align: middle;">
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+                        <button class="ts-button is-secondary is-small is-outlined" style="height: 30px !important; padding: 0 10px;" onclick="openDetailModal('{{ batch.id }}')">
+                            <span class="ts-icon is-eye-icon" style="margin-right: 4px;"></span> 查看
+                        </button>
+                        <button class="ts-button is-warning is-icon is-small is-dense" style="width: 30px !important; height: 30px !important; padding: 0; display: flex; justify-content: center; align-items: center; color: #000;" onclick="deleteSingleBatch('{{ batch.id }}')" title="取消載運狀態">
+                            <span class="ts-icon is-rotate-left-icon"></span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center !important; padding: 60px 0;">
+                    <div class="ts-icon is-box-open-icon" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3; color: var(--my-text-sub);"></div>
+                    <div style="font-size: 1rem; font-weight: bold; color: var(--my-text-sub);">目前沒有符合條件的載運紀錄</div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="ts-content is-secondary is-fitted rwd-toolbar bottom-pagination-bar" style="padding: 10px 20px; border-top: 1px solid var(--my-border); background-color: var(--my-bg-input); border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--my-text-sub); font-size: 0.95rem; white-space: nowrap;">每頁顯示：</span>
+        <select class="ts-select" onchange="changePageSize(this.value)" style="width: 85px !important; height: 32px !important; padding: 0 5px !important;">
+            <option value="10" {% if current_page_size == 10 %}selected{% endif %}>10</option>
+            <option value="20" {% if current_page_size == 20 %}selected{% endif %}>20</option>
+            <option value="50" {% if current_page_size == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if current_page_size == 100 %}selected{% endif %}>100</option>
+        </select>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; justify-content: flex-end;">
+        <div style="display: flex; align-items: center;">
+            <span id="weightLabelBottom" style="font-size: 0.95rem; color: var(--my-text-main);">本頁顯示重量：</span>
+            <span id="displayTotalWeightBottom" style="color: #db2828; font-weight: bold; font-size: 1.15rem; margin: 0 6px;">{{ total_weight_sum|default:0|floatformat:3 }}</span>
+            <span style="font-size: 0.9rem; color: var(--my-text-sub);">kg</span>
+        </div>
+
+        <div style="width: 1px; height: 20px; background: var(--my-border);"></div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.95rem; color: var(--my-text-sub); white-space: nowrap;">排序：</span>
+            <select class="ts-select is-small" onchange="submitWithSort(this.value)" style="width: 145px !important; height: 32px !important;">
+                <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊)</option>
+                <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新)</option>
+                <option value="weight_desc" {% if current_sort == 'weight_desc' %}selected{% endif %}>重量 (重 → 輕)</option>
+                <option value="weight_asc" {% if current_sort == 'weight_asc' %}selected{% endif %}>重量 (輕 → 重)</option>
+            </select>
+        </div>
+
+        <div style="width: 1px; height: 20px; background: var(--my-border);"></div>
+
+        <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
+            {% if page_obj.has_previous %}
+                <a class="item" onclick="goToPage(1)" title="第一頁"><span class="ts-icon is-angles-left-icon"></span></a>
+                <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁"><span class="ts-icon is-angle-left-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+            {% endif %}
+            
+            <span class="item is-text" style="padding: 0 10px; white-space: nowrap;">
+                第 <input type="number" class="page-jump-input" id="jump-page-input-bottom" value="{{ page_obj.number }}" min="1" max="{{ page_obj.paginator.num_pages|default:1 }}" onkeypress="if(event.key === 'Enter') jumpToPage('bottom')" style="width: 45px; height: 26px; text-align: center; border: 1px solid var(--my-border); background: var(--my-bg-panel); color: var(--my-text-main); border-radius: 4px; margin: 0 4px;"> / {{ page_obj.paginator.num_pages|default:1 }} 頁
+            </span>
+
+            {% if page_obj.has_next %}
+                <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁"><span class="ts-icon is-angles-right-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% for batch in page_obj %}
+<template id="tmpl-{{ batch.id }}">
+    <div style="margin-bottom: 15px; color: var(--my-text-sub); font-size: 1rem;">
+        單號：<span style="font-family:monospace; color: var(--my-text-main);">#{{ batch.id }}</span> <br>
+        本批次共包含 <strong style="color: var(--my-text-main);">{{ batch.items.count|default:"-" }}</strong> 筆廢棄物紀錄：
+    </div>
+    <table class="sub-table">
+        <thead>
+            <tr><th>單筆 ID</th><th>產出部門</th><th>產出定點</th><th>產出時間</th><th>重量 (KG)</th><th>過磅人員</th></tr>
+        </thead>
+        <tbody>
+            {% for item in batch.items.all %}
+            <tr>
+                <td style="font-family: monospace;">#{{ item.id }}</td>
+                <td>{{ item.department.name }}</td><td>{{ item.location.name }}</td>
+                <td>{{ item.create_time|date:"Y-m-d H:i" }}</td>
+                <td style="text-align: right; font-weight: bold; color: #db2828;">{{ item.weight|floatformat:3 }}</td>
+                <td>{{ item.creator.username }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align: center; padding: 20px;">尚無明細資料</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed var(--my-border); text-align: right; font-weight: bold; font-size: 1.1rem; color: var(--my-text-main);">
+        總計重量：<span style="color: #db2828; font-size: 1.3rem;">{{ batch.total_weight|floatformat:3 }}</span> KG
+    </div>
+</template>
+{% endfor %}
+<script id="raw-filtered-data" type="application/json">{{ all_filtered_data|safe }}</script>

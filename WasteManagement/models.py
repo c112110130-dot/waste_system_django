@@ -225,9 +225,6 @@ class WasteType(models.Model):
         """Get unit display name in Chinese"""
         return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
 
-
-
-
 class WasteRecord(models.Model):
     """Waste record entity - Core transaction table (depends on Department and WasteType)"""
     id = models.AutoField(primary_key=True)
@@ -256,8 +253,6 @@ class WasteRecord(models.Model):
     def __str__(self):
         return f"{self.date} - {self.department.name} - {self.waste_type.name}"
     
-
-
 class DepartmentWasteConfiguration:
     """Dynamic configuration management system"""
 

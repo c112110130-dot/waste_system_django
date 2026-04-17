@@ -495,7 +495,7 @@
             <div class="custom-modal-title">確認結算</div>
             <div class="custom-modal-content">
                 <div class="info-box">將建立包含 <strong id="modalSelectedCount">0</strong> 筆資料的載運單。</div>
-                <form id="settlementForm" method="post" action="{% url 'management:settlement_process' %}">
+                <form id="settlementForm" method="post" action="{% url 'dashboard:settlement_process' %}">
                     {% csrf_token %}
                     <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
                     <div>
@@ -646,7 +646,7 @@
     
     window.confirmDelete = function() {
         if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
-        fetch("{% url 'management:api_delete_records' %}", { 
+        fetch("{% url 'dashboard:api_delete_records' %}", { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
             body: JSON.stringify({ ids: window.pendingDeleteIds })
