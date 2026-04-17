@@ -35,11 +35,21 @@ class LocationManager {
         });
         
         // 搜尋
-        const locSearch = document.querySelector('input[placeholder*="搜尋定點"]');
-        if (locSearch) locSearch.addEventListener('input', (e) => this.searchTable('.location-table', e.target.value));
+        // const locSearch = document.querySelector('input[placeholder*="搜尋定點..."]');
+        // if (locSearch) locSearch.addEventListener('input', (e) => this.searchTable('.location-table', e.target.value));
+        const LocationSearch = document.querySelector('input[placeholder*="搜尋定點"]');
+        if (LocationSearch) {
+            LocationSearch.addEventListener('input', (e) => {
+                this.searchLocationTable(e.target.value);
+            });
+        }
         
         const agencySearch = document.querySelector('input[placeholder*="搜尋機構"]');
-        if (agencySearch) agencySearch.addEventListener('input', (e) => this.searchTable('.agency-table', e.target.value));
+        if (agencySearch) {
+            agencySearch.addEventListener('input', (e) => {
+                this.searchAgencyTable(e.target.value);
+            });
+        }
         
         // 核取方塊 (包含全選功能)
         document.addEventListener('change', (e) => {
@@ -142,7 +152,7 @@ class LocationManager {
         if (!nameInput.value.trim()) return alert('請輸入定點名稱');
         
         try {
-            const response = await fetch('/dashboard/api/location/save/', {
+            const response = await fetch('/management/api/location/save/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                 body: JSON.stringify({ id: row.dataset.id, code: codeInput.value.trim(), name: nameInput.value.trim() })
@@ -164,7 +174,7 @@ class LocationManager {
         }
         NotificationUtils.showConfirm('確認刪除', `確定要刪除選定的 ${ids.length} 個定點嗎？此操作無法復原。`, async () => {
             try {
-                const response = await fetch('/dashboard/api/location/delete/', {
+                const response = await fetch('/management/api/location/delete/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                     body: JSON.stringify({ ids: ids })
@@ -284,7 +294,7 @@ class LocationManager {
         if (!nameInput.value.trim()) return alert('請輸入機構名稱');
         
         try {
-            const response = await fetch('/dashboard/api/agency/save/', {
+            const response = await fetch('/management/api/agency/save/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                 body: JSON.stringify({ id: row.dataset.id, code: codeInput.value.trim(), name: nameInput.value.trim(), type: typeSelect.value })
@@ -307,7 +317,7 @@ class LocationManager {
         }
         NotificationUtils.showConfirm('確認刪除', `確定要刪除選定的 ${ids.length} 個機構嗎？此操作無法復原。`, async () => {
             try {
-                const response = await fetch('/dashboard/api/agency/delete/', {
+                const response = await fetch('/management/api/agency/delete/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                     body: JSON.stringify({ ids: ids })
@@ -328,14 +338,54 @@ class LocationManager {
         const rows = document.querySelectorAll(`${tableSelector} tbody tr`);
         const normalizedQuery = query.toLowerCase().trim();
         rows.forEach(row => {
-            if (row.dataset.id === 'new') return;
-            const codeCell = row.querySelector('td:nth-child(2)');
+            if (row.dataset.id === 'new') return; // Skip editing row
+            
             const nameCell = row.querySelector('td:nth-child(3)');
-            if (!codeCell || !nameCell) return;
             if (!nameCell) return;
-            row.style.display = (!normalizedQuery || nameCell.textContent.toLowerCase().includes(normalizedQuery)) ? '' : 'none';
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell.textContent.toLowerCase();
+            const name = nameCell.textContent.toLowerCase();
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
+            row.style.display = matches ? '' : 'none';
         });
     }
+    searchLocationTable(query) {
+        const rows = document.querySelectorAll('.location-table tbody tr');
+        const normalizedQuery = query.toLowerCase().trim();
+        rows.forEach(row => {
+            if (row.dataset.id === 'new') return; // Skip editing row
+            
+            const nameCell = row.querySelector('td:nth-child(3)');
+            if (!nameCell) return;
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell.textContent.toLowerCase();
+            const name = nameCell.textContent.toLowerCase();
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+    searchAgencyTable(query) {
+        const rows = document.querySelectorAll('.agency-table tbody tr');
+        const normalizedQuery = query.toLowerCase().trim();
+        rows.forEach(row => {
+            if (row.dataset.id === 'new') return; // Skip editing row
+
+            const nameCell = row.querySelector('td:nth-child(3)');
+            if (!nameCell) return;
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell.textContent.toLowerCase();
+            const name = nameCell.textContent.toLowerCase();
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+
 
     updateLocationButtons() {
         const hasSelection = document.querySelectorAll('.location-table tbody input[type="checkbox"]:checked').length > 0;

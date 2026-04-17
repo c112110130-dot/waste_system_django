@@ -145,7 +145,6 @@ class DatabaseManager {
                     <select class="edit-unit">
                         <option value="metric_ton" ${wasteType.unit === 'metric_ton' ? 'selected' : ''}>公噸</option>
                         <option value="kilogram" ${wasteType.unit === 'kilogram' ? 'selected' : ''}>公斤</option>
-                        <option value="gram" ${wasteType.unit === 'gram' ? 'selected' : ''}>公克</option>
                     </select>
                 </div>
             </td>
@@ -353,13 +352,9 @@ class DatabaseManager {
         const option2 = document.createElement('option');
         option2.value = 'kilogram';
         option2.textContent = '公斤';
-        const option3 = document.createElement('option');
-        option3.value = 'gram';
-        option3.textContent = '公克';
         
         unitSelect.appendChild(option1);
         unitSelect.appendChild(option2);
-        unitSelect.appendChild(option3);
         unitDiv.appendChild(unitSelect);
         unitCell.appendChild(unitDiv);
         
@@ -848,9 +843,12 @@ class DatabaseManager {
             
             const nameCell = row.querySelector('td:nth-child(3)');
             if (!nameCell) return;
-            
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell ? codeCell.textContent.toLowerCase() : '';
             const name = nameCell.textContent.toLowerCase();
-            const matches = !normalizedQuery || name.includes(normalizedQuery);
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
             row.style.display = matches ? '' : 'none';
         });
     }

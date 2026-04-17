@@ -199,7 +199,6 @@ class WasteType(models.Model):
     UNIT_CHOICES = [
         ('metric_ton', '公噸'),
         ('kilogram', '公斤'),
-        ('gram', '公克'),
     ]
     
     id = models.AutoField(primary_key=True)
@@ -224,6 +223,9 @@ class WasteType(models.Model):
     def get_unit_display_name(self):
         """Get unit display name in Chinese"""
         return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
+
+
+
 
 class WasteRecord(models.Model):
     """Waste record entity - Core transaction table (depends on Department and WasteType)"""
@@ -253,6 +255,8 @@ class WasteRecord(models.Model):
     def __str__(self):
         return f"{self.date} - {self.department.name} - {self.waste_type.name}"
     
+
+
 class DepartmentWasteConfiguration:
     """Dynamic configuration management system"""
 
@@ -260,7 +264,6 @@ class DepartmentWasteConfiguration:
     UNIT_TRANSLATION = {
         'metric_ton': {'display': '公噸', 'symbol': 'T'},
         'kilogram': {'display': '公斤', 'symbol': 'kg'},
-        'gram': {'display': '公克', 'symbol': 'g'}
     }
 
     # Default department list
@@ -306,6 +309,7 @@ class DepartmentWasteConfiguration:
         for i, dept_name in enumerate(cls.DEFAULT_DEPARTMENTS):
             Department.objects.get_or_create(
                 name=dept_name,
+                code=dept_name,  # Use name as code for simplicity
                 defaults={'display_order': i + 1}
             )
 
@@ -349,9 +353,18 @@ class clearAgency(models.Model):
     id = models.AutoField(primary_key=True)        #清理機構ID
     code = models.CharField(max_length=100)        #清理機構代碼
     name = models.CharField(max_length=100)        #清理機構名稱
+    DEFAULT_AGENCIES = ['嘉德技術開發股份有限公司', '環碩環保工程股份有限公司', '運鴻環保股份有限公司','信利環保工程股份有限公司','三裕運輸股份有限公司']
     class Meta:
         db_table = 'clear_agency' # 資料庫裡的表格名稱
         verbose_name = "清理機構"
+
+    def initialize_default_agencies(self):
+        """Initialize default clear agencies - call this in migration or management command"""
+        for agency_name in self.DEFAULT_AGENCIES:
+            clearAgency.objects.get_or_create(
+                name=agency_name,
+                code=agency_name[:3]  # Use first 3 characters as code for simplicity
+            )
 
 class processAgency(models.Model):
     id = models.AutoField(primary_key=True)      #處理機構ID
@@ -395,20 +408,18 @@ class TransportRecord(models.Model):
 class WasteRecord_New(models.Model):
     id = models.AutoField(primary_key=True)
     is_transported = models.BooleanField(default=False)
-    @property
-    def is_expired(self):
-        if hasattr(self, 'TransportRecord_id') and self.TransportRecord_id:
-            return False
-        if self.is_transported:
-            return False
-        if not self.create_time:
-            return False
-        if timezone.now() > self.create_time + timedelta(days=3):
-            return True
+    
+    def is_overweight(self):
+        if self.waste_type and self.weight:
+            return self.weight > 100
+        return False
+    def is_underweight(self):
+        if self.waste_type and self.weight:
+            return self.weight < 0.1
         return False
     @property
     def can_delete(self):
-        return not self.is_transported and not self.is_expired
+        return not self.is_transported and not self.is_overweight and not self.is_underweight
     weight = models.DecimalField(max_digits=5,decimal_places=2)
     department = models.ForeignKey(
         Department,
@@ -431,7 +442,7 @@ class WasteRecord_New(models.Model):
         related_name='extension_types'
     )  # 廢棄物種類（外來鍵）
     creator = models.ForeignKey(
-        settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE,
         related_name='created_records',
         verbose_name="過磅人員"

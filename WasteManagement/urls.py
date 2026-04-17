@@ -33,11 +33,11 @@ urlpatterns = [
     path('transportation/', views.transportation_view, name='transportation_view'),
     # --- API ---
     # 刪除單筆紀錄
-    path('api/delete_records/', views.delete_records_api, name='api_delete_records'),
+    path('api/delete_records/', views.delete_data, name='delete_data'),
     # 新增單筆紀錄
     path('api/record_waste/', views.record_waste_api, name='api_record_waste'),
     # 刪除載運單
-    path('api/delete_batches/', views.delete_batches_api, name='api_delete_batches'),
+    path('api/delete_batches/', views.delete_records_api, name='delete_batches_api'),
     path('api/locations/', views.locations_api, name='locations_api'),
     
     path('api/location/save/', views.api_save_location, name='api_save_location'),
@@ -50,4 +50,7 @@ urlpatterns = [
     path('location/', views.location_management_view, name='location_management'),
     # 6. QR Code 列印頁面
     path('qrcode/', views.qrcode_print_view, name='qrcode_print'),
+
+    path('alert_record/', views.alert_record_view, name='alert_record'),
+    path('api/delete_alert_records/', views.api_delete_alert_records, name='api_delete_alert_records'),
 ]
