@@ -53,4 +53,9 @@ urlpatterns = [
 
     path('alert_record/', views.alert_record_view, name='alert_record'),
     path('api/delete_alert_records/', views.api_delete_alert_records, name='api_delete_alert_records'),
+    path('api/save_alert_settings/', views.save_alert_settings, name='api_save_alert_settings'),
+    path('generate_fake_data/', views.generate_fake_data, name='generate_fake_data'),
+    path('api/random_transport/', views.random_transport_records, name='random_transport_api'),
+    path('api/get_alert_settings/', views.get_alert_settings, name='api_get_alert_settings'),
+    path('locate/<int:record_id>/', views.locate_record_view, name='locate_record'),
 ]

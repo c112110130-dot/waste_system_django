@@ -51,7 +51,7 @@ class Command(BaseCommand):
         self.stdout.write('\n[STEP] Creating permission groups...')
 
         # Simple list, no bullshit
-        groups = ['root', 'moderator', 'staff', 'registrar', 'importer']
+        groups = ['root', 'moderator', 'staff', 'registrar', 'importer','outsider']
 
         created_count = 0
         existing_count = 0

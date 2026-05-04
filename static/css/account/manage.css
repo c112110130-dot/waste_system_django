@@ -23,9 +23,8 @@
 
 /* --- 3. 核心修復：防止按鈕被擠壓 --- */
 .action-column, .action-cell {
-    /* 移除 width: 1% !important; 改用以下設定 */
-    width: 1% !important;
-    min-width: 100px !important; /* 確保按鈕不會被壓縮到看不見 */
+    width: 15% !important;
+    min-width: 175px !important; /* 確保按鈕不會被壓縮到看不見 */
     text-align: center !important;
     white-space: nowrap !important;
     
@@ -33,7 +32,7 @@
 
 /* 讓按鈕之間有間距，防止平板誤觸 */
 .action-cell .ts-button + .ts-button{
-    margin-left: 20px;
+    margin-left: 10px;
 }
 
 
@@ -89,4 +88,9 @@
     opacity: 0.5 !important;
     cursor: not-allowed !important;
     pointer-events: none; /* 確保徹底無法觸發點擊事件 */
+}
+
+.ts-select select {
+    width: 100% !important;
+    min-width: 90px !important; /* 確保下拉選單不會被壓縮到看不見 */
 }

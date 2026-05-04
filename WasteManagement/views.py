@@ -1,20 +1,22 @@
 import json
 import logging
+import math
 import random
 import sqlite3
 import time
-from datetime import datetime
+from django.utils import timezone
+from datetime import datetime,timedelta
 from collections import Counter
 
 from django.contrib import messages
 from dateutil import relativedelta
 from django.db import transaction, OperationalError, connections
-from django.db.models import Q,Count
+from django.db.models import F, ExpressionWrapper, fields, Q ,DateTimeField
 from django.http import JsonResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST,require_GET
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt, csrf_protect, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
@@ -2257,7 +2259,7 @@ def settlement_process(request):
             id_list = ids_str.split(',')
             
             updated_count = WasteRecord_New.objects.filter(id__in=id_list).update(
-                is_transported=True,
+                # is_transported=True,
                 transportrecord=new_transport
             )
             print("=== 5. WasteRecord 更新成功 ===")
@@ -2392,19 +2394,24 @@ def settlement_view(request):
     
     sort_map = {'newest': '-create_time', 'oldest': 'create_time', 'weight_desc': '-weight', 'weight_asc': 'weight'}
     
-    today_date = timezone.now().date()
+    today_date = timezone.now().date() 
+    
     yesterday_date = today_date - timedelta(days=1)
     
     yesterday_total = WasteRecord_New.objects.filter(
         create_time__date=yesterday_date
-    ).aggregate(Sum('weight'))['weight__sum'] or 0.0
+    ).aggregate(total_weight=Sum('weight'))['total_weight'] or 0
+
+    today_total = WasteRecord_New.objects.filter(
+        create_time__date=today_date
+    ).aggregate(total_weight=Sum('weight'))['total_weight'] or 0
 
     records = records.order_by(sort_map.get(f_sort, '-create_time'))
     all_data_list = []
     for r in records:
         all_data_list.append({
             'weight': float(r.weight),
-            'status': '已載運' if r.is_transported else '未載運',
+            'status': '已載運' if r.transportrecord else '未載運',
             'waste_type': r.waste_type.name if r.waste_type else '',
             'department': r.department.name if r.department else '',
             'location': r.location.name if r.location else '',
@@ -2427,6 +2434,7 @@ def settlement_view(request):
         'all_filtered_data': all_data_list, # 傳遞 list，給 json_script 處理
         'total_weight_sum': round(total_w, 3),
         'yesterday_total': round(yesterday_total, 3),
+        'today_total': round(today_total, 3),
     }
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -2636,7 +2644,7 @@ def delete_records_api(request):
         data = json.loads(request.body); ids = data.get('ids', [])
         batches = TransportRecord.objects.filter(id__in=ids)
         with transaction.atomic():
-            WasteRecord_New.objects.filter(transportrecord__in=batches).update(is_transported=False, transportrecord=None)
+            WasteRecord_New.objects.filter(transportrecord__in=batches).update(transportrecord=None)
             batches.delete()
         return JsonResponse({'status': 'success'})
     except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
@@ -2987,14 +2995,52 @@ def alert_record_view(request):
     f_weigher = request.GET.get('weigher', '')
     f_sort = request.GET.get('sort_by', 'newest')
     f_size = int(request.GET.get('page_size', 10))
+    f_alert_name = request.GET.get('alert_name', '')
+    f_alert_type = request.GET.get('alert_type', '')
+    alert_settings = AlertConfig.objects.all()
+    waste_types = WasteType.objects.all()
+    alert_settings_dict = {s.waste_type_id: s for s in alert_settings}
 
-    query = Q(weight__gt=50) # 假設重量大於50為警報
+    now = timezone.now()
+    month_threshold = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    weight_alert_q = Q(
+        Q(weight__gt=F('waste_type__alert_configs__weight_max')) |
+        Q(weight__lt=F('waste_type__alert_configs__weight_min'))
+    )
+    # for s in waste_types:
+    #     if s.id not in alert_settings_dict:
+    #         alert_settings_dict[s.id] = AlertConfig.objects.create(waste_type_id=s.id, overdue_hours=24, weight_max=100, weight_min=1, time_frequency='每小時')
+    time_alert_query = Q(create_time__lt=month_threshold)
+    query = Q(transportrecord__isnull=True)
+    query &= Q(
+        Q(weight__gt=F('waste_type__alert_configs__weight_max')) | 
+        Q(weight__lt=F('waste_type__alert_configs__weight_min'))
+    ) | Q(
+        create_time__lte=month_threshold
+    )   
+      
     if f_start: query &= Q(create_time__date__gte=f_start)
     if f_end: query &= Q(create_time__date__lte=f_end)
-    if f_weigher: query &= Q(creator_id=f_weigher)
 
-    alerts = WasteRecord_New.objects.filter(query).select_related('creator')
+    alerts = WasteRecord_New.objects.filter(query).select_related('creator', 'waste_type')
 
+    if f_alert_type:
+        if f_alert_type == '重量異常':
+            alerts = alerts.filter(weight_alert_q)
+        elif f_alert_type == '清運逾期':
+            alerts = alerts.filter(create_time__lte=month_threshold,weight__lt=F('waste_type__alert_configs__weight_max'),weight__gt=F('waste_type__alert_configs__weight_min'))
+
+    if f_alert_name:
+        if f_alert_name == '重量超標':
+            alerts = alerts.filter(weight__gt=F('waste_type__alert_configs__weight_max'))
+        elif f_alert_name == '重量不足':
+            alerts = alerts.filter(weight__lt=F('waste_type__alert_configs__weight_min'))
+        elif f_alert_name == '過磅未處理':
+            alerts = alerts.filter(create_time__lte=month_threshold,weight__lt=F('waste_type__alert_configs__weight_max'),weight__gt=F('waste_type__alert_configs__weight_min'))
+
+    if f_weigher:
+        alerts = alerts.filter(creator_id=f_weigher)
     if f_sort == 'severity_desc': alerts = alerts.order_by('-weight')
     elif f_sort == 'severity_asc': alerts = alerts.order_by('weight')
     elif f_sort == 'oldest': alerts = alerts.order_by('create_time')
@@ -3002,24 +3048,34 @@ def alert_record_view(request):
 
     all_data_list = []
     for a in alerts:
-        a.weigher = a.creator 
-        a.alert_name = "重量異常"
-        a.alert_type = "設備異常"
-        a.severity = "High" if a.weight > 100 else "Warning"
+        alert_settings = alert_settings_dict.get(a.waste_type_id)
+        weight_max = alert_settings.weight_max if alert_settings else 100
+        weight_min = alert_settings.weight_min if alert_settings else 1
+        is_weight_alert = a.weight > weight_max or a.weight < weight_min
+        is_overdue = False
+        if not getattr(a, 'is_transported', False):
+            if a.create_time and a.create_time <= month_threshold:
+                is_overdue = True
 
-        display_name = ''
-        if a.creator:
-            display_name = a.creator.get_full_name()
-            if not display_name:
-                display_name = a.creator.username
+        if is_weight_alert:
+            a.alert_name = "重量超標" if a.weight > weight_max else "重量不足"
+            a.alert_type = "重量異常"        
+        else:
+            a.alert_name = "過磅未處理"
+            a.alert_type = "清運逾期"
+    
 
+        a.weigher = a.creator
+        display_name = a.creator.get_full_name() or a.creator.username if a.creator else '系統'
+        
         all_data_list.append({
             'id': a.id,
             'create_time': a.create_time.strftime('%Y-%m-%d %H:%M') if a.create_time else '',
+            'weight': float(a.weight),
             'weigher': display_name or '未知',
             'alert_name': a.alert_name,
             'alert_type': a.alert_type,
-            'severity': a.severity
+            'status_color': 'negative' if (is_weight_alert or is_overdue) else '',
         })
 
     paginator = Paginator(alerts, f_size)
@@ -3031,11 +3087,38 @@ def alert_record_view(request):
         'all_filtered_data': all_data_list, # 傳遞 list 給 json_script
         'current_page_size': f_size, 'current_sort': f_sort,
         'start_date': f_start, 'end_date': f_end, 'selected_weigher': f_weigher,
+        'waste_types': WasteType.objects.all(), 'departments': Department.objects.all(),
+        'alert_settings': AlertConfig.objects.select_related('waste_type').all(),
     }
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'management/alert_record_table_content.html', context)
     return render(request, 'management/alert_record.html', context)
+
+@require_POST
+def save_alert_settings(request):
+    try:
+        data = json.loads(request.body)
+        waste_type = data.get('waste_type')
+        weight_max = data.get('weight_max')
+        weight_min = data.get('weight_min')
+        frequency = data.get('frequency')
+
+        if not waste_type or weight_max is None or weight_min is None or not frequency: 
+            return JsonResponse({'status': 'error', 'message': '資料不完整'})
+
+        AlertConfig.objects.update_or_create(
+            waste_type_id=waste_type,
+            defaults={
+                'weight_max': weight_max,
+                'weight_min': weight_min,
+                'time_frequency': frequency
+            }
+        )
+
+        return JsonResponse({'status': 'success', 'message': '設定儲存成功'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @require_POST
 def api_delete_alert_records(request):
@@ -3045,6 +3128,8 @@ def api_delete_alert_records(request):
         record_ids = list(map(str, data.get('ids', [])))
         before_len = len(alert_records)
         alert_records = [r for r in alert_records if str(r['id']) not in record_ids]
+        WasteRecord_New.objects.filter(id__in=record_ids).delete()
+        
         return JsonResponse({'status': 'success', 'deleted_count': before_len - len(alert_records)})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
@@ -3070,3 +3155,66 @@ def delete_data(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
             
     return JsonResponse({'status': 'error', 'message': '只允許 POST 請求'})
+
+def generate_fake_data(request):
+    if request.method == 'POST':
+        try:
+            for i in range(100):
+                WasteRecord_New.objects.create(
+                    weight=random.uniform(0.5, 150),
+                    waste_type=WasteType.objects.order_by('?').first(),
+                    department=Department.objects.order_by('?').first(),
+                    location=LocationPoint.objects.order_by('?').first(),
+                    creator=UserProfile.objects.order_by('?').first().user,
+                    create_time=timezone.now() - timedelta(days=random.randint(0, 30))
+                ) 
+            return JsonResponse({'status': 'success', 'message': '已生成 100 筆假資料'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': '只允許 POST 請求'})
+
+def random_transport_records(request):
+    if request.method == 'POST':
+        try:
+            all_records = list(WasteRecord_New.objects.filter(transportrecord__isnull=True))
+            random.shuffle(all_records)
+            for r in all_records[:50]: 
+                tr = TransportRecord.objects.create(
+                    clear_agency=clearAgency.objects.order_by('?').first(),
+                    process_agency=processAgency.objects.order_by('?').first(),
+                    settle_time=timezone.now() - timedelta(days=random.randint(0, 30)),
+                    settler=UserProfile.objects.order_by('?').first().user
+                )
+                r.transportrecord = tr
+                r.save()
+            return JsonResponse({'status': 'success', 'message': '已隨機生成 50 筆運輸紀錄'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': '只允許 POST 請求'})
+
+def get_alert_settings(request):
+    try:
+        settings = AlertConfig.objects.select_related('waste_type').all()
+        settings_list = []
+        for s in settings:
+            settings_list.append({
+                'waste_type': s.waste_type.name if s.waste_type else '未知',
+                'weight_max': s.weight_max,
+                'weight_min': s.weight_min,
+                'time_frequency': s.time_frequency
+            })
+        return JsonResponse({'status': 'success', 'settings': settings_list})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+def locate_record_view(request, record_id):
+    record = get_object_or_404(WasteRecord_New, id=record_id)
+
+    all_records = WasteRecord_New.objects.all().order_by('-create_time')
+    
+    count_before = all_records.filter(create_time__gt=record.create_time).count()
+    
+    page_size = int(request.GET.get('page_size', 10))
+    page_number = math.floor(count_before / page_size) + 1
+    
+    return redirect(f'/management/settlement/?page={page_number}&id={record_id}')

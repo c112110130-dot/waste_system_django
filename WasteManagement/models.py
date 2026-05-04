@@ -348,6 +348,7 @@ class LocationPoint(models.Model):
     class Meta:
         db_table = 'location' # 資料庫裡的表格名稱
         verbose_name = "定點"
+        verbose_name_plural = "定點"
 
 class clearAgency(models.Model):
     id = models.AutoField(primary_key=True)        #清理機構ID
@@ -357,6 +358,7 @@ class clearAgency(models.Model):
     class Meta:
         db_table = 'clear_agency' # 資料庫裡的表格名稱
         verbose_name = "清理機構"
+        verbose_name_plural = "清理機構"
 
     def initialize_default_agencies(self):
         """Initialize default clear agencies - call this in migration or management command"""
@@ -373,6 +375,7 @@ class processAgency(models.Model):
     class Meta:
         db_table = 'process_agency' # 資料庫裡的表格名稱
         verbose_name = "處理機構"
+        verbose_name_plural = "處理機構"
 
 class TransportRecord(models.Model):
     id = models.AutoField(primary_key=True)          
@@ -404,10 +407,12 @@ class TransportRecord(models.Model):
     class Meta:
         db_table = 'transport_record' # 資料庫裡的表格名稱
         verbose_name = "載運紀錄"
+        verbose_name_plural = "載運紀錄"
 
 class WasteRecord_New(models.Model):
     id = models.AutoField(primary_key=True)
-    is_transported = models.BooleanField(default=False)
+    def is_transported(self):
+        return self.transportrecord is not None
     
     def is_overweight(self):
         if self.waste_type and self.weight:
@@ -460,4 +465,33 @@ class WasteRecord_New(models.Model):
     update_time = models.DateTimeField(auto_now=True, verbose_name="更新時間")
     class Meta:
         db_table = 'waste_record' # 資料庫裡的表格名稱
-        verbose_name = "廢棄物紀錄"
+        verbose_name = "新廢棄物紀錄"
+        verbose_name_plural = "新廢棄物紀錄"
+
+class AlertConfig(models.Model):
+    ALERT_TYPES = (
+        ('overdue', '清運逾期'),
+        ('volume', '產出量異常'),
+    )
+    
+    FREQUENCY_CHOICES = (
+        ('daily', '每日'),
+        ('weekly', '每週'),
+        ('monthly', '每月'),
+    )
+
+    
+    
+    waste_type = models.ForeignKey('WasteType', on_delete=models.CASCADE, unique=True, related_name='alert_configs')
+    weight_min = models.FloatField(null=True, blank=True, help_text="重量最小限制 (kg)",default=1)
+    weight_max = models.FloatField(null=True, blank=True, help_text="重量最大限制 (kg)",default=100)
+    
+    time_frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
+    overdue_hours = models.IntegerField(null=True, blank=True, help_text="逾期小時數",default=24)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.waste_type.name}"
+    
+    

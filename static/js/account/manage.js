@@ -8,7 +8,7 @@ const permission_types = {
     'staff': { name: '行政人員', color: 'color-staff' },
     'registrar': { name: '登錄者', color: 'color-registrar' },
     'importer': { name: '匯入者', color: 'color-importer' },
-    'not-defined': { name: '未知身份', color: 'color-not-defined' }
+    'outsider': { name: '外部人員', color: 'color-outsider' }
 };
 
 document.addEventListener("DOMContentLoaded", () => {

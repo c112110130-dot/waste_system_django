@@ -9,6 +9,7 @@ GROUP_HIERARCHY = {
     "staff": 20,
     "registrar": 10,
     "importer": 10,
+    "outsider": 10,
 }
 
 def get_permission_hi(user, id=False):
@@ -134,11 +135,13 @@ def user_group_define(request):
     is_staff = user.groups.filter(name='staff').exists() if user.is_authenticated else False
     is_registrar = user.groups.filter(name='registrar').exists() if user.is_authenticated else False
     is_importer = user.groups.filter(name='importer').exists() if user.is_authenticated else False
+    is_outsider = user.groups.filter(name='outsider').exists() if user.is_authenticated else False
 
     is_over_mod = is_root or is_moderator
     is_over_staff = is_root or is_moderator or is_staff
     is_over_reg = is_root or is_moderator or is_staff or is_registrar
     is_over_imp = is_root or is_moderator or is_staff or is_importer
+    is_over_out = is_root or is_moderator or is_staff or is_importer or is_registrar
 
     # Return context data
     return {
@@ -147,11 +150,13 @@ def user_group_define(request):
         'user_is_staff': is_staff,
         'user_is_registrar': is_registrar,
         'user_is_importer': is_importer,
+        'user_is_outsider': is_outsider,
 
         'user_is_over_mod': is_over_mod,
         'user_is_over_staff': is_over_staff,
         'user_is_over_reg': is_over_reg,
         'user_is_over_imp': is_over_imp,
+        'user_is_over_out': is_over_out,
 
         'permission_hi': permission_hi,
         'permission_lo': permission_lo,

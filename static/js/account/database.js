@@ -155,6 +155,9 @@ class DatabaseManager {
                 <button type="button" class="ts-button is-negative is-icon btn-cancel-waste-type">
                     <span class="ts-icon is-xmark-icon"></span>
                 </button>
+                <button type="button" class="ts-button is-negative is-icon btn-delete-waste-type">
+                    <span class="ts-icon is-trash-icon"></span>
+                </button>
             </td>
         `;
     }
@@ -246,6 +249,9 @@ class DatabaseManager {
                 <button type="button" class="ts-button is-negative is-icon btn-cancel-department">
                     <span class="ts-icon is-xmark-icon"></span>
                 </button>
+                <button type="button" class="ts-button is-negative is-icon btn-delete-department">
+                    <span class="ts-icon is-trash-icon"></span>
+                </button>
             </td>
         `;
     }
@@ -279,6 +285,17 @@ class DatabaseManager {
             } else if (e.target.closest('.btn-cancel-department')) {
                 this.cancelEditDepartment();
             }
+            else if (e.target.closest('.btn-delete-department')) {
+                const row = e.target.closest('tr');
+                const id = parseInt(row.dataset.id);
+                this.deleteDepartment(id);
+            }
+            else if (e.target.closest('.btn-delete-waste-type')) {
+                const row = e.target.closest('tr');
+                const id = parseInt(row.dataset.id);
+                this.deleteWasteType(id);
+            }
+
         });
         
         // Checkbox events
@@ -374,10 +391,12 @@ class DatabaseManager {
         const cancelIcon = document.createElement('span');
         cancelIcon.className = 'ts-icon is-xmark-icon';
         cancelButton.appendChild(cancelIcon);
+
         
+
         actionCell.appendChild(saveButton);
         actionCell.appendChild(cancelButton);
-        
+
         // Append all cells to row
         newRow.appendChild(checkboxCell);
         newRow.appendChild(nameCell);
@@ -499,6 +518,7 @@ class DatabaseManager {
                 if (result.success) {
                     NotificationUtils.showAlert('成功', result.message, 'success');
                     await this.loadData();
+                    window.location.reload(); 
                 } else {
                     NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
                 }
@@ -509,6 +529,34 @@ class DatabaseManager {
         });
     }
     
+    deleteWasteType(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此廢棄物種類嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/account/api/database/waste-type/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ ids: [id] })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    NotificationUtils.showAlert('成功', result.message, 'success');
+                    await this.loadData();
+                    
+                } else {
+                    NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                NotificationUtils.showAlert('錯誤', `刪除失敗: ${error.message}`, 'error');
+            }
+        });
+    }
+
     // Department methods
     startAddDepartment() {
         
@@ -570,10 +618,11 @@ class DatabaseManager {
         const cancelIcon = document.createElement('span');
         cancelIcon.className = 'ts-icon is-xmark-icon';
         cancelButton.appendChild(cancelIcon);
-        
+
+
         actionCell.appendChild(saveButton);
         actionCell.appendChild(cancelButton);
-        
+
         // Append all cells to row
         newRow.appendChild(checkboxCell);
         newRow.appendChild(codeCell);
@@ -697,6 +746,34 @@ class DatabaseManager {
                     NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
                 }
                 
+            } catch (error) {
+                NotificationUtils.showAlert('錯誤', `刪除失敗: ${error.message}`, 'error');
+            }
+        });
+    }
+
+    deleteDepartment(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此部門嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/account/api/database/department/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ ids: [id] })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    NotificationUtils.showAlert('成功', result.message, 'success');
+                    await this.loadData();
+                    window.location.reload();
+                } else {
+                    NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
+                }
+
             } catch (error) {
                 NotificationUtils.showAlert('錯誤', `刪除失敗: ${error.message}`, 'error');
             }
@@ -935,4 +1012,5 @@ class DatabaseManager {
             NotificationUtils.showAlert('錯誤', '目前沒有部門資料。請先新增部門才能使用部門廢棄物管理功能。', 'error');
         }
     }
+    
 }

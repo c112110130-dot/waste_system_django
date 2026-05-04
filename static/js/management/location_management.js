@@ -25,6 +25,11 @@ class LocationManager {
             else if (e.target.closest('.btn-save-location')) this.saveLocation(e);
             else if (e.target.closest('.btn-cancel-location')) this.cancelEditLocation();
             else if (e.target.closest('.btn-delete-locations')) this.deleteSelectedLocations();
+            else if (e.target.closest('.btn-delete-location')) {
+                const row = e.target.closest('tr');
+                const id = parseInt(row.dataset.id);
+                this.deleteLocation(id);
+            }
             
             // 機構
             else if (e.target.closest('.btn-add-agency')) this.startAddAgency();
@@ -32,6 +37,12 @@ class LocationManager {
             else if (e.target.closest('.btn-save-agency')) this.saveAgency(e);
             else if (e.target.closest('.btn-cancel-agency')) this.cancelEditAgency();
             else if (e.target.closest('.btn-delete-agencies')) this.deleteSelectedAgencies();
+            else if (e.target.closest('.btn-delete-agency')) {
+                const id = e.target.closest('tr').dataset.id;
+                console.log('Deleting agency with ID:', id);
+                this.deleteAgency(id);
+            }
+
         });
         
         // 搜尋
@@ -90,7 +101,7 @@ class LocationManager {
             </td>
             <td class="action-cell" style="text-align: right;">
                 <button type="button" class="ts-button is-positive is-icon is-small btn-save-location"><span class="ts-icon is-check-icon"></span></button>
-                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
+                <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
             </td>
         `;
         tbody.insertBefore(newRow, tbody.firstChild);
@@ -121,7 +132,8 @@ class LocationManager {
             </div>`;
         actionCell.innerHTML = `
             <button type="button" class="ts-button is-positive is-icon is-small btn-save-location"><span class="ts-icon is-check-icon"></span></button>
-            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>          
+            <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
+            <button type="button" class="ts-button is-negative is-icon is-small btn-delete-location"><span class="ts-icon is-trash-icon"></span></button>       
         `;
         
         
@@ -189,6 +201,25 @@ class LocationManager {
         });
     }
 
+    deleteLocation(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此定點嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/management/api/location/delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
+                    body: JSON.stringify({ ids: [id] })
+                });
+                if ((await response.json()).success) {
+                    await NotificationUtils.showAlert('成功', `成功刪除定點資料`, 'success');
+                    window.location.reload();
+                } else {
+                    alert('刪除失敗');
+                }
+            } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        });
+    }
+
+
     // ==========================================
     // 機構管理
     // ==========================================
@@ -212,7 +243,7 @@ class LocationManager {
             </td>
             <td class="action-cell" style="text-align: right; white-space: nowrap;">
                 <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>    
-                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button> 
+                <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button> 
             </td>
         `;
         tbody.insertBefore(newRow, tbody.firstChild);
@@ -258,8 +289,8 @@ class LocationManager {
         `;
         actionCell.innerHTML = `
             <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>
-            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
-            
+            <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
+            <button type="button" class="ts-button is-negative is-icon is-small btn-delete-agency"><span class="ts-icon is-trash-icon"></span></button>
         `;
         const codeInput = row.querySelector('.edit-code');
         if (codeInput) codeInput.focus();
@@ -327,6 +358,24 @@ class LocationManager {
                     window.location.reload();
                 }
                 else alert('刪除失敗');
+            } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        });
+    }
+
+    deleteAgency(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此機構嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/management/api/agency/delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
+                    body: JSON.stringify({ ids: [id] })
+                });
+                if ((await response.json()).success) {
+                    await NotificationUtils.showAlert('成功', `成功刪除機構資料`, 'success');
+                    window.location.reload();
+                } else {
+                    alert('刪除失敗');
+                }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });
     }
