@@ -32,7 +32,7 @@
         <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
             {% if page_obj.has_previous %}
                 <a class="item" onclick="goToPage(1)" title="第一頁"><span class="ts-icon is-angles-left-icon"></span></a>
-                <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁"><span class="ts-icon is-angle-left-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.previous_page_number }}')" title="上一頁"><span class="ts-icon is-angle-left-icon"></span></a>
             {% else %}
                 <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
                 <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
@@ -43,8 +43,8 @@
             </span>
 
             {% if page_obj.has_next %}
-                <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁"><span class="ts-icon is-angle-right-icon"></span></a>
-                <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁"><span class="ts-icon is-angles-right-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.next_page_number }}')" title="下一頁"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.paginator.num_pages|default:1 }}')" title="最末頁"><span class="ts-icon is-angles-right-icon"></span></a>
             {% else %}
                 <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
                 <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
@@ -89,6 +89,7 @@
     <table class="ts-table is-fullwidth" id="dataTable" style="min-width: 1000px;">
         <colgroup>
             <col style="width: 50px;">
+            <col style="width: 60px;">
             <col style="width: 14%;">
             <col style="width: 10%;">
             <col style="width: 10%;"> <col style="width: 14%;">
@@ -105,6 +106,7 @@
                         <input type="checkbox" id="checkAll" onclick="toggleAll(this)">
                     </label>
                 </th>
+                <th style="text-align: center;">序號</th>
                 <th>過磅時間</th>
                 <th>重量 (kg)</th>
                 <th>狀態</th>
@@ -117,11 +119,14 @@
         </thead>
         <tbody>
             {% for record in page_obj %}
-            <tr id="row_{{ record.id }}" class="{% if record.is_transported %}tr-locked{% endif %}">
+            <tr id="row_{{ record.id }}" data-id="{{ record.id }}" class="{% if record.is_transported %}tr-locked{% endif %}">
                 <td style="text-align: center;">
                     <label class="ts-checkbox">
                         <input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" data-weight="{{ record.weight|floatformat:3 }}" data-transported="{{ record.is_transported|yesno:'true,false' }}" onchange="updateUI()">
                     </label>
+                </td>
+                <td style="text-align: center; color: var(--my-text-sub);">
+                    {{ page_obj.start_index|add:forloop.counter0 }}
                 </td>
                 <td>{{ record.create_time|date:"Y-m-d H:i" }}</td>
                 <td style="font-weight: bold; font-size: 1.05rem;">{{ record.weight|floatformat:3 }}</td>
@@ -198,7 +203,7 @@
         <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
             {% if page_obj.has_previous %}
                 <a class="item" onclick="goToPage(1)" title="第一頁"><span class="ts-icon is-angles-left-icon"></span></a>
-                <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁"><span class="ts-icon is-angle-left-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.previous_page_number }}')" title="上一頁"><span class="ts-icon is-angle-left-icon"></span></a>
             {% else %}
                 <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
                 <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
@@ -209,8 +214,8 @@
             </span>
 
             {% if page_obj.has_next %}
-                <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁"><span class="ts-icon is-angle-right-icon"></span></a>
-                <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁"><span class="ts-icon is-angles-right-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.next_page_number }}')" title="下一頁"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.paginator.num_pages|default:1 }}')" title="最末頁"><span class="ts-icon is-angles-right-icon"></span></a>
             {% else %}
                 <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
                 <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>

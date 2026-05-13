@@ -1,0 +1,46 @@
+<div style="display: flex; flex-direction: column; gap: 20px; padding: 20px; width: 50%; box-sizing: border-box;">
+    <div class="ts-container is-fluid" style="padding: 20px; background-color: var(--my-bg); border-radius: 12px; border: 1px solid var(--my-border); width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; ">
+            <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px; color: #db2828;">
+                <span class="ts-icon is-clock-rotate-left-icon" style="color: #db2828;"></span> 昨日過磅監控
+            </div>
+        </div>
+        {% for d in dept_list %}
+        <div class="monitor-list">
+            <div class="monitor-item">
+
+                <span class="room-name">{{ d.name }}</span>
+
+                <div class="progress-bar">
+                    <div class="progress"
+                        style="
+                        width: {{ d.percent }}%;
+                        background-color:
+                            {% if d.status == 'danger' %}
+                                #e74c3c
+                            {% else %}
+                                #2ecc71
+                            {% endif %};
+                        ">
+                        {{ d.actual }}
+                    </div>
+                </div>
+
+                <span class="progress-text">
+                    {{ d.actual }} / {{ d.standard }}
+                </span>
+
+            </div>
+        </div>
+        {% endfor %}
+        <p class="ts-paragraph is-small" style="margin-top: 15px; color: var(--my-text-secondary); display: flex; align-items: center; gap: 8px;">
+            <span class="ts-icon is-info-icon" style="color: #2185d0;"></span>
+            注意：有 {{ dept_list|length }} 個部門尚未完成規定過磅次數。
+        </p>
+
+    </div>
+</div>
+
+<script id="alert-data-json" type="application/json">
+    {{ alert_json_data|safe }}
+</script>

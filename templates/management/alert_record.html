@@ -128,7 +128,53 @@
         .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; border-top: 2px solid #000; }
     }
     .print-header-title, .print-summary-box, .print-only-text { display: none; } 
+
+    .truncate-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+    }
+
+    .sub-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 0.95rem;
+        border: 1px solid var(--my-border);
+    }
+    .sub-table thead {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+    .sub-table th {
+        padding: 12px 8px;
+        text-align: left;
+        border-bottom: 2px solid var(--my-border);
+        color: var(--my-text-sub);
+    }
+    .sub-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--my-border);
+    }
+    .sub-table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    /* 讓 Modal 內的滾動條好看一點 */
+    #modalBody::-webkit-scrollbar {
+        width: 6px;
+    }
+    #modalBody::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 10px;
+    }
+
 </style>
+
 
 <div class="ts-container" style="--width: 1800px; padding: 23px 15px;">
     
@@ -159,10 +205,9 @@
                         <label>警報名稱</label>
                         <select name="alert_name" class="ts-select">
                             <option value="">全部警報名稱</option>
-                            <option value="超重" {% if selected_alert_name == '超重' %}selected{% endif %}>超重</option>
+                            <option value="重量超標" {% if selected_alert_name == '重量超標' %}selected{% endif %}>重量超標</option>
                             <option value="重量不足" {% if selected_alert_name == '重量不足' %}selected{% endif %}>重量不足</option>
-                            <option value="資料傳輸失敗" {% if selected_alert_name == '資料傳輸失敗' %}selected{% endif %}>資料傳輸失敗</option>
-                            <option value="通訊異常" {% if selected_alert_name == '通訊異常' %}selected{% endif %}>通訊異常</option>
+                            <option value="過磅未處理" {% if selected_alert_name == '過磅未處理' %}selected{% endif %}>過磅未處理</option>
                         </select>
                     </div>
                     <div>
@@ -170,18 +215,10 @@
                         <select name="alert_type" class="ts-select">
                             <option value="">全部警報類型</option>
                             <option value="重量異常" {% if selected_alert_type == '重量異常' %}selected{% endif %}>重量異常</option>
-                            <option value="設備異常" {% if selected_alert_type == '設備異常' %}selected{% endif %}>設備異常</option>
+                            <option value="清運逾期" {% if selected_alert_type == '清運逾期' %}selected{% endif %}>清運逾期</option>
                         </select>
                     </div>
-                    <div>
-                        <label>過磅人員</label>
-                        <select name="weigher" class="ts-select">
-                            <option value="">全部人員</option>
-                            {% for w in weighers %}
-                                <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>{{ w }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+
                     
                     <div style="display: flex; gap: 10px; margin-top: 5px; justify-content: flex-start;">
                         <button type="submit" class="ts-button is-primary" style="width: 120px;">
@@ -190,18 +227,26 @@
                         <button type="button" class="ts-button is-secondary" onclick="clearAllFilters()" style="width: 50px; padding: 0;" title="重置">
                             <span class="ts-icon is-rotate-left-icon"></span>
                         </button>
+                        <button type="button" class="ts-button is-secondary" onclick="openSettingModal()" style="width: 50px; padding: 0;">
+                            <span class="ts-icon is-gear-icon"></span>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
-
+            
         <div class="main-content">
             <div class="ts-grid is-relaxed is-3-columns stat-card-container">
                 <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-bell-icon"></span></div><div class="stat-info"><div class="stat-title">警報總數</div><div class="stat-value" id="cardTotalAlerts">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-triangle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">高嚴重度 (嚴重)</div><div class="stat-value" id="cardHighSeverity">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-circle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">中低嚴重度 (警告)</div><div class="stat-value" id="cardLowSeverity">0</div></div></div></div>
+                <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-weight-hanging-icon"></span></div><div class="stat-info"><div class="stat-title">重量異常警報</div><div class="stat-value" id="cardTotalWeightingAlerts">0</div></div></div></div>
+                <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-weight-hanging-icon"></span></div><div class="stat-info"><div class="stat-title">清運逾期警報</div><div class="stat-value" id="cardTotalCollectionAlerts">0</div></div></div></div>
             </div>
-
+            <div class="ts-container has-top-spaced-big" style="--width: 1800px; color: #1900ff; background-color: transparent; border: none; padding: 0;">
+                <div class="ts-tab is-large" style="background-color: transparent; border: none; color: #1900ff;">
+                    <a class="item is-active" style="color: #1900ff; font-weight: bold;" onclick="controltstab(event, 'table')">警報紀錄明細</a>
+                    <a class="item" style="color: #1900ff; font-weight: bold;" onclick="controltstab(event, 'analysis')">數據統計分析</a>
+                </div>
+            </div>
             <div class="dashboard-panel batch-panel">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
@@ -233,10 +278,14 @@
                     </button>
                 </div>
             </div>
-
+            
             <div class="dashboard-panel data-panel" id="table-container">
                 {% include 'management/alert_record_table_content.html' %}
             </div>
+            <div class="dashboard-panel data-panel" id="analysis-container" style="display: none;">
+                {% include 'management/alert_record_analysis.html' %}
+            </div>
+
         </div>
     </div>
 </div>
@@ -264,6 +313,202 @@
     </div>
 </dialog>
 
+<dialog id="infoModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 500px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
+        <div class="ts-icon is-info-icon" style="font-size: 3rem; color: #2185d0; margin-bottom: 15px;"></div>
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.2rem;">訊息</div>
+        <p id="infoModalText" style="margin-bottom: 20px; color: var(--my-text-sub); line-height: 1.5;"></p>
+        <div id="infoTableContainer" style="margin-bottom: 20px; text-align: left;"></div>
+            <table style="width: 100%; margin-bottom: 20px;">
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">廢棄物種類</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">最大重量</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">最小重量</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">監控頻率</td>
+                </tr>    
+                {% for u in alert_settings %}
+                {% if u.waste_type is not None %}
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.waste_type }}</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.weight_max }} kg</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.weight_min }} kg</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.time_frequency }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+            <table style="width: 100%; margin-bottom: 20px; ">
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">部門</td>
+                    <td style="text-align: center; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">每日過磅次數</td>
+                </tr>    
+                {% for u in alert_settings %}
+                {% if u.department is not None %}
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">{{ u.department }}</td>
+                    <td style="text-align: center; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">{{ u.weighting_counts }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+        <button type="button" class="ts-button is-fluid" onclick="document.getElementById('infoModal').close()">我知道了</button>
+    </div>
+</dialog>
+
+<dialog id="settingModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 850px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px;">
+        
+        <div class="ts-header is-heavy" style="margin-bottom: 20px; font-size: 1.25rem; color: #2185d0; display: flex; align-items: center; gap: 8px;">
+            <span class="ts-icon is-bell-icon"></span> 警報管理設定
+        </div>
+
+        <div class="ts-grid is-stacked">
+            <div class="column">
+                <div class="ts-header is-small is-heavy">
+                    <span class="ts-icon is-calendar-days-icon"></span> 清運週期監控
+                </div>
+                <div class="ts-text is-description" style="margin-top: 5px;">
+                    系統目前設定為：<b style="color: #db2828;">每個月 1 號</b> 自動標記上個月尚未載運之紀錄為「過磅未處理」。
+                </div>
+            </div>
+
+            <div class="ts-divider" style="margin: 15px 0;"></div>
+
+            <div class="column">
+                <div class="ts-header is-small is-heavy" style="margin-bottom: 12px;">
+                    <span class="ts-icon is-weight-hanging-icon"></span> 廢棄物產出量監控
+                </div>
+                
+                <div class="ts-grid is-middle-aligned">
+                    <div class="column is-4-wide">
+                        <div class="ts-select is-fluid">
+                            <select id="alert_waste_type">
+                                <option value="">選擇廢棄物種類</option>
+                                {% for type in waste_types %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-fluid">
+                            <input type="number" id="alert_weight_max" placeholder="最大重量 (kg)">
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-fluid">
+                            <input type="number" id="alert_weight_min" placeholder="最小重量 (kg)">
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-select is-fluid">
+                            <select id="alert_frequency">
+                                <option value="daily">每日累計</option>
+                                <option value="monthly">每月累計</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ts-text is-description" style="margin-top: 10px;">
+                    當特定廢棄物在指定時間內超過設定重量時，系統將自動標記為異常。
+                </div>
+            </div>
+            <div class="column">
+                <div class="ts-header is-small is-heavy" style="margin-bottom: 12px;">
+                    <span class="ts-icon is-clock-icon"></span> 過磅頻率異常監控
+                </div>
+                
+                <div class="ts-grid is-middle-aligned">
+                    <div class="column is-4-wide">
+                        <div class="ts-select is-fluid">
+                            <select id="alert_department">
+                                <option value="">選擇部門</option>
+                                {% for type in departments %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-fluid">
+                            <input type="number" id="weighing_counts" placeholder="每日過磅次數標準">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ts-text is-description" style="margin-top: 10px;">
+                    當特定部門每日過磅次數低於設定標準時，系統將自動標記為「過磅次數過少」。
+                </div>
+                <div class="ts-text is-description" style="margin-top: 10px;">
+                    當特定部門每日過磅次數高於設定標準時，系統將自動標記為「過磅次數過多」。
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+            <button type="button" class="ts-button is-outlined" onclick="viewAlertSettings()">查看設置</button>
+            <button type="button" class="ts-button is-outlined" onclick="document.getElementById('settingModal').close()">取消</button>
+            <button type="button" class="ts-button is-primary" onclick="saveAlertSettings()">
+                <span class="ts-icon is-floppy-disk-icon"></span> 儲存設定
+            </button>
+        </div>
+    </div>
+</dialog>
+<dialog id="detailModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 1100px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="ts-content custom-modal-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; position: relative;">
+        <button class="ts-close" style="position: absolute; top: 15px; right: 15px;" onclick="document.getElementById('detailModal').close()"></button>
+        <div class="ts-header is-heavy" style="margin-bottom: 15px; font-size: 1.25rem;">
+            <span class="ts-icon is-list-icon"></span> 紀錄詳細資訊
+        </div>
+        <div id="modalBody" style="overflow-y: auto; max-height: 60vh;"></div>
+    </div>
+</dialog>
+<dialog id="detailModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 500px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px;">
+        <div class="ts-header is-heavy" style="font-size: 1.2rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            <span class="ts-icon is-circle-info-icon"></span> 紀錄詳細資訊
+        </div>
+        <div class="ts-list is-bordered">
+            <div class="item">
+                <div class="content">
+                    <div class="ts-text is-description">過磅時間</div>
+                    <div id="det_time" style="font-weight: bold;">-</div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="ts-text is-description">重量 / 種類</div>
+                    <div><span id="det_weight" style="color: #2185d0; font-weight: bold;">-</span> | <span id="det_type">-</span></div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="ts-text is-description">來源部門與定點</div>
+                    <div><span id="det_dept">-</span> / <span id="det_loc">-</span></div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="ts-text is-description">清運狀態</div>
+                    <div id="det_status">-</div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="ts-text is-description">過磅人員</div>
+                    <div id="det_user">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: right; margin-top: 25px;">
+            <button class="ts-button is-outlined" onclick="document.getElementById('detailModal').close()">關閉視窗</button>
+        </div>
+    </div>
+</dialog> 
+
 <script>
     // ==========================================
     // 🌟 1. JSON 資料與卡片動畫引擎 🌟
@@ -282,8 +527,9 @@
             } catch(e) { console.error('JSON解析錯誤:', e); }
         }
 
-        // 計算卡片數據
         let totalAlerts = window.allFilteredData.length;
+        let totalWeightingAlerts = 0;
+        let totalCollectionAlerts = 0;
         let highSeverity = 0;
         let lowSeverity = 0;
 
@@ -293,10 +539,20 @@
             } else {
                 lowSeverity++;
             }
+
+            if (item.alert_type === '重量異常') {
+                totalWeightingAlerts++;
+            }
+
+            if (item.alert_type === '清運逾期') {
+                totalCollectionAlerts++;
+            }
         });
 
         // 觸發數字動畫
         animateValue("cardTotalAlerts", totalAlerts);
+        animateValue("cardTotalWeightingAlerts", totalWeightingAlerts);
+        animateValue("cardTotalCollectionAlerts", totalCollectionAlerts);
         animateValue("cardHighSeverity", highSeverity);
         animateValue("cardLowSeverity", lowSeverity);
     }
@@ -334,6 +590,26 @@
             
             window.history.pushState(null, '', url);
             updateUI(); 
+        })
+        .catch(err => {
+            console.error(err); alert('更新失敗，請檢查網路連線。');
+            container.style.opacity = '1'; container.style.pointerEvents = 'auto';
+        });
+    }
+    function refreshAnalysis(url) {
+        const container = document.getElementById('analysis-container');
+        if (!container) return;
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+
+        fetch(url, { headers: { 'x-requested-with': 'analysis' } })
+        .then(res => res.text())
+        .then(html => {
+            container.innerHTML = html;
+            container.style.opacity = '1';
+            container.style.pointerEvents = 'auto';
+            
+            window.history.pushState(null, '', url);
         })
         .catch(err => {
             console.error(err); alert('更新失敗，請檢查網路連線。');
@@ -392,7 +668,11 @@
         const count = checkedBoxes.length;
         
         const badgeEl = document.getElementById('batchCountBadge');
-        if(badgeEl) badgeEl.innerText = count;
+        badgeEl.innerText = count;
+    }
+
+    window.openSettingModal = function() {
+        document.getElementById('settingModal').showModal();
     }
 
     window.openBatchDelete = function(){
@@ -466,7 +746,7 @@
             <div class="export-title">${titleText}</div>
             <div class="export-date">匯出日期：${dateStr}</div>
             <table class="export-table">
-                <thead><tr><th style="width: 60px; text-align: center;">序號</th><th>警示時間</th><th>過磅人員</th><th>警報名稱</th><th>警報類型</th><th style="text-align: center;">嚴重度</th></tr></thead>
+                <thead><tr><th style="width: 60px; text-align: center;">序號</th><th>警示時間</th><th>警報名稱</th><th>警報類型</th></tr></thead>
                 <tbody>`;
 
         let hasData = false; 
@@ -480,7 +760,7 @@
                     hasData = true; printCount++;
                     let isSevere = cols[6].innerHTML.includes('light-red') || cols[6].innerHTML.includes('嚴重');
                     let sevClass = isSevere ? 'text-red' : 'text-yellow'; let sevText = isSevere ? '嚴重' : '警告';
-                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${cols[2].innerText.trim().replace(/\n/g, ' ')}</td><td>${cols[3].innerText.trim()}</td><td>${cols[4].innerText.trim()}</td><td>${cols[5].innerText.trim()}</td><td style="text-align: center;" class="${sevClass}">${sevText}</td></tr>`;
+                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${cols[2].innerText.trim().replace(/\n/g, ' ')}</td><td>${cols[3].innerText.trim()}</td><td>${cols[4].innerText.trim()}</td><td>${cols[5].innerText.trim()}</td></tr>`;
                 }
             });
         } else {
@@ -490,7 +770,7 @@
                     printCount++;
                     let isSevere = item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'));
                     let sevClass = isSevere ? 'text-red' : 'text-yellow'; let sevText = isSevere ? '嚴重' : '警告';
-                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${item.create_time}</td><td>${item.weigher}</td><td>${item.alert_name}</td><td>${item.alert_type}</td><td style="text-align: center;" class="${sevClass}">${sevText}</td></tr>`;
+                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${item.create_time}</td><td>${item.alert_name}</td><td>${item.alert_type}</td></tr>`;
                 });
             }
         }
@@ -520,7 +800,7 @@
     window.exportToExcel = function() {
         const { wrapper, hasData, dateStr } = createPrintableElement('警報紀錄報表');
         if (!hasData) return alert("目前沒有資料可以匯出喔！");
-        const rows = [["警報紀錄報表"], ["匯出日期：", dateStr], [], ["序號", "警示時間", "過磅人員", "警報名稱", "警報類型", "嚴重度"]];
+        const rows = [["警報紀錄報表"], ["匯出日期：", dateStr], [], ["序號", "警示時間", "過磅人員", "警報名稱", "警報類型"]];
         wrapper.querySelectorAll('tbody tr').forEach(tr => rows.push(Array.from(tr.querySelectorAll('td')).map(td => td.innerText)));
         const ws = XLSX.utils.aoa_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄"); XLSX.writeFile(wb, `警報紀錄_${dateStr}.xlsx`);
     }
@@ -533,5 +813,129 @@
         pri.document.open(); pri.document.write(`<html><head><style>body { font-family: sans-serif; margin: 0; padding: 20px; } @media print { @page { size: landscape A4; margin: 1cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>${wrapper.innerHTML}</body></html>`); pri.document.close();
         pri.focus(); setTimeout(() => { pri.print(); document.body.removeChild(iframe); }, 300);
     }
+    function saveAlertSettings() {
+        const data = {
+            waste_type: document.getElementById('alert_waste_type').value,
+            weight_max: document.getElementById('alert_weight_max').value,
+            weight_min: document.getElementById('alert_weight_min').value,
+            frequency: document.getElementById('alert_frequency').value
+        };
+        if (!data.waste_type || !data.weight_max || !data.weight_min || !data.frequency) {
+            NotificationUtils.showAlert('請填寫設定！');
+            return;
+        }
+        const apiUrl = "{% url 'WasteManagement:api_save_alert_settings' %}"; 
+        
+        fetch(apiUrl, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'success') {
+                NotificationUtils.showAlert('設定已更新！','success');
+                document.getElementById('settingModal').close();
+                window.setTimeout(() => {
+                    const u = new URLSearchParams(window.location.search);
+                    refreshTable(`${window.location.pathname}?${u.toString()}`);
+                }, 500);
+            }
+            if (res.status === 'error') {
+                NotificationUtils.showAlert('設定更新失敗：' + (res.message || '未知錯誤'), 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('儲存設定時發生錯誤，請稍後再試。');
+        });
+    }
+    
+    viewAlertSettings = function() {
+        const apiUrl = "{% url 'WasteManagement:api_get_alert_settings' %}";
+        fetch(apiUrl, { headers: { 'x-requested-with': 'XMLHttpRequest' } })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && data.settings) {
+                const s = data.settings;
+                document.getElementById('alert_waste_type').value = s.waste_type || '';
+                document.getElementById('alert_weight_max').value = s.weight_max || '';
+                document.getElementById('alert_weight_min').value = s.weight_min || '';
+                document.getElementById('alert_frequency').value = s.frequency || 'daily';
+                document.getElementById('infoModal').showModal();
+            } else {
+                alert('無法取得設定：' + (data.message || '未知錯誤'));
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('取得設定時發生錯誤，請稍後再試。');
+        });
+    }
+
+    async function viewRecordDetail(recordId) {
+        const modal = document.getElementById('detailModal');
+        
+        console.log("Fetching record:", recordId);
+
+        try {
+            const response = await fetch(`/api/waste_record/${recordId}/`);
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                const d = result.data;
+
+
+                document.getElementById('det_time').innerText = d.create_time;
+                document.getElementById('det_weight').innerText = d.weight;
+                document.getElementById('det_type').innerText = d.waste_type;
+                document.getElementById('det_dept').innerText = d.department;
+                document.getElementById('det_loc').innerText = d.location;
+                document.getElementById('det_user').innerText = d.weigher;
+
+
+                const statusEl = document.getElementById('det_status');
+                if (d.is_transported) {
+                    statusEl.innerHTML = `<span class="ts-text is-success" style="font-weight: bold;">已於 ${d.transport_time} 清運</span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="ts-text is-negative" style="font-weight: bold;">待清運中</span>`;
+                }
+
+                modal.showModal();
+            } else {
+                alert("無法取得資料：" + result.message);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("網路請求失敗，請稍後再試。");
+        }
+    }
+    window.openDetailModal = function(id) {
+        const tmpl = document.getElementById('tmpl-' + id);
+        if (tmpl) { document.getElementById('modalBody').innerHTML = tmpl.innerHTML; document.getElementById('detailModal').showModal(); }
+    }
+    function controltstab(e, tab) {
+        document.querySelectorAll('.ts-tab .item')
+            .forEach(t => t.classList.remove('is-active'));
+
+        e.currentTarget.classList.add('is-active');
+
+        if (tab === 'table') {
+            document.getElementById('table-container').style.display = 'block';
+            document.getElementById('analysis-container').style.display = 'none';
+        } else if (tab === 'analysis') {
+            document.getElementById('table-container').style.display = 'none';
+            document.getElementById('analysis-container').style.display = 'block';
+
+            if (!window.analysisLoaded) {
+                loadAnalysis();  // 你前面寫的 Chart.js
+                window.analysisLoaded = true;
+            }
+        }
+    }
+</script>
+<script id="alert-data-json" type="application/json">
+    {{ alert_json_data|safe }}
 </script>
 {% endblock %}
+

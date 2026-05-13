@@ -6,8 +6,20 @@
     <link rel="stylesheet" href="{% static 'css/management/visualize.css' %}">
 {% endblock %}
 {% block content %}
+    
     <!-- Chart Select -->
     <div class="ts-container has-top-padded-large" style="--width: 1650px">
+        <div style="margin-bottom: 30px; display: flex; align-items: center; gap: 12px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main);">
+                <div style="background: #af3b3b; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(33, 133, 208, 0.3);">
+                    <span class="ts-icon is-chart-simple-icon"></span>
+                </div>
+                <div>
+                    廢棄物報表管理(院內)
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">根據多個設定製作院內的報表</div>
+                </div>
+            </div>
+        </div>
         <div class="ts-grid is-middle-aligned">
             <!-- Instruction -->
             <div class="column is-3-wide ts-procedure is-start-aligned has-top-spaced-large has-bottom-spaced">

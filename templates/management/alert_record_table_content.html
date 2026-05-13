@@ -12,7 +12,7 @@
     <div class="ts-pagination is-small is-secondary rwd-group" style="display: flex; align-items: center;">
         {% if page_obj.has_previous %}
             <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
-            <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+            <a class="item" onclick="goToPage('{{ page_obj.previous_page_number }}')" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
         {% else %}
             <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
             <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
@@ -25,8 +25,8 @@
         </span>
 
         {% if page_obj.has_next %}
-            <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
-            <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+            <a class="item" onclick="goToPage('{{ page_obj.next_page_number }}')" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+            <a class="item" onclick="goToPage('{{ page_obj.paginator.num_pages|default:1 }}')" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
         {% else %}
             <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
             <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
@@ -35,50 +35,51 @@
 </div>
 
 <div class="ts-content is-fitted" style="overflow-x: auto;">
-    <table class="ts-table is-celled is-striped is-fullwidth" id="dataTable" style="min-width: 900px; table-layout: fixed;">
+    <table class="ts-table is-celled is-fullwidth" id="dataTable" style="min-width: 900px; table-layout: fixed;">
         <thead>
             <tr>
-                <th class="collapsing is-center-aligned" style="width: 5%;">
+                <th style="width: 5%;text-align: center;">
                     <label class="ts-checkbox"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></label>
                 </th>
                 <th class="is-center-aligned" style="width: 7%;">序號</th>
+                <th style="width: 15%;">部門</th>
                 <th style="width: 15%;">警示時間</th>
-                <th style="width: 15%;">過磅人員</th>
                 <th style="width: 25%;">警報名稱</th>
                 <th style="width: 15%;">警報類型</th>
-                <th class="is-center-aligned" style="width: 10%;">嚴重度</th>
-                <th class="collapsing is-center-aligned" style="width: 8%;">操作</th>
+                <th class="collapsing is-center-aligned" style="width: 7%;">操作</th>
             </tr>
         </thead>
         <tbody>
             {% for alert in page_obj %}
             <tr id="row_{{ alert.id }}">
-                <td class="collapsing is-center-aligned">
+                <th style="width: 5%;text-align: center;">
                     <label class="ts-checkbox">
                         <input type="checkbox" name="record_ids" value="{{ alert.id }}" class="record-checkbox" onchange="updateUI()">
                     </label>
                 </td>
-                <td class="is-center-aligned">{{ forloop.counter }}</td>
-                <td>{{ alert.create_time|date:"Y-m-d H:i" }}</td>
-                <td class="truncate-text" title="{{ alert.weigher.get_full_name|default:alert.weigher.username }}">{{ alert.weigher.get_full_name|default:alert.weigher.username }}</td>
-                <td class="truncate-text" title="{{ alert.alert_name|default:'重量異常' }}">{{ alert.alert_name|default:"重量異常" }}</td>
-                <td class="truncate-text" title="{{ alert.alert_type|default:'設備異常' }}">{{ alert.alert_type|default:"設備異常" }}</td>
-                <td class="is-center-aligned">
-                    {% if alert.severity == 'High' or '失敗' in alert.alert_name %}
-                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #db2828; font-weight: bold; font-size: 1rem;">
-                            <span class="severity-light light-red" style="margin: 0; box-shadow: 0 0 5px rgba(219,40,40,0.5);"></span> 嚴重
-                        </div>
-                    {% else %}
-                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #d69800; font-weight: bold; font-size: 1rem;">
-                            <span class="severity-light light-yellow" style="margin: 0; box-shadow: 0 0 5px rgba(251,189,8,0.5);"></span> 警告
-                        </div>
-                    {% endif %}
-                </td>
+                <td class="is-center-aligned">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                <td>{{ alert.department.name }}</td>
+                <td>{{ alert.create_time }}</td>
+                <td class="truncate-text" title="{{ alert.alert_name|default:'' }}">{{ alert.alert_name|default:"" }}</td>
+                <td class="truncate-text" title="{{ alert.alert_type|default:'' }}">{{ alert.alert_type|default:"" }}</td>
+
                 <td class="collapsing is-center-aligned">
-                    <button class="ts-button is-negative is-small is-dense" type="button" onclick="deleteRecord({{ alert.id }})" style="padding: 0 15px; height: 32px !important;">
-                        刪除
+
+                    <button class="ts-button is-info is-small is-dense" type="button" style="padding: 0 15px; height: 32px !important;"
+                            onclick="openDetailModal('{{ alert.id }}')">
+                        <span class="ts-icon is-list-ul-icon"></span> 詳情 
                     </button>
+
+                        <!-- <a href="/management/locate/{{ alert.id }}/" class="ts-button is-outlined is-small">
+                            <span class="ts-icon is-location-dot-icon"></span> 定位紀錄
+                        </a>
+                        <button class="ts-button is-outlined is-small" onclick="viewRecordDetail('{{ alert.id }}')">詳情</button> -->
+
+                    <!-- <button class="ts-button is-negative is-small is-dense" type="button" onclick="deleteRecord('{{ alert.id }}')" style="padding: 0 15px; height: 32px !important;">
+                        刪除
+                    </button> -->
                 </td>
+
             </tr>
             {% empty %}
             <tr>
@@ -110,7 +111,7 @@
         <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
             {% if page_obj.has_previous %}
                 <a class="item" onclick="goToPage(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
-                <a class="item" onclick="goToPage({{ page_obj.previous_page_number }})" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.previous_page_number }}')" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
             {% else %}
                 <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
                 <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
@@ -123,8 +124,8 @@
             </span>
 
             {% if page_obj.has_next %}
-                <a class="item" onclick="goToPage({{ page_obj.next_page_number }})" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
-                <a class="item" onclick="goToPage({{ page_obj.paginator.num_pages|default:1 }})" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.next_page_number }}')" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage('{{ page_obj.paginator.num_pages|default:1 }}')" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
             {% else %}
                 <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
                 <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
@@ -132,5 +133,37 @@
         </div>
     </div>
 </div>
+{% for batch in page_obj %}
+<template id="tmpl-{{ batch.id }}">
+    <div style="margin-bottom: 15px; color: var(--my-text-sub); font-size: 1rem;">
+        單號：<span style="font-family:monospace; color: var(--my-text-main);">#{{ batch.id }}</span> <br>
+        警報時間：<span style="color: var(--my-text-main);">{{ batch.create_time}}</span> <br>
+        本批次共包含 <strong style="color: var(--my-text-main);">{{ batch.items|length|default:"-" }}</strong> 筆廢棄物紀錄：
+    </div>
+    <table class="sub-table is-celled" style=" width: 100%; border-collapse: collapse; table-layout: fixed; background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 8px;">
+        <thead>
+            <tr><th>單筆 ID</th><th>種類</th><th>產出部門</th><th>產出定點</th><th>產出時間</th><th>重量 (KG)</th><th>過磅人員</th><th>操作</th></tr>
+        </thead>
+        {% for record in batch.items %}
+        <tbody>
+            <tr>
+                <td style="font-family: monospace;">#{{ record.id}}</td>
+                <td>{{ record.waste_type.name }}</td>
+                <td>{{ record.department.name }}</td><td>{{ record.location.name }}</td>
+                <td>{{ record.create_time|date:"Y-m-d H:i" }}</td>
+                <td style="text-align: left; font-weight: bold; color: #db2828;">{{ record.weight|floatformat:3 }}</td>
+                <td>{{ record.creator }}</td>
+                <td>
+                    <a href="/management/locate/{{ record.id }}" class="ts-button is-outlined is-small" style="padding: 0 10px; height: 32px !important;">
+                        <span class="ts-icon is-location-dot-icon"></span> 定位紀錄
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+        {% endfor %}
+    </table>
 
-{{ all_filtered_data|json_script:"alert-data-json" }}
+</template>
+{% endfor %}
+
+

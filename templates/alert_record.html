@@ -307,8 +307,6 @@
                 <select class="sort-select" onchange="submitWithSort(this.value)">
                     <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>時間 (新 → 舊) ↓</option>
                     <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>時間 (舊 → 新) ↑</option>
-                    <option value="severity_desc" {% if current_sort == 'severity_desc' %}selected{% endif %}>嚴重度 (高 → 低) ↓</option>
-                    <option value="severity_asc" {% if current_sort == 'severity_asc' %}selected{% endif %}>嚴重度 (低 → 高) ↑</option>
                 </select>
                 
                 <div class="rwd-group-divider"></div>
@@ -391,11 +389,11 @@
                         <th style="width: 15%;">過磅人員</th>
                         <th style="width: 25%;">警報名稱</th>
                         <th style="width: 15%;">警報類型</th>
-                        <th class="is-center-aligned" style="width: 10%;">嚴重度</th>
                         <th class="collapsing is-center-aligned" style="width: 8%;">操作</th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% if not confirm_delete_id %}
                     {% for alert in page_obj %}
                     <tr id="row_{{ alert.id }}">
                         <td class="collapsing is-center-aligned">
@@ -677,7 +675,6 @@
                         <th>過磅人員</th>
                         <th>警報名稱</th>
                         <th>警報類型</th>
-                        <th style="text-align: center;">嚴重度</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -695,8 +692,6 @@
                 if(cols.length >= 7) {
                     hasData = true;
                     let isSevere = cols[6].innerHTML.includes('light-red');
-                    let sevClass = isSevere ? 'text-red' : 'text-yellow';
-                    let sevText = isSevere ? '嚴重' : '警告';
                     let cleanTime = cols[2].innerText.trim().replace(/\n/g, ' ');
                     
                     html += `<tr>
@@ -705,7 +700,6 @@
                         <td>${cols[3].innerText.trim()}</td>
                         <td>${cols[4].innerText.trim()}</td>
                         <td>${cols[5].innerText.trim()}</td>
-                        <td style="text-align: center;" class="${sevClass}">${sevText}</td>
                     </tr>`;
                 }
             });
@@ -714,8 +708,6 @@
                 hasData = true;
                 allFilteredData.forEach((item, index) => {
                     let isSevere = item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'));
-                    let sevClass = isSevere ? 'text-red' : 'text-yellow';
-                    let sevText = isSevere ? '嚴重' : '警告';
                     
                     html += `<tr>
                         <td style="text-align: center;">${index + 1}</td>
@@ -723,7 +715,6 @@
                         <td>${item.weigher}</td>
                         <td>${item.alert_name}</td>
                         <td>${item.alert_type}</td>
-                        <td style="text-align: center;" class="${sevClass}">${sevText}</td>
                     </tr>`;
                 });
             } else {
@@ -734,8 +725,6 @@
                         let isSevere = cols[6].innerHTML.includes('light-red');
                         if(!isSevere && !cols[6].innerHTML.includes('light-yellow')) return;
                         hasData = true;
-                        let sevClass = isSevere ? 'text-red' : 'text-yellow';
-                        let sevText = isSevere ? '嚴重' : '警告';
                         let cleanTime = cols[2].innerText.trim().replace(/\n/g, ' ');
                         html += `<tr>
                             <td style="text-align: center;">${idx++}</td>
@@ -743,7 +732,6 @@
                             <td>${cols[3].innerText.trim()}</td>
                             <td>${cols[4].innerText.trim()}</td>
                             <td>${cols[5].innerText.trim()}</td>
-                            <td style="text-align: center;" class="${sevClass}">${sevText}</td>
                         </tr>`;
                     }
                 });
@@ -816,7 +804,7 @@
     function executeExcelExport() {
         const selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
         const now = new Date(); const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        let data = [['警報紀錄報表'], ['匯出日期：', dateStr], [], ['序號', '警示時間', '過磅人員', '警報名稱', '警報類型', '嚴重度']];
+        let data = [['警報紀錄報表'], ['匯出日期：', dateStr], [], ['序號', '警示時間', '過磅人員', '警報名稱', '警報類型']];
         let hasData = false;
 
         if (selectedCount > 0) {
@@ -825,17 +813,16 @@
                 const cb = row.querySelector('.record-checkbox'); if (!cb || !cb.checked) return;
                 const cols = row.querySelectorAll('td');
                 if (cols.length >= 7) {
-                    hasData = true; 
-                    let severityText = cols[6].innerHTML.includes('light-red') ? '嚴重' : '警告';
-                    data.push([idx++, cols[2].innerText.trim().replace(/\n/g, ' '), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), severityText]);
+                    hasData = true;
+                    let cleanTime = cols[2].innerText.trim().replace(/\n/g, ' ');
+                    data.push([idx++, cleanTime, cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim()]);
                 }
             });
         } else {
             if (allFilteredData && allFilteredData.length > 0) {
                 hasData = true;
                 allFilteredData.forEach((item, index) => {
-                    let severityText = (item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'))) ? '嚴重' : '警告';
-                    data.push([index + 1, item.create_time, item.weigher, item.alert_name, item.alert_type, severityText]);
+                    data.push([index + 1, item.create_time, item.weigher, item.alert_name, item.alert_type]);
                 });
             } else {
                 let idx = 1;
@@ -845,8 +832,7 @@
                         let isSevere = cols[6].innerHTML.includes('light-red');
                         if(!isSevere && !cols[6].innerHTML.includes('light-yellow')) return;
                         hasData = true; 
-                        let severityText = isSevere ? '嚴重' : '警告';
-                        data.push([idx++, cols[2].innerText.trim().replace(/\n/g, ' '), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim(), severityText]);
+                        data.push([idx++, cols[2].innerText.trim().replace(/\n/g, ' '), cols[3].innerText.trim(), cols[4].innerText.trim(), cols[5].innerText.trim()]);
                     }
                 });
             }

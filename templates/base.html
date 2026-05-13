@@ -131,17 +131,20 @@
                             <span class="ts-icon is-house-icon"></span>
                             <span class="ts-text is-bold">主頁面</span>
                         </a>
-                        {% if user_is_over_mod %}
+                        {% if user_is_over_reg or user_is_over_imp %}
                         <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-management">
                             <span class="ts-icon is-folder-open-icon"></span>
                             <span class="ts-text is-bold">廢棄物管理</span>
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
                         </a>
-                        
-                        <div class="ts-dropdown" id="dropdown-management" data-position="bottom-start" style="z-index: 9999;">        
+                        <div class="ts-dropdown" id="dropdown-management" data-position="bottom-start" style="z-index: 9999;"> 
+                            {% if not user_is_outsider and not user_is_registrar %}       
                             <button class="item" data-href="{% url 'transportation:transportation_index' %}">聯單管理</button>
+                            {% endif %}
+                            {% if user_is_over_reg %}
                             <button class="item" data-href="{% url 'management:database_index' %}">廢棄物管理(院內)</button>
-                            <button class="item" data-href="{% url 'management:db_department_index' %}">廢棄物管理(部門)</button>
+                            <button class="item" data-href="{% url 'management:db_department_index' %}">廢棄物管理(部門)</button> 
+                            {% endif %}
                         </div>
                         {% endif %}
                         <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-report">
@@ -150,19 +153,20 @@
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
                         </a>
                         <div class="ts-dropdown" id="dropdown-report" data-position="bottom-start" style="z-index: 9999;">
-                            {% if user_is_over_mod %}
+                            {% if not user_is_outsider %}
                             <button class="item" data-href="{% url 'management:visualize_index' %}">廢棄物報表管理(院內)</button>
                             <button class="item" data-href="{% url 'management:visualize_department_index' %}">廢棄物報表管理(部門)</button>
                             {% endif %}
-                            <button class="item" data-href="{% url 'management:settlement_view' %}">廢棄物過磅記錄檢視</button>
-                            <button class="item" data-href="{% url 'management:transportation_view' %}">廢棄物載運紀錄檢視</button>
+                            <button class="item" data-href="{% url 'management:settlement_view' %}">廢棄物過磅紀錄管理</button>
+                            <button class="item" data-href="{% url 'management:transportation_view' %}">廢棄物載運紀錄管理</button>
                         </div>
-                        {% if user_is_over_mod %}
+                        {% if user_is_over_imp or user_is_over_reg %}
                         <a class="item tab-item {% if '/prediction' in request.path %}is-active{% endif %}" href="/prediction/">
                             <span class="ts-icon is-chart-line-icon"></span>
                             <span class="ts-text is-bold">廢棄物預測</span>
                         </a>
                         {% endif %}
+                        {% if user_is_over_mod or user_is_outsider %}
                         <a class="item tab-item {% if '/management/mobile/' in request.path %}is-active{% endif %}" href="/management/mobile/">
                             <span class="ts-icon is-mobile-screen-icon"></span>
                             <span class="ts-text is-bold">行動裝置登記</span>
@@ -171,6 +175,7 @@
                             <span class="ts-icon is-qrcode-icon"></span>
                             <span class="ts-text is-bold">QR code列印</span>
                         </a>
+                        {% endif %}
                     </div>
                     <style>
                         /* 抓取 class 含有 'is-qrcode-icon' 的圖示 */
@@ -243,7 +248,7 @@
                                     系統帳號管理
                                 </button>
                             {% endif %}
-                            {% if user.is_staff %}
+                            {% if user_is_over_mod %}
                                 <button class="item" data-href="{% url 'admin:index' %}">
                                     <span class="ts-icon is-python-icon"></span>
                                     Django Administration

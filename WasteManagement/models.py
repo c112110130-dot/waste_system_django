@@ -461,8 +461,8 @@ class WasteRecord_New(models.Model):
         verbose_name="更新人員"
     )
 
-    create_time = models.DateTimeField(auto_now_add=True, verbose_name="過磅時間")
-    update_time = models.DateTimeField(auto_now=True, verbose_name="更新時間")
+    create_time = models.DateTimeField(default=timezone.now, verbose_name="過磅時間")
+    update_time = models.DateTimeField(default=timezone.now, verbose_name="更新時間")
     class Meta:
         db_table = 'waste_record' # 資料庫裡的表格名稱
         verbose_name = "新廢棄物紀錄"
@@ -480,18 +480,19 @@ class AlertConfig(models.Model):
         ('monthly', '每月'),
     )
 
-    
-    
-    waste_type = models.ForeignKey('WasteType', on_delete=models.CASCADE, unique=True, related_name='alert_configs')
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='alert_configs', null=True, blank=True)
+    waste_type = models.ForeignKey(WasteType, on_delete=models.CASCADE, related_name='alert_configs', null=True, blank=True)
+
     weight_min = models.FloatField(null=True, blank=True, help_text="重量最小限制 (kg)",default=1)
     weight_max = models.FloatField(null=True, blank=True, help_text="重量最大限制 (kg)",default=100)
     
     time_frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
     overdue_hours = models.IntegerField(null=True, blank=True, help_text="逾期小時數",default=24)
+    weighting_counts = models.IntegerField(null=True, blank=True, help_text="每日過磅次數標準",default=3)
 
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.waste_type.name}"
+        return f"AlertConfig for {self.department.name if self.department else 'All Departments'} {self.waste_type.name if self.waste_type else 'All Types'} - {self.get_time_frequency_display()}"
     
     

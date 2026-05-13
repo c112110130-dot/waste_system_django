@@ -28,7 +28,7 @@
 {% block content %}
     {% csrf_token %}
 
-    <div class="ts-container has-vertically-spaced-large" style="--width: 1800px">
+    <div class="ts-container has-vertically-spaced-large is-relaxed" style="--width: 1800px">
         <div class="ts-grid is-evenly-divided is-divided is-relaxed">
             
             <div class="column">
@@ -49,8 +49,8 @@
                     </div>
                 </div>
 
-                <div class="ts-box has-shadow has-vertically-spaced-large">
-                    <table class="ts-table is-large is-relaxed is-single-line location-table">
+                <div class="ts-box has-shadow has-vertically-spaced-large" style="overflow: auto;">
+                    <table class="ts-table is-large is-relaxed is-single-line location-table" >
                         <thead>
                             <tr>
                                 <th class="checkbox-column"><label class="ts-checkbox is-solo is-large"><input type="checkbox"></label></th>
@@ -103,8 +103,8 @@
                     </div>
                 </div>
 
-                <div class="ts-box has-shadow has-vertically-spaced-large">
-                    <table class="ts-table is-large is-relaxed is-single-line agency-table">
+                <div class="ts-box has-shadow has-vertically-spaced-large " style="overflow: auto;">
+                    <table class="ts-table is-large is-relaxed is-single-line agency-table" style="display: table;">
                         <thead>
                             <tr>
                                 <th class="checkbox-column"><label class="ts-checkbox is-solo is-large"><input type="checkbox"></label></th>

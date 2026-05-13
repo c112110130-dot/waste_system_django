@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物過磅紀錄檢視{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物過磅紀錄管理{% endblock %}
 {% block stylesheet %}
-    <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}"> -->
 {% endblock %}
 {% block content %}
 
@@ -13,7 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
     /* ========================================= */
     /* 1. 智慧顏色與佈局變數                     */
@@ -85,6 +85,15 @@
         .daring-layout { flex-direction: column; }
         .filter-sidebar { width: 100%; position: static; }
     }
+    @keyframes highlightFade {
+        0% { background-color: #fff9c4; } /* 淺黃色 */
+        100% { background-color: transparent; }
+    }
+
+    .row-highlight {
+        animation: highlightFade 3s ease-in-out;
+        border: 2px solid #fbbd08 !important; /* 加個金邊更明顯 */
+    }
 </style>
 
 <div class="ts-container" style="--width: 1800px; padding: 23px 15px;">
@@ -96,8 +105,8 @@
                 <span class="ts-icon is-clipboard-list-icon"></span>
             </div>
             <div>
-                廢棄物過磅紀錄檢視
-                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視、匯出及結算院內廢棄物過磅數據資料</div>
+                廢棄物過磅紀錄管理
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">管理、匯出及結算部門廢棄物過磅紀錄</div>
             </div>
         </div>
     </div>
@@ -158,7 +167,7 @@
         <div class="main-content">
             <div class="ts-grid is-relaxed is-4-columns stat-card-container">
                 <div class="column"><div class="stat-card card-green"><div class="stat-icon"><span class="ts-icon is-clipboard-list-icon"></span></div><div class="stat-info"><div class="stat-title">總過磅筆數</div><div class="stat-value" id="cardTotalCount">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-calendar-day-icon"></span></div><div class="stat-info"><div class="stat-title">昨日過磅總重 (kg)</div><div class="stat-value">{{ yesterday_total_weight|default:"0.000"|floatformat:3 }}</div></div></div></div>
+                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-calendar-day-icon"></span></div><div class="stat-info"><div class="stat-title">昨日過磅總重 (kg)</div><div class="stat-value" id="cardYesterdayTotal">{{ yesterday_total|default:"0.000"|floatformat:3 }}</div></div></div></div>
                 <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-truck-fast-icon"></span></div><div class="stat-info"><div class="stat-title">已載運重量 (kg)</div><div class="stat-value" id="cardTransportedWeight">0.000</div></div></div></div>
                 <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-triangle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">未載運重量 (kg)</div><div class="stat-value" id="cardPendingWeight">0.000</div></div></div></div>
             </div>
@@ -175,6 +184,11 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <!-- {% if user_is_root %}
+                    <button class="ts-button is-outlined" onclick="generateFakeData()">
+                        <span class="ts-icon is-check-icon" style="margin-right: 6px;"></span> 建立假資料
+                    </button>
+                    {% endif %} -->
                     <button class="ts-button btn-batch-green" onclick="openSettlementModal()">
                         <span class="ts-icon is-calculator-icon" style="margin-right: 6px;"></span> 建立載運單 (結算)
                     </button>
@@ -205,40 +219,50 @@
     </div>
 </div>
 
-<dialog id="settlementModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px;">
-        <div class="ts-header is-heavy" style="margin-bottom: 15px; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
-            <span class="ts-icon is-truck-fast-icon"></span> 確認結算
-        </div>
-        <p style="margin-bottom: 20px; color: var(--my-text-sub);">將建立包含 <strong id="modalSelectedCount" style="color: #db2828; font-size: 1.1rem;">0</strong> 筆資料的載運單。</p>
+<dialog id="settlementModal" style="padding: 0; border: none; border-radius: 16px; background: transparent; max-width: 420px; width: 90vw; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 16px; padding: 35px 25px; text-align: center;">
+        
+        <div class="ts-icon is-truck-fast-icon" style="font-size: 3.5rem; color: #2185d0; margin-bottom: 20px;"></div>
+        
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.4rem; display: flex; justify-content: center; align-items: center;">確認結算載運</div>
+        
+        <p style="margin-bottom: 25px; color: var(--my-text-sub); font-size: 1.05rem;">
+            將建立包含 <strong id="modalSelectedCount" style="color: #db2828; font-size: 1.25rem; margin: 0 4px;">0</strong> 筆資料的載運單。
+        </p>
 
-        <form id="settlementForm" action="{% url 'WasteManagement:settlement_process' %}" method="post">
+        <form id="settlementForm" action="{% url 'WasteManagement:settlement_process' %}" method="post" style="text-align: left;">
             {% csrf_token %}
             <input type="hidden" name="selected_ids" id="hiddenSelectedIds">
 
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; color: var(--my-text-main); font-weight: bold;">處理公司</label>
-                <select name="process_agency" class="ts-select is-fluid" required style="background-color: var(--my-bg-input); color: var(--my-text-main);">
-                    <option value="">請選擇處理公司...</option>
-                    {% for agency in process_agencies %}
-                        <option value="{{ agency.id }}">{{ agency.name }}</option>
-                    {% endfor %}
-                </select>
+            <div style="background-color: var(--my-bg-main); padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid var(--my-border);">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--my-text-main); font-weight: bold;">
+                        處理公司 <span style="color: #db2828;">*</span>
+                    </label>
+                    <select name="process_agency" class="ts-select is-fluid" required style="background-color: var(--my-bg-panel); color: var(--my-text-main);">
+                        <option value="">請選擇處理公司...</option>
+                        {% for agency in process_agencies %}
+                            <option value="{{ agency.id }}">{{ agency.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 8px; color: var(--my-text-main); font-weight: bold;">
+                        清理公司 <span style="color: #db2828;">*</span>
+                    </label>
+                    <select name="clear_agency" class="ts-select is-fluid" required style="background-color: var(--my-bg-panel); color: var(--my-text-main);">
+                        <option value="">請選擇清理公司...</option>
+                        {% for agency in clear_agencies %}
+                            <option value="{{ agency.id }}">{{ agency.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
-            <div style="margin-bottom: 25px;">
-                <label style="display: block; margin-bottom: 8px; color: var(--my-text-main); font-weight: bold;">清理公司</label>
-                <select name="clear_agency" class="ts-select is-fluid" required style="background-color: var(--my-bg-input); color: var(--my-text-main);">
-                    <option value="">請選擇清理公司...</option>
-                    {% for agency in clear_agencies %}
-                        <option value="{{ agency.id }}">{{ agency.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" class="ts-button is-outlined" onclick="document.getElementById('settlementModal').close()">取消</button>
-                <button type="submit" class="ts-button is-primary">確認結算</button>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button type="button" class="ts-button is-outlined" style="min-width: 110px;" onclick="document.getElementById('settlementModal').close()">取消返回</button>
+                <button type="submit" class="ts-button is-primary" style="min-width: 110px;">確認結算</button>
             </div>
         </form>
     </div>
@@ -253,16 +277,20 @@
     </div>
 </dialog>
 
-<dialog id="deleteModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px;">
-        <div class="ts-header is-heavy" style="margin-bottom: 15px; font-size: 1.25rem; color: #db2828; display: flex; align-items: center; gap: 8px;">
-            <span class="ts-icon is-trash-can-icon"></span> 確認刪除
-        </div>
-        <p id="deleteModalText" style="margin-bottom: 25px; color: var(--my-text-sub);"></p>
+<dialog id="deleteModal" style="padding: 0; border: none; border-radius: 16px; background: transparent; max-width: 380px; width: 90vw; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 16px; padding: 35px 25px; text-align: center;">
         
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button type="button" class="ts-button is-outlined" onclick="document.getElementById('deleteModal').close()">取消</button>
-            <button type="button" class="ts-button is-negative" onclick="executeBatchDelete()">確定刪除</button>
+        <div class="ts-icon is-trash-can-icon" style="font-size: 3.5rem; color: #db2828; margin-bottom: 20px;"></div>
+        
+        <div class="ts-header is-heavy" style="margin-bottom: 15px; font-size: 1.4rem; color: var(--my-text-main); display: flex; justify-content: center; align-items: center;">
+            確認刪除資料？
+        </div>
+        
+        <p id="deleteModalText" style="margin-bottom: 30px; color: var(--my-text-sub); font-size: 1.05rem; line-height: 1.6;"></p>
+        
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button type="button" class="ts-button is-outlined" style="min-width: 110px;" onclick="document.getElementById('deleteModal').close()">取消返回</button>
+            <button type="button" class="ts-button is-negative" style="min-width: 110px;" onclick="executeBatchDelete()">確定刪除</button>
         </div>
     </div>
 </dialog>
@@ -387,9 +415,19 @@
             let w = parseFloat(item.weight) || 0; totalW += w;
             if (item.status === '已載運') transW += w; else pendW += w;
         });
+        
         document.getElementById('cardTotalCount').innerText = dataList.length;
         document.getElementById('cardTransportedWeight').innerText = transW.toFixed(3);
         document.getElementById('cardPendingWeight').innerText = pendW.toFixed(3);
+        // document.getElementById('cardYesterdayTotal').innerText = dataList.reduce((sum, item) => {
+        //     const date = new Date(item.weigh_time);
+        //     const yesterday = new Date();
+        //     yesterday.setDate(yesterday.getDate() - 6);
+        //     if (date.toDateString() === yesterday.toDateString()) {
+        //         return sum + (parseFloat(item.weight) || 0);
+        //     }
+        //     return sum;
+        // }, 0).toFixed(3);
     }
 
     window.updateUI = function() {
@@ -485,7 +523,6 @@
         const ws = XLSX.utils.aoa_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄"); XLSX.writeFile(wb, `過磅紀錄_${res.dateStr}.xlsx`);
     }
 
-    // 🌟 2. PDF (直接餵入 HTML 字串) 🌟
     window.exportToPDF = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); 
         if(!res.hasData) return alert("無資料可匯出");
@@ -494,15 +531,13 @@
             margin:       10, 
             filename:     `過磅紀錄_${res.dateStr}.pdf`,
             image:        { type: 'jpeg', quality: 1 },
-            html2canvas:  { scale: 2, useCORS: true }, 
+            html2canvas:  { scale: 1, useCORS: true }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } 
         };
 
-        // 直接傳入 HTML「字串」(.from(res.htmlString))，讓套件在沙盒裡自己搞定！
         html2pdf().set(opt).from(res.htmlString).save();
     }
 
-    // 🌟 3. PNG (使用超級巨大的隱形 Iframe 截圖) 🌟
     window.exportToPNG = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); 
         if(!res.hasData) return alert("無資料可匯出");
@@ -570,32 +605,15 @@
         }, 300);
     }
 
-    // --- 🌟 結算與刪除防呆邏輯 🌟 ---
     window.openSettlementModal = function() {
         const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
-        let ids = [];
-        let hasTransported = false;
-
+        let ids = []; let hasTransported = false;
         checkedBoxes.forEach(cb => {
             ids.push(cb.value);
-            if (cb.getAttribute('data-transported') === 'true') {
-                hasTransported = true;
-            }
+            if (cb.getAttribute('data-transported') === 'true') hasTransported = true;
         });
-
-        if(ids.length === 0) { 
-            document.getElementById('warningModalText').innerText = '請至少選取一筆資料。'; 
-            document.getElementById('warningModal').showModal(); 
-            return; 
-        }
-        
-        // 🌟 防呆：阻擋已載運的紀錄重複結算 🌟
-        if(hasTransported) {
-            document.getElementById('warningModalText').innerText = '選取項目中包含「已載運」的紀錄，無法重複結算！請取消勾選。'; 
-            document.getElementById('warningModal').showModal(); 
-            return;
-        }
-
+        if(ids.length === 0) { document.getElementById('warningModalText').innerText = '請至少選取一筆資料。'; document.getElementById('warningModal').showModal(); return; }
+        if(hasTransported) { document.getElementById('warningModalText').innerText = '選取項目中包含「已載運」的紀錄，無法重複結算！請取消勾選。'; document.getElementById('warningModal').showModal(); return; }
         document.getElementById('modalSelectedCount').innerText = ids.length;
         document.getElementById('hiddenSelectedIds').value = ids.join(',');
         document.getElementById('settlementModal').showModal();
@@ -603,32 +621,17 @@
     
     window.openBatchDelete = function(){
         const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
-        let ids = [];
-        let hasTransported = false;
-
+        let ids = []; let hasTransported = false;
         checkedBoxes.forEach(cb => {
             ids.push(cb.value);
-            if (cb.getAttribute('data-transported') === 'true') {
-                hasTransported = true;
-            }
+            if (cb.getAttribute('data-transported') === 'true') hasTransported = true;
         });
-
-        if(ids.length === 0) { 
-            document.getElementById('warningModalText').innerText = '請先勾選要刪除的紀錄。'; 
-            document.getElementById('warningModal').showModal(); 
-            return; 
-        }
-
-        // 🌟 防呆：阻擋刪除已載運的紀錄 🌟
-        if(hasTransported) {
-            document.getElementById('warningModalText').innerText = '「已載運」的紀錄受到系統保護，無法刪除！請取消勾選。'; 
-            document.getElementById('warningModal').showModal(); 
-            return;
-        }
-
+        if(ids.length === 0) { document.getElementById('warningModalText').innerText = '請先勾選要刪除的紀錄。'; document.getElementById('warningModal').showModal(); return; }
+        if(hasTransported) { document.getElementById('warningModalText').innerText = '「已載運」的紀錄受到系統保護，無法刪除！請取消勾選。'; document.getElementById('warningModal').showModal(); return; }
         window.pendingDeleteIds = ids; 
         document.getElementById('deleteModalText').innerText = `確定要刪除選取的 ${ids.length} 筆資料嗎？`; 
         document.getElementById('deleteModal').showModal();
+        
     }
 
     // 匯出 / 列印 (完全放行，不阻擋)
@@ -656,8 +659,10 @@
                     redirect: 'follow'
                 })
                 .then(() => {
-                    // 🚀 處理完畢後，直接「就地重新整理」當前網址！
-                    window.location.reload();
+                    NotificationUtils.showAlert('成功!','載運單已建立。', 'success');
+                    setTimeout(() => {
+                        refreshTable(window.location.href);
+                    }, 1000);
                 })
                 .catch(err => {
                     console.error(err);
@@ -680,7 +685,6 @@
     window.executeBatchDelete = function() {
         if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
         
-        // 🌟 換成這行！呼叫專門刪除過磅資料的 API
         fetch("{% url 'WasteManagement:delete_data' %}", {
             method: 'POST',
             headers: {
@@ -692,7 +696,10 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                window.location.reload(); // 成功後重新整理頁面
+                NotificationUtils.showAlert('成功!', '刪除成功！', 'success');
+                setTimeout(() => {
+                    refreshTable(window.location.href);
+                }, 1000);
             } else {
                 alert('刪除失敗：' + (data.message || '未知錯誤'));
                 document.getElementById('deleteModal').close();
@@ -704,5 +711,47 @@
             document.getElementById('deleteModal').close();
         });
     }
+    generateFakeData = function() {
+        if (!confirm("確定要生成假資料嗎？這將會新增 100 筆隨機過磅紀錄。")) return;
+        fetch("{% url 'WasteManagement:generate_fake_data' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                NotificationUtils.showAlert('成功!', '已生成 100 筆假資料！', 'success');
+                setTimeout(() => {
+                    refreshTable(window.location.href);
+                }, 1000);
+            } else {
+                alert('生成失敗：' + (data.message || '未知錯誤'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('系統發生錯誤，請稍後再試。');
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id');
+
+        if (targetId) {
+            const targetRow = document.querySelector(`tr[data-id="${targetId}"]`);
+            
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                targetRow.classList.add('row-highlight');
+                
+            } else {
+                
+            }
+        }
+    });
 </script>
 {% endblock %}

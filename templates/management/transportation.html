@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物載運紀錄{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物載運紀錄管理{% endblock %}
 
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/dashboard/transportation.css' %}">
@@ -93,7 +93,7 @@
             </div>
             <div>
                 廢棄物載運紀錄管理
-                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視及管理已結算之廢棄物載運單，並支援 AJAX 局部更新與證明文件產出</div>
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視及管理已結算之廢棄物載運單</div>
             </div>
         </div>
     </div>
@@ -172,6 +172,11 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <!-- {% if user_is_root %}
+                    <button class="ts-button is-outlined" onclick="random_transport_records()">
+                        <span class="ts-icon is-check-icon" style="margin-right: 6px;"></span> 隨機載運
+                    </button>
+                    {% endif %} -->
                     <div style="position: relative;">
                         <button id="exportBtn" class="ts-button btn-batch-white" data-dropdown="export-menu">
                             <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出報表
@@ -525,12 +530,38 @@
         fetch("{% url 'WasteManagement:delete_batches_api' %}", {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
             body: JSON.stringify({ ids: window.pendingDeleteIds })
-        }).then(res => res.json()).then(data => { if (data.status === 'success') window.location.reload(); else alert('操作失敗'); });
+        }).then(res => res.json()).then(data => { 
+            if (data.status === 'success'){ 
+            NotificationUtils.showAlert('成功', '取消載運成功！', 'success');
+            closeDeleteModal();
+            setTimeout(() => {
+                window.location.href = '/management/transportation/';
+            }, 1500); }}) 
+        
     }
+    
+    closeDeleteModal = function() { window.pendingDeleteIds = null; document.getElementById('deleteModal').close(); }
     
     window.openDetailModal = function(id) {
         const tmpl = document.getElementById('tmpl-' + id);
         if (tmpl) { document.getElementById('modalBody').innerHTML = tmpl.innerHTML; document.getElementById('detailModal').showModal(); }
+    }
+
+    random_transport_records = function() {
+        if (!confirm('確定要隨機生成測試載運紀錄嗎？這將會新增 50 筆測試資料。')) return;
+        fetch("{% url 'WasteManagement:random_transport_api' %}", { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                NotificationUtils.showAlert('成功', '已生成 50 筆測試載運紀錄！', 'success');
+                setTimeout(() => { window.location.href = '/management/transportation/'; }, 1500);
+            } else {
+                NotificationUtils.showAlert('失敗', '生成測試資料失敗，請稍後再試。', 'error');
+            }
+        }).catch(err => {
+            console.error(err);
+            NotificationUtils.showAlert('錯誤', '發生錯誤，請檢查網路連線。', 'error');
+        });
     }
 </script>
 {% endblock %}

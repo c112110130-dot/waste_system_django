@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/delete_records/', views.delete_data, name='delete_data'),
     # 新增單筆紀錄
     path('api/record_waste/', views.record_waste_api, name='api_record_waste'),
+    path('api/waste_record/<int:record_id>/', views.get_record_detail_api, name='api_get_record_detail'),
     # 刪除載運單
     path('api/delete_batches/', views.delete_records_api, name='delete_batches_api'),
     path('api/locations/', views.locations_api, name='locations_api'),

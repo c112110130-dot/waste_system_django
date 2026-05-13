@@ -6,12 +6,12 @@ import sqlite3
 import time
 from django.utils import timezone
 from datetime import datetime,timedelta
-from collections import Counter
+from collections import Counter, defaultdict
 
 from django.contrib import messages
 from dateutil import relativedelta
 from django.db import transaction, OperationalError, connections
-from django.db.models import F, ExpressionWrapper, fields, Q ,DateTimeField
+from django.db.models import F, Count, ExpressionWrapper, fields, Q ,DateTimeField
 from django.http import JsonResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST,require_GET
@@ -2274,100 +2274,6 @@ def settlement_process(request):
     return redirect('management:settlement_page') 
 
 
-# def settlement_view(request):
-#     departments_list = Department.objects.all()
-#     locations_list = LocationPoint.objects.all()
-#     weighers_list = UserProfile.objects.all()
-#     process_agencies = processAgency.objects.all()
-#     clear_agencies = clearAgency.objects.all()
-#     Waste_types = WasteType.objects.all()
-#     all_records =  WasteRecord_New.objects.filter().order_by('-create_time')
-#     f_start_date = request.GET.get('start_date', '')
-#     f_end_date = request.GET.get('end_date', '')
-#     f_location = request.GET.get('location', '')
-#     f_dept = request.GET.get('dept', '')
-#     f_weigher = request.GET.get('weigher', '')
-#     f_waste_type = request.GET.get('waste_type', '')
-#     sort_by = request.GET.get('sort_by', 'newest') # 預設排序：最新
-
-#     filtered_records =  []
-    
-#     for r in all_records:
-#         match = True
-        
-#         # 1. 日期區間篩選
-#         if f_start_date:
-#             try:
-#                 naive_sd = datetime.strptime(f_start_date, '%Y-%m-%d')
-#                 sd = timezone.make_aware(naive_sd)
-#                 if r.create_time < sd: match = False
-#             except ValueError: pass
-#         if f_end_date:
-#             try:
-#                 # 結束日期包含當天，所以加一天變成當日 23:59:59 的概念
-#                 naive_ed = datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1)
-#                 ed = timezone.make_aware(naive_ed)
-#                 if r.create_time >= ed: match = False
-#             except ValueError: pass
-
-#         # 2. 定點/部門/人員篩選 (比對 ID)
-#         if f_location and str(r.location_id) != str(f_location): match = False
-#         if f_dept and str(r.department_id) != str(f_dept): match = False
-#         if f_weigher and str(r.creator_id) != str(f_weigher): match = False
-#         if f_waste_type and str(r.waste_type_id) != str(f_waste_type): match = False
-
-#         if match:
-#             filtered_records.append(r)
-
-#     if sort_by == 'newest':
-#         # 預設使用當前時間防止 key error (若資料庫欄位名不同請修改)
-#         filtered_records.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=True)
-#     elif sort_by == 'oldest':
-#         filtered_records.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=False)
-#     elif sort_by == 'weight_desc':
-#         filtered_records.sort(key=lambda x: getattr(x, 'weight', 0), reverse=True)
-#     elif sort_by == 'weight_asc':
-#         filtered_records.sort(key=lambda x: getattr(x, 'weight', 0), reverse=False)
-
-#     page_size_param = request.GET.get('page_size', '10')
-#     try:
-#         page_size = int(page_size_param)
-#     except ValueError:
-#         page_size = 10
-
-#     paginator = Paginator(filtered_records, page_size)
-#     page_number = request.GET.get('page', 1)
-
-#     try:
-#         page_obj = paginator.page(page_number)
-#     except (PageNotAnInteger, EmptyPage):
-#         # 若頁數錯誤，預設回傳第一頁
-#         page_obj = paginator.page(1)
-
-#     total_w = sum(item.weight for item in filtered_records if hasattr(item, 'weight') and item.weight is not None)
-
-#     context = {
-#         'page_obj': page_obj,
-#         'current_page_size': page_size,
-#         'all_filtered_data': filtered_records,
-#         'total_weight_sum': round(total_w, 3),
-#         'start_date': f_start_date,
-#         'end_date': f_end_date,
-#         'selected_location': f_location,
-#         'selected_dept': f_dept,
-#         'selected_weigher': f_weigher,
-#         'selected_waste_type': f_waste_type,
-#         'current_sort': sort_by,
-
-#         'departments': departments_list,
-#         'locations': locations_list,
-#         'weighers': weighers_list,
-#         'waste_types': Waste_types,
-#         'process_agencies': process_agencies,
-#         'clear_agencies': clear_agencies,
-#     }
-
-#     return render(request, 'management/settlement_fragment.html', context)
     
 def settlement_view(request):
     f_start = request.GET.get('start_date', '')
@@ -2441,105 +2347,6 @@ def settlement_view(request):
         return render(request, 'management/settlement_table_content.html', context)
     return render(request, 'management/settlement_fragment.html', context)
 
-# def transportation_view(request):
-    
-#     f_start_date = request.GET.get('start_date', '')
-#     f_end_date = request.GET.get('end_date', '')
-#     f_agency1 = request.GET.get('agency1', '') 
-#     f_agency2 = request.GET.get('agency2', '')
-#     sort_by = request.GET.get('sort_by', 'newest')
-    
-#     try: 
-#         page_size = int(request.GET.get('page_size', '10'))
-#     except ValueError: 
-#         page_size = 10
-
-#     batches = TransportRecord.objects.select_related(
-#         'clear_agency', 'process_agency', 'settler'
-#     ).annotate(
-#         db_total_weight=Sum('wasterecord_new__weight'),  
-#         db_item_count=Count('wasterecord_new')
-#     ).prefetch_related('wasterecord_new_set')
-    
-#     if f_start_date:
-#         try:
-#             start_dt = timezone.make_aware(datetime.strptime(f_start_date, '%Y-%m-%d'))
-#             batches = batches.filter(settle_time__gte=start_dt)
-#         except ValueError: pass
-        
-#     if f_end_date:
-#         try:
-#             end_dt = timezone.make_aware(datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1))
-#             batches = batches.filter(settle_time__lt=end_dt)
-#         except ValueError: pass
-#     agency_id1 = None
-#     agency_id2 = None
-#     if f_agency1:
-#         try:
-#             agency_type, agency_id1 = f_agency1.split('_')
-#             f_agency1 = agency_type
-#             agency_id1 = int(agency_id1)
-#             if agency_type == 'clear':
-#                 batches = batches.filter(clear_agency_id=agency_id1)
-                
-#             elif agency_type == 'process':
-#                 batches = batches.filter(process_agency_id=agency_id1)
-#         except ValueError:
-#             pass
-
-#     if f_agency2:
-#         try:
-#             agency_type, agency_id2 = f_agency2.split('_')
-#             f_agency2 = agency_type
-#             agency_id2 = int(agency_id2)
-#             if agency_type == 'clear':
-#                 batches = batches.filter(clear_agency_id=agency_id2)
-#             elif agency_type == 'process':  
-#                 batches = batches.filter(process_agency_id=agency_id2)
-#         except ValueError:
-#             pass
-
-#     weight_data = batches.aggregate(weight_sum=Sum('db_total_weight'))
-#     raw_weight = weight_data['weight_sum'] or 0
-#     total_weight_sum = round(raw_weight, 2)
-#     if sort_by == 'newest':
-#         batches = batches.order_by('-settle_time')
-#     elif sort_by == 'oldest':
-#         batches = batches.order_by('settle_time')
-#     elif sort_by == 'weight_desc':
-#         batches = batches.order_by('-db_total_weight')
-#     elif sort_by == 'weight_asc':
-#         batches = batches.order_by('db_total_weight')
-#     else:
-#         batches = batches.order_by('-settle_time')
-
-#     paginator = Paginator(batches, page_size) 
-#     page_obj = paginator.get_page(request.GET.get('page', 1))
-
-#     # 8. 準備下拉選單資料
-#     try:
-#         process_agencies = processAgency.objects.filter()
-#         clear_agencies = clearAgency.objects.filter()
-#     except:
-#         process_agencies = []
-#         clear_agencies = []
-
-#     context = {
-#         'agency_id1s': agency_id1,
-#         'agency_id2s': agency_id2,
-#         'page_obj': page_obj, 
-#         'start_date': f_start_date, 
-#         'end_date': f_end_date,
-#         'selected_agency1': f_agency1, 
-#         'selected_agency2': f_agency2,
-#         'current_page_size': page_size,
-#         'current_sort': sort_by,
-#         'total_weight_sum': round(total_weight_sum, 2),
-#         'clear_agencies': clear_agencies,
-#         'process_agencies': process_agencies,
-#     }
-    
-#     return render(request, 'management/transportation.html', context)
 
 def transportation_view(request):
     f_start = request.GET.get('start_date', '')
@@ -2604,40 +2411,6 @@ def mobile_station_view(request):
     }
     return render(request, 'management/mobile/station.html', context)
 
-# @require_POST
-# def delete_records_api(request):
-#     try:
-#         # 1. 解析前端傳來的 JSON 資料
-#         # 因為前端 fetch header 是 'application/json'，資料不在 POST 裡，而在 body 裡
-#         data = json.loads(request.body)
-#         ids = data.get('ids', [])
-
-#         if ids:
-#             # 2. 找出要刪除的清運單
-#             batches_to_delete = TransportRecord.objects.filter(id__in=ids)
-            
-#             # === 🔥 關鍵邏輯：釋放廢棄物紀錄 (Safe Delete) ===
-#             # 在刪除單據前，先把裡面的廢棄物紀錄狀態還原
-#             # 這樣它們就會回到「未結算列表」，而不會憑空消失
-#             # 注意：這裡的 filter 條件是 transportRecord__in (反向關聯查找)
-#             WasteRecord_New.objects.filter(transportrecord__in=batches_to_delete).update(
-#                 is_transported=False,  # 標記為未運送
-#                 transportrecord=None   # 解除關聯 (變回 NULL)
-#             )
-
-#             # 3. 安全之後，才執行刪除清運單
-#             deleted_count, _ = batches_to_delete.delete()
-            
-#             return JsonResponse({'status': 'success', 'deleted': deleted_count})
-#         else:
-#             return JsonResponse({'status': 'error', 'message': '未提供 ID'}, status=400)
-
-#     except Exception as e:
-#         print(f"API 刪除錯誤: {str(e)}")  # 建議印出來方便除錯
-#         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-#     except Exception as e:
-#         print(f"刪除失敗: {e}")
-#         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 def delete_records_api(request):
     try:
@@ -2648,41 +2421,6 @@ def delete_records_api(request):
             batches.delete()
         return JsonResponse({'status': 'success'})
     except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
-
-# @require_POST
-# def delete_batches_api(request):
-#     try:
-#         # 1. 解析前端傳來的 JSON 資料
-#         # 因為前端 fetch header 是 'application/json'，資料不在 POST 裡，而在 body 裡
-#         data = json.loads(request.body)
-#         ids = data.get('ids', [])
-
-#         if ids:
-#             # 2. 找出要刪除的清運單
-#             batches_to_delete = TransportRecord.objects.filter(id__in=ids)
-            
-#             # === 🔥 關鍵邏輯：釋放廢棄物紀錄 (Safe Delete) ===
-#             # 在刪除單據前，先把裡面的廢棄物紀錄狀態還原
-#             # 這樣它們就會回到「未結算列表」，而不會憑空消失
-#             # 注意：這裡的 filter 條件是 transportRecord__in (反向關聯查找)
-#             WasteRecord_New.objects.filter(transportrecord__in=batches_to_delete).update(
-#                 is_transported=False,  # 標記為未運送
-#                 transportrecord=None   # 解除關聯 (變回 NULL)
-#             )
-
-#             # 3. 安全之後，才執行刪除清運單
-#             deleted_count, _ = batches_to_delete.delete()
-            
-#             return JsonResponse({'status': 'success', 'deleted': deleted_count})
-#         else:
-#             return JsonResponse({'status': 'error', 'message': '未提供 ID'}, status=400)
-
-#     except Exception as e:
-#         print(f"API 刪除錯誤: {str(e)}")  # 建議印出來方便除錯
-#         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-#     except Exception as e:
-#         print(f"刪除失敗: {e}")
-#         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @require_POST
@@ -2872,122 +2610,7 @@ def qrcode_print_view(request):
 
 alert_records = []
 
-# def generate_alert_data():
-#     global alert_records
-#     if alert_records: return
-#     random.seed(88) 
-#     alert_records = []
-    
-#     alert_types_mapping = {
-#         '超重': '重量異常',
-#         '重量不足': '重量異常',
-#         '資料傳輸失敗': '設備異常',
-#         '通訊異常': '設備異常'
-#     }
-    
-#     for i in range(80): 
-#         hours_ago = random.randint(1, 720) 
-#         create_time = datetime.now() - timedelta(hours=hours_ago)
-#         alert_name = random.choice(list(alert_types_mapping.keys()))
-#         alert_type = alert_types_mapping[alert_name]
-        
-#         if alert_name == '資料傳輸失敗' or alert_name == '超重': severity = 'High'
-#         else: severity = 'Medium'
-            
-#         fake_alert = {
-#             'id': i + 1,
-#             'create_time': create_time,
-#             'weigher': weighers_list[random.randint(0, 3)],
-#             'alert_name': alert_name,
-#             'alert_type': alert_type,
-#             'severity': severity
-#         }
-#         alert_records.append(fake_alert)
 
-# def alert_record_view(request):
-#     alert_records = WasteRecord_New.objects.all()
-#     weighers_list = UserProfile.objects.all()  
-#     f_start_date = request.GET.get('start_date', '')
-#     f_end_date = request.GET.get('end_date', '')
-#     f_alert_name = request.GET.get('alert_name', '')
-#     f_alert_type = request.GET.get('alert_type', '')
-#     f_weigher = request.GET.get('weigher', '')
-#     sort_by = request.GET.get('sort_by', 'newest')
-
-#     filtered_alerts = []
-#     for r in alert_records:
-#         match = True
-        
-#         # 1. 日期區間篩選
-#         if f_start_date:
-#             try:
-#                 naive_sd = datetime.strptime(f_start_date, '%Y-%m-%d')
-#                 sd = timezone.make_aware(naive_sd)
-#                 if r.create_time < sd: match = False
-#             except ValueError: pass
-#         if f_end_date:
-#             try:
-#                 # 結束日期包含當天，所以加一天變成當日 23:59:59 的概念
-#                 naive_ed = datetime.strptime(f_end_date, '%Y-%m-%d') + timedelta(days=1)
-#                 ed = timezone.make_aware(naive_ed)
-#                 if r.create_time >= ed: match = False
-#             except ValueError: pass
-
-#         # 2. 定點/部門/人員篩選 (比對 ID)
-#         if f_alert_name and r.alert_name != f_alert_name: match = False
-#         if f_alert_type and r.alert_type != f_alert_type: match = False
-#         if f_weigher and str(r.weigher_id) != str(f_weigher): match = False
-
-#         if match:
-#             filtered_alerts.append(r)
-
-#     if sort_by == 'newest':
-#         # 預設使用當前時間防止 key error (若資料庫欄位名不同請修改)
-#         filtered_alerts.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=True)
-#     elif sort_by == 'oldest':
-#         filtered_alerts.sort(key=lambda x: getattr(x, 'create_time', datetime.now()), reverse=False)
-#     elif sort_by == 'weight_desc':
-#         filtered_alerts.sort(key=lambda x: getattr(x, 'weight', 0), reverse=True)
-#     elif sort_by == 'weight_asc':
-#         filtered_alerts.sort(key=lambda x: getattr(x, 'weight', 0), reverse=False)
-
-#     page_size_param = request.GET.get('page_size', '10')
-#     try:
-#         page_size = int(page_size_param)
-#     except ValueError:
-#         page_size = 10
-
-#     paginator = Paginator(filtered_alerts, page_size)
-#     page_number = request.GET.get('page', 1)
-
-#     try:
-#         page_obj = paginator.page(page_number)
-#     except (PageNotAnInteger, EmptyPage):
-#         # 若頁數錯誤，預設回傳第一頁
-#         page_obj = paginator.page(1)
-
-#     # 🌟 重點：打包過濾後的全部資料供前端匯出使用
-#     export_list = []
-#     for a in filtered_alerts:
-#         export_list.append({
-#             'create_time': a.create_time.strftime("%Y-%m-%d %H:%M") if a.create_time else '-',
-#             'weigher': a.creator.username if a.creator else '-',
-            
-            
-#         })
-
-#     context = {
-#         'page_obj': page_obj,
-#         'weighers': weighers_list, 
-#         'start_date': f_start_date, 'end_date': f_end_date,
-#         'selected_alert_name': f_alert_name,
-#         'selected_alert_type': f_alert_type,
-#         'selected_weigher': f_weigher,
-#         'current_sort': sort_by, 
-#         'current_page_size': page_size,
-#         'all_filtered_data': json.dumps(export_list), # 傳送至前端
-#     }
-    # return render(request, 'management/alert_record.html', context)
 
 def alert_record_view(request):
     f_start = request.GET.get('start_date', '')
@@ -2997,65 +2620,76 @@ def alert_record_view(request):
     f_size = int(request.GET.get('page_size', 10))
     f_alert_name = request.GET.get('alert_name', '')
     f_alert_type = request.GET.get('alert_type', '')
-    alert_settings = AlertConfig.objects.all()
+    departments = Department.objects.all()
     waste_types = WasteType.objects.all()
-    alert_settings_dict = {s.waste_type_id: s for s in alert_settings}
+    alert_settings = AlertConfig.objects.all()     
+    alert_settings_dict = {s.department_id: s for s in alert_settings}
+    today = timezone.now().date()
+    yesterday = today - timedelta(days=1)
+
+    
+    for s in departments:
+         if s.id not in alert_settings_dict:
+             alert_settings_dict[s.id] = AlertConfig.objects.update_or_create(department_id=s.id, overdue_hours=24, weight_max=100, weight_min=1, time_frequency='每小時')
+    for s in waste_types:
+         if s.id not in alert_settings_dict:
+             alert_settings_dict[s.id] = AlertConfig.objects.update_or_create(waste_type_id=s.id, overdue_hours=24, weight_max=100, weight_min=1, time_frequency='每小時')
 
     now = timezone.now()
     month_threshold = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     weight_alert_q = Q(
-        Q(weight__gt=F('waste_type__alert_configs__weight_max')) |
-        Q(weight__lt=F('waste_type__alert_configs__weight_min'))
+        Q(weight__gt=F('department__alert_configs__weight_max')) |
+        Q(weight__lt=F('department__alert_configs__weight_min'))
     )
-    # for s in waste_types:
-    #     if s.id not in alert_settings_dict:
-    #         alert_settings_dict[s.id] = AlertConfig.objects.create(waste_type_id=s.id, overdue_hours=24, weight_max=100, weight_min=1, time_frequency='每小時')
-    time_alert_query = Q(create_time__lt=month_threshold)
+
     query = Q(transportrecord__isnull=True)
-    query &= Q(
-        Q(weight__gt=F('waste_type__alert_configs__weight_max')) | 
-        Q(weight__lt=F('waste_type__alert_configs__weight_min'))
-    ) | Q(
-        create_time__lte=month_threshold
-    )   
-      
+    query &= Q(Q(weight_alert_q) | Q(create_time__lte=month_threshold))
     if f_start: query &= Q(create_time__date__gte=f_start)
     if f_end: query &= Q(create_time__date__lte=f_end)
 
-    alerts = WasteRecord_New.objects.filter(query).select_related('creator', 'waste_type')
-
+    alerts = WasteRecord_New.objects.filter(query)
+    dept_counts = (
+        WasteRecord_New.objects
+        .filter(create_time__date=yesterday)
+        .values('department')
+        .annotate(total=Count('id'))
+    )
+    dept_count_dict = {d['department']: d['total'] for d in dept_counts}
     if f_alert_type:
         if f_alert_type == '重量異常':
             alerts = alerts.filter(weight_alert_q)
         elif f_alert_type == '清運逾期':
-            alerts = alerts.filter(create_time__lte=month_threshold,weight__lt=F('waste_type__alert_configs__weight_max'),weight__gt=F('waste_type__alert_configs__weight_min'))
+            alerts = alerts.filter(create_time__lte=month_threshold,weight__lt=F('department__alert_configs__weight_max'),weight__gt=F('department__alert_configs__weight_min'))
 
     if f_alert_name:
         if f_alert_name == '重量超標':
-            alerts = alerts.filter(weight__gt=F('waste_type__alert_configs__weight_max'))
+            alerts = alerts.filter(weight__gt=F('department__alert_configs__weight_max'))
         elif f_alert_name == '重量不足':
-            alerts = alerts.filter(weight__lt=F('waste_type__alert_configs__weight_min'))
+            alerts = alerts.filter(weight__lt=F('department__alert_configs__weight_min'))
         elif f_alert_name == '過磅未處理':
-            alerts = alerts.filter(create_time__lte=month_threshold,weight__lt=F('waste_type__alert_configs__weight_max'),weight__gt=F('waste_type__alert_configs__weight_min'))
+            alerts = alerts.filter(create_time__lte=month_threshold,weight__lt=F('department__alert_configs__weight_max'),weight__gt=F('department__alert_configs__weight_min'))
 
-    if f_weigher:
-        alerts = alerts.filter(creator_id=f_weigher)
+
     if f_sort == 'severity_desc': alerts = alerts.order_by('-weight')
     elif f_sort == 'severity_asc': alerts = alerts.order_by('weight')
     elif f_sort == 'oldest': alerts = alerts.order_by('create_time')
     else: alerts = alerts.order_by('-create_time')
+    dept_list = []
 
     all_data_list = []
+    daily_groups = defaultdict(lambda: {
+        'items': [],
+        'total_weight': 0,
+        'weigher_names': set()
+    })
+
     for a in alerts:
-        alert_settings = alert_settings_dict.get(a.waste_type_id)
+        alert_settings = alert_settings_dict.get(a.department_id)
         weight_max = alert_settings.weight_max if alert_settings else 100
         weight_min = alert_settings.weight_min if alert_settings else 1
         is_weight_alert = a.weight > weight_max or a.weight < weight_min
-        is_overdue = False
-        if not getattr(a, 'is_transported', False):
-            if a.create_time and a.create_time <= month_threshold:
-                is_overdue = True
+        freq = getattr(alert_settings, 'time_frequency', '每月') if alert_settings else '每月'
 
         if is_weight_alert:
             a.alert_name = "重量超標" if a.weight > weight_max else "重量不足"
@@ -3063,36 +2697,124 @@ def alert_record_view(request):
         else:
             a.alert_name = "過磅未處理"
             a.alert_type = "清運逾期"
-    
 
-        a.weigher = a.creator
-        display_name = a.creator.get_full_name() or a.creator.username if a.creator else '系統'
-        
+        if freq == 'daily':
+            day_key = a.create_time.strftime('%Y-%m-%d')
+            group_key = (day_key, a.department_id, a.alert_type)         
+            g = daily_groups[group_key]
+            g['items'].append(a)
+            g['total_weight'] += float(a.weight)
+            g['weigher_names'].add(a.creator.username if a.creator else '-')
+            g['id'] = f"{a.id}" 
+            g['department'] = a.department if a.department else None
+            g['waste_type'] = a.waste_type.name if a.waste_type else ''
+            g['create_time'] = day_key
+            g['alert_name'] = a.alert_name
+            g['alert_type'] = a.alert_type
+        elif freq == 'weekly':
+            week_key = a.create_time.strftime('%Y-%W')
+            group_key = (week_key, a.department_id, a.alert_type)         
+            g = daily_groups[group_key]
+            g['items'].append(a)
+            g['total_weight'] += float(a.weight)
+            g['weigher_names'].add(a.creator.username if a.creator else '-')
+            g['id'] = f"{a.id}" 
+            g['department'] = a.department if a.department else None
+            g['waste_type'] = a.waste_type.name if a.waste_type else ''
+            g['create_time'] = week_key
+            g['alert_name'] = a.alert_name
+            g['alert_type'] = a.alert_type
+        elif freq == 'monthly':
+            month_key = a.create_time.strftime('%Y-%m')
+            group_key = (month_key, a.department_id, a.alert_type)         
+            g = daily_groups[group_key]
+            g['items'].append(a)
+            g['total_weight'] += float(a.weight)
+            g['weigher_names'].add(a.creator.username if a.creator else '-')
+            g['id'] = f"{a.id}" 
+            g['department'] = a.department if a.department else None
+            g['waste_type'] = a.waste_type.name if a.waste_type else ''
+            g['create_time'] = month_key
+            g['alert_name'] = a.alert_name
+            g['alert_type'] = a.alert_type
+        else:
+            all_data_list.append({
+                'id': a.id,
+                'is_aggregated': False,
+                'create_time': a.create_time.strftime('%Y-%m-%d %H:%M'),
+                'weight': float(a.weight),
+                'total_weight': float(a.weight),
+                'department': a.department if a.department else None,
+                'waste_type': a.waste_type.name if a.waste_type else '',
+                'alert_name': a.alert_name,
+                'alert_type': a.alert_type,
+                'creator': a.creator.username if a.creator else '-',
+                'items': [a],
+                'link_url': f'/management/locate/{a.id}/' 
+            })
+    for key, g in daily_groups.items():
         all_data_list.append({
-            'id': a.id,
-            'create_time': a.create_time.strftime('%Y-%m-%d %H:%M') if a.create_time else '',
-            'weight': float(a.weight),
-            'weigher': display_name or '未知',
-            'alert_name': a.alert_name,
-            'alert_type': a.alert_type,
-            'status_color': 'negative' if (is_weight_alert or is_overdue) else '',
+            'id': g['id'],
+            'is_aggregated': True,
+            'create_time': g['create_time'],
+            'weight': g['total_weight'],
+            'total_weight': g['total_weight'],
+            'department': g['department'],
+            'waste_type': g['waste_type'],
+            'alert_name': g['alert_name'],
+            'alert_type': f"{g['alert_type']}",
+            'creator': f"{len(g['weigher_names'])} 人經手",
+            'items': g['items'],
+            'link_url': f'/management/locate/{g['items'][0].id}/'
         })
 
-    paginator = Paginator(alerts, f_size)
+    all_data_list.sort(key=lambda x: x['create_time'], reverse=(f_sort != 'oldest'))
+
+    paginator = Paginator(all_data_list, f_size)
     page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    alert_json_data = json.dumps(all_data_list, default=str)
+
+    dept_list = []
+
+    configs = AlertConfig.objects.filter(is_active=True)
+
+    for config in configs:
+        if not config.department:
+            continue
+
+        dept_id = config.department.id
+        dept_name = config.department.name
+
+        actual = dept_count_dict.get(dept_id, 0)
+        standard = config.weighting_counts or 0
+
+        percent = int((actual / standard) * 100) if standard > 0 else 0
+
+        dept_list.append({
+            'name': dept_name,
+            'actual': actual,
+            'standard': standard,
+            'percent': min(percent, 100),  
+            'status': 'danger' if actual < standard else 'normal'
+        })
 
     context = {
         'page_obj': page_obj,
         'weighers': UserProfile.objects.all(),
-        'all_filtered_data': all_data_list, # 傳遞 list 給 json_script
+        'all_filtered_data': all_data_list, 
+        'alert_json_data': alert_json_data,
         'current_page_size': f_size, 'current_sort': f_sort,
         'start_date': f_start, 'end_date': f_end, 'selected_weigher': f_weigher,
         'waste_types': WasteType.objects.all(), 'departments': Department.objects.all(),
         'alert_settings': AlertConfig.objects.select_related('waste_type').all(),
+        'dept_list': dept_list
     }
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'management/alert_record_table_content.html', context)
+    elif request.headers.get('x-requested-with') == 'analysis':
+        return render(request, 'management/alert_record_analysis.html', context)
     return render(request, 'management/alert_record.html', context)
 
 @require_POST
@@ -3103,6 +2825,7 @@ def save_alert_settings(request):
         weight_max = data.get('weight_max')
         weight_min = data.get('weight_min')
         frequency = data.get('frequency')
+        weighting_counts = data.get('weighting_counts')
 
         if not waste_type or weight_max is None or weight_min is None or not frequency: 
             return JsonResponse({'status': 'error', 'message': '資料不完整'})
@@ -3112,7 +2835,8 @@ def save_alert_settings(request):
             defaults={
                 'weight_max': weight_max,
                 'weight_min': weight_min,
-                'time_frequency': frequency
+                'time_frequency': frequency,
+                'weighting_counts': weighting_counts
             }
         )
 
@@ -3201,7 +2925,8 @@ def get_alert_settings(request):
                 'waste_type': s.waste_type.name if s.waste_type else '未知',
                 'weight_max': s.weight_max,
                 'weight_min': s.weight_min,
-                'time_frequency': s.time_frequency
+                'time_frequency': s.time_frequency,
+                'weighting_counts': s.weighting_counts
             })
         return JsonResponse({'status': 'success', 'settings': settings_list})
     except Exception as e:
@@ -3218,3 +2943,26 @@ def locate_record_view(request, record_id):
     page_number = math.floor(count_before / page_size) + 1
     
     return redirect(f'/management/settlement/?page={page_number}&id={record_id}')
+
+def get_record_detail_api(request, record_id):
+    record = get_object_or_404(
+        WasteRecord_New.objects.select_related('waste_type', 'department', 'location', 'creator'), 
+        id=record_id
+    )
+
+    data = {
+        'status': 'success',
+        'data': {
+            'id': record.id,
+            'create_time': record.create_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'weight': f"{record.weight:.3f} kg",
+            'waste_type': record.waste_type.name if record.waste_type else "未分類",
+            'department': record.department.name if record.department else "無",
+            'location': record.location.name if record.location else "無",
+            'weigher': record.creator.get_full_name() or record.creator.username if record.creator else "系統",
+            'is_transported': record.is_transported, # 之前定義的 property
+            'transport_time': record.transportrecord.create_time.strftime('%Y-%m-%d %H:%M') if hasattr(record, 'transportrecord') and record.transportrecord else "尚未清運",
+
+        }
+    }
+    return JsonResponse(data)

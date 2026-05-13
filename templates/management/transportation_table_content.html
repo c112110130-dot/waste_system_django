@@ -190,7 +190,7 @@
                 <td style="font-family: monospace;">#{{ item.id }}</td>
                 <td>{{ item.department.name }}</td><td>{{ item.location.name }}</td>
                 <td>{{ item.create_time|date:"Y-m-d H:i" }}</td>
-                <td style="text-align: right; font-weight: bold; color: #db2828;">{{ item.weight|floatformat:3 }}</td>
+                <td style="text-align: left; font-weight: bold; color: #db2828;">{{ item.weight|floatformat:3 }}</td>
                 <td>{{ item.creator.username }}</td>
             </tr>
             {% empty %}
