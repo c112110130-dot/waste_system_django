@@ -194,17 +194,17 @@
                     </button>
                     <div style="position: relative;">
                         <button id="exportBtn" class="ts-button btn-batch-white" data-dropdown="export-menu">
-                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出報表清單
+                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出檔案
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
                         </button>
                         <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
-                            <button class="item" onclick="exportToExcel()">匯出 Excel</button>
-                            <button class="item" onclick="exportToPDF()">匯出 PDF</button>
-                            <button class="item" onclick="exportToPNG()">匯出 PNG</button>
+                            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span>匯出 Excel</button>
+                            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span>匯出 PDF</button>
+                            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span>匯出 PNG</button>
                         </div>
                     </div>
                     <button class="ts-button btn-batch-white" onclick="printSelectedReport()">
-                        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印報表
+                        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印
                     </button>
                     <button class="ts-button btn-batch-red" onclick="openBatchDelete()">
                         <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> 刪除選取紀錄
@@ -661,6 +661,7 @@
                 .then(() => {
                     NotificationUtils.showAlert('成功!','載運單已建立。', 'success');
                     setTimeout(() => {
+                        window.location.hash = ''; 
                         refreshTable(window.location.href);
                     }, 1000);
                 })

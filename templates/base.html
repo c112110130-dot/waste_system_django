@@ -147,6 +147,7 @@
                             {% endif %}
                         </div>
                         {% endif %}
+                        {% if user_is_over_out %}
                         <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-report">
                             <span class="ts-icon is-chart-pie-icon"></span>
                             <span class="ts-text is-bold">報表與紀錄</span>
@@ -160,6 +161,7 @@
                             <button class="item" data-href="{% url 'management:settlement_view' %}">廢棄物過磅紀錄管理</button>
                             <button class="item" data-href="{% url 'management:transportation_view' %}">廢棄物載運紀錄管理</button>
                         </div>
+                        {% endif %}
                         {% if user_is_over_imp or user_is_over_reg %}
                         <a class="item tab-item {% if '/prediction' in request.path %}is-active{% endif %}" href="/prediction/">
                             <span class="ts-icon is-chart-line-icon"></span>

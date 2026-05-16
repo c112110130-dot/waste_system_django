@@ -173,7 +173,10 @@ class LocationManager {
                 await NotificationUtils.showAlert('成功', `成功儲存定點資料`, 'success');
                 window.location.reload();
             }
-            else alert('儲存失敗');
+            else {
+                const result = await response.json();
+                await NotificationUtils.showAlert('失敗', result.error, 'error');
+            }
         } catch (error) { alert(`發生錯誤: ${error.message}`); }
     }
 
@@ -195,7 +198,8 @@ class LocationManager {
                     await NotificationUtils.showAlert('成功', `成功刪除 ${ids.length} 筆定點資料`, 'success');
                     window.location.reload();     
                 } else {
-                    alert('刪除失敗');
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
                 }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });
@@ -209,11 +213,13 @@ class LocationManager {
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                     body: JSON.stringify({ ids: [id] })
                 });
+                const result = await response.json();
                 if ((await response.json()).success) {
                     await NotificationUtils.showAlert('成功', `成功刪除定點資料`, 'success');
                     window.location.reload();
                 } else {
-                    alert('刪除失敗');
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
                 }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });
@@ -335,7 +341,10 @@ class LocationManager {
                 window.location.reload();
                 
                 }
-            else alert('儲存失敗');
+            else {
+                const result = await response.json();
+                await NotificationUtils.showAlert('失敗', `儲存失敗: ${result.error}`, 'error');
+            }
         } catch (error) { alert(`發生錯誤: ${error.message}`); }
     }
 
@@ -357,7 +366,10 @@ class LocationManager {
                     await NotificationUtils.showAlert('成功', `成功刪除 ${ids.length} 筆機構資料`, 'success'); 
                     window.location.reload();
                 }
-                else alert('刪除失敗');
+                else {
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
+                }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });
     }
@@ -374,7 +386,8 @@ class LocationManager {
                     await NotificationUtils.showAlert('成功', `成功刪除機構資料`, 'success');
                     window.location.reload();
                 } else {
-                    alert('刪除失敗');
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
                 }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });

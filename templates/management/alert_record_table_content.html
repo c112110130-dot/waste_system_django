@@ -142,14 +142,14 @@
     </div>
     <table class="sub-table is-celled" style=" width: 100%; border-collapse: collapse; table-layout: fixed; background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 8px;">
         <thead>
-            <tr><th>單筆 ID</th><th>種類</th><th>產出部門</th><th>產出定點</th><th>產出時間</th><th>重量 (KG)</th><th>過磅人員</th><th>操作</th></tr>
+            <tr><th>單筆 ID</th><th>種類</th><th>產出定點</th><th>產出時間</th><th>重量 (KG)</th><th>過磅人員</th><th>操作</th></tr>
         </thead>
         {% for record in batch.items %}
         <tbody>
             <tr>
                 <td style="font-family: monospace;">#{{ record.id}}</td>
                 <td>{{ record.waste_type.name }}</td>
-                <td>{{ record.department.name }}</td><td>{{ record.location.name }}</td>
+                <td>{{ record.location.name }}</td>
                 <td>{{ record.create_time|date:"Y-m-d H:i" }}</td>
                 <td style="text-align: left; font-weight: bold; color: #db2828;">{{ record.weight|floatformat:3 }}</td>
                 <td>{{ record.creator }}</td>

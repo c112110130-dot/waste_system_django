@@ -179,7 +179,7 @@
                     {% endif %} -->
                     <div style="position: relative;">
                         <button id="exportBtn" class="ts-button btn-batch-white" data-dropdown="export-menu">
-                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出報表
+                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出檔案
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
                         </button>
                         <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
@@ -548,12 +548,12 @@
     }
 
     random_transport_records = function() {
-        if (!confirm('確定要隨機生成測試載運紀錄嗎？這將會新增 50 筆測試資料。')) return;
+        if (!confirm('確定要隨機生成測試載運紀錄嗎？這將會新增 10 筆測試資料。')) return;
         fetch("{% url 'WasteManagement:random_transport_api' %}", { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
-                NotificationUtils.showAlert('成功', '已生成 50 筆測試載運紀錄！', 'success');
+                NotificationUtils.showAlert('成功', '已生成 10 筆測試載運紀錄！', 'success');
                 setTimeout(() => { window.location.href = '/management/transportation/'; }, 1500);
             } else {
                 NotificationUtils.showAlert('失敗', '生成測試資料失敗，請稍後再試。', 'error');

@@ -59,4 +59,5 @@ urlpatterns = [
     path('api/random_transport/', views.random_transport_records, name='random_transport_api'),
     path('api/get_alert_settings/', views.get_alert_settings, name='api_get_alert_settings'),
     path('locate/<int:record_id>/', views.locate_record_view, name='locate_record'),
+    path('api/last-month-alert-trend/', views.last_month_alert_trend, name='last_month_alert_trend'),
 ]

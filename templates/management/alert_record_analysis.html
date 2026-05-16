@@ -1,4 +1,5 @@
-<div style="display: flex; flex-direction: column; gap: 20px; padding: 20px; width: 50%; box-sizing: border-box;">
+<div style="display: flex; gap: 20px;">
+<div class="column is-6-wide" style="display: flex; flex-direction: column; gap: 10px; padding: 10px; width: 50%; box-sizing: border-box;">
     <div class="ts-container is-fluid" style="padding: 20px; background-color: var(--my-bg); border-radius: 12px; border: 1px solid var(--my-border); width: 100%; box-sizing: border-box;">
         <div style="display: flex; align-items: center; ">
             <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px; color: #db2828;">
@@ -37,8 +38,19 @@
             <span class="ts-icon is-info-icon" style="color: #2185d0;"></span>
             注意：有 {{ dept_list|length }} 個部門尚未完成規定過磅次數。
         </p>
-
     </div>
+    
+</div>
+<div class="column is-6-wide" style="display: flex; flex-direction: column; gap: 10px; padding: 10px; width: 50%; box-sizing: border-box;">
+    <div class="ts-container is-fluid" style="padding: 20px; background-color: var(--my-bg); border-radius: 12px; border: 1px solid var(--my-border); width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; ">
+            <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px; color: #db2828;">
+                <span class="ts-icon is-chart-line-icon" style="color: #db2828;"></span> 上月警示趨勢
+            </div>
+        </div>
+        <canvas id="alertTrendChart" style="margin-top: 20px;"></canvas>
+    </div>
+</div>
 </div>
 
 <script id="alert-data-json" type="application/json">

@@ -393,7 +393,7 @@ class TransportRecord(models.Model):
         processAgency,
         on_delete=models.CASCADE
     ) #處理機構ID
-    settle_time = models.DateTimeField(auto_now_add=True)
+    settle_time = models.DateTimeField(default=timezone.now, verbose_name="結算時間") #結算時間
     @property
     def total_weight(self):
         result = self.wasterecord_new_set.aggregate(total=Sum('weight'))
@@ -442,7 +442,7 @@ class WasteRecord_New(models.Model):
     )
     waste_type = models.ForeignKey(
         WasteType,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True, blank=True,
         related_name='extension_types'
     )  # 廢棄物種類（外來鍵）

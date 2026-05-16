@@ -20,6 +20,7 @@ from django.shortcuts import get_object_or_404, render
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt, csrf_protect, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.db.models.functions import TruncDate
 
 from Main.models import UserProfile
 from MedicalWasteManagementSystem.permissions import *
@@ -2517,8 +2518,19 @@ def api_delete_location(request):
     try:
         data = json.loads(request.body)
         ids_to_delete = data.get('ids', [])
-        
-        # 刪除所有被選中的 LocationPoint 物件
+        errors = []
+        from WasteManagement.models import WasteRecord_New
+        record_count = WasteRecord_New.objects.filter(
+            location_id__in=ids_to_delete
+        ).count()
+                    
+        if record_count > 0:
+            location = LocationPoint.objects.get(id=ids_to_delete[0])
+            errors.append(f"'{location.name}' 仍有 {record_count} 筆廢棄物記錄，無法刪除")
+
+        if errors:
+            return JsonResponse({'success': False, 'error': '; '.join(errors)})
+
         LocationPoint.objects.filter(id__in=[int(i) for i in ids_to_delete]).delete()
         
         return JsonResponse({'success': True})
@@ -2575,6 +2587,23 @@ def api_delete_agency(request):
     try:
         data = json.loads(request.body)
         raw_ids = data.get('ids', []) # ex: ['clear_1', 'process_2']
+        errors = []
+        from WasteManagement.models import TransportRecord
+        for raw_id in raw_ids:
+            agency_type, agency_id = raw_id.split('_')[0], raw_id.split('_')[1]
+            if agency_type == 'clear':
+                record_count = TransportRecord.objects.filter(clear_agency_id=agency_id).count()
+                if record_count > 0:
+                    agency = clearAgency.objects.get(id=agency_id)
+                    errors.append(f"'{agency.name}' 仍有 {record_count} 筆載運記錄，無法刪除")
+            else:
+                record_count = TransportRecord.objects.filter(process_agency_id=agency_id).count()
+                if record_count > 0:
+                    agency = processAgency.objects.get(id=agency_id)
+                    errors.append(f"'{agency.name}' 仍有 {record_count} 筆載運記錄，無法刪除")
+
+        if errors:
+            return JsonResponse({'success': False, 'error': '; '.join(errors)})
         
         # 解析出要刪除的清理機構 ID 和 處理機構 ID
         clear_ids = [i.split('_')[1] for i in raw_ids if i.startswith('clear_')]
@@ -2595,7 +2624,6 @@ def qrcode_print_view(request):
     departments_list = Department.objects.all()
     waste_types_list = WasteType.objects.all()
     if request.user.is_authenticated:
-        # 🟢 順序對調：先抓 first_name (在中文通常被當作姓氏) 再抓 last_name (名字)
         full_name = f"{request.user.first_name}{request.user.last_name}".strip()
         current_user = full_name if full_name else request.user.username
     else:
@@ -2620,6 +2648,7 @@ def alert_record_view(request):
     f_size = int(request.GET.get('page_size', 10))
     f_alert_name = request.GET.get('alert_name', '')
     f_alert_type = request.GET.get('alert_type', '')
+    f_dept = request.GET.get('department', '')
     departments = Department.objects.all()
     waste_types = WasteType.objects.all()
     alert_settings = AlertConfig.objects.all()     
@@ -2647,6 +2676,7 @@ def alert_record_view(request):
     query &= Q(Q(weight_alert_q) | Q(create_time__lte=month_threshold))
     if f_start: query &= Q(create_time__date__gte=f_start)
     if f_end: query &= Q(create_time__date__lte=f_end)
+    if f_dept: query &= Q(department_id=f_dept)
 
     alerts = WasteRecord_New.objects.filter(query)
     dept_counts = (
@@ -2685,59 +2715,15 @@ def alert_record_view(request):
     })
 
     for a in alerts:
-        alert_settings = alert_settings_dict.get(a.department_id)
+        alert_settings = alert_settings_dict.get(a.department)
         weight_max = alert_settings.weight_max if alert_settings else 100
         weight_min = alert_settings.weight_min if alert_settings else 1
         is_weight_alert = a.weight > weight_max or a.weight < weight_min
-        freq = getattr(alert_settings, 'time_frequency', '每月') if alert_settings else '每月'
+        freq = getattr(alert_settings, 'time_frequency', 'monthly') if alert_settings else 'monthly'
 
         if is_weight_alert:
             a.alert_name = "重量超標" if a.weight > weight_max else "重量不足"
-            a.alert_type = "重量異常"        
-        else:
-            a.alert_name = "過磅未處理"
-            a.alert_type = "清運逾期"
-
-        if freq == 'daily':
-            day_key = a.create_time.strftime('%Y-%m-%d')
-            group_key = (day_key, a.department_id, a.alert_type)         
-            g = daily_groups[group_key]
-            g['items'].append(a)
-            g['total_weight'] += float(a.weight)
-            g['weigher_names'].add(a.creator.username if a.creator else '-')
-            g['id'] = f"{a.id}" 
-            g['department'] = a.department if a.department else None
-            g['waste_type'] = a.waste_type.name if a.waste_type else ''
-            g['create_time'] = day_key
-            g['alert_name'] = a.alert_name
-            g['alert_type'] = a.alert_type
-        elif freq == 'weekly':
-            week_key = a.create_time.strftime('%Y-%W')
-            group_key = (week_key, a.department_id, a.alert_type)         
-            g = daily_groups[group_key]
-            g['items'].append(a)
-            g['total_weight'] += float(a.weight)
-            g['weigher_names'].add(a.creator.username if a.creator else '-')
-            g['id'] = f"{a.id}" 
-            g['department'] = a.department if a.department else None
-            g['waste_type'] = a.waste_type.name if a.waste_type else ''
-            g['create_time'] = week_key
-            g['alert_name'] = a.alert_name
-            g['alert_type'] = a.alert_type
-        elif freq == 'monthly':
-            month_key = a.create_time.strftime('%Y-%m')
-            group_key = (month_key, a.department_id, a.alert_type)         
-            g = daily_groups[group_key]
-            g['items'].append(a)
-            g['total_weight'] += float(a.weight)
-            g['weigher_names'].add(a.creator.username if a.creator else '-')
-            g['id'] = f"{a.id}" 
-            g['department'] = a.department if a.department else None
-            g['waste_type'] = a.waste_type.name if a.waste_type else ''
-            g['create_time'] = month_key
-            g['alert_name'] = a.alert_name
-            g['alert_type'] = a.alert_type
-        else:
+            a.alert_type = "重量異常"
             all_data_list.append({
                 'id': a.id,
                 'is_aggregated': False,
@@ -2751,7 +2737,64 @@ def alert_record_view(request):
                 'creator': a.creator.username if a.creator else '-',
                 'items': [a],
                 'link_url': f'/management/locate/{a.id}/' 
-            })
+            })        
+        else:
+            a.alert_name = "過磅未處理"
+            a.alert_type = "清運逾期"
+            if freq == 'daily':
+                day_key = a.create_time.strftime('%Y-%m-%d')
+                group_key = (day_key, a.department, a.alert_type)         
+                g = daily_groups[group_key]
+                g['items'].append(a)
+                g['total_weight'] += float(a.weight)
+                g['weigher_names'].add(a.creator.username if a.creator else '-')
+                g['id'] = f"{a.id}" 
+                g['department'] = a.department if a.department else None
+                g['waste_type'] = a.waste_type.name if a.waste_type else ''
+                g['create_time'] = day_key
+                g['alert_name'] = a.alert_name
+                g['alert_type'] = a.alert_type
+            elif freq == 'weekly':
+                week_key = a.create_time.strftime('%Y-%W')
+                group_key = (week_key, a.department, a.alert_type)         
+                g = daily_groups[group_key]
+                g['items'].append(a)
+                g['total_weight'] += float(a.weight)
+                g['weigher_names'].add(a.creator.username if a.creator else '-')
+                g['id'] = f"{a.id}" 
+                g['department'] = a.department if a.department else None
+                g['waste_type'] = a.waste_type.name if a.waste_type else ''
+                g['create_time'] = week_key
+                g['alert_name'] = a.alert_name
+                g['alert_type'] = a.alert_type
+            elif freq == 'monthly':
+                month_key = a.create_time.strftime('%Y-%m')
+                group_key = (month_key, a.department, a.alert_type)         
+                g = daily_groups[group_key]
+                g['items'].append(a)
+                g['total_weight'] += float(a.weight)
+                g['weigher_names'].add(a.creator.username if a.creator else '-')
+                g['id'] = f"{a.id}" 
+                g['department'] = a.department if a.department else None
+                g['waste_type'] = a.waste_type.name if a.waste_type else ''
+                g['create_time'] = month_key
+                g['alert_name'] = a.alert_name
+                g['alert_type'] = a.alert_type
+            else:
+                all_data_list.append({
+                    'id': a.id,
+                    'is_aggregated': False,
+                    'create_time': a.create_time.strftime('%Y-%m-%d %H:%M'),
+                    'weight': float(a.weight),
+                    'total_weight': float(a.weight),
+                    'department': a.department if a.department else None,
+                    'waste_type': a.waste_type.name if a.waste_type else '',
+                    'alert_name': a.alert_name,
+                    'alert_type': a.alert_type,
+                    'creator': a.creator.username if a.creator else '-',
+                    'items': [a],
+                    'link_url': f'/management/locate/{a.id}/' 
+                })
     for key, g in daily_groups.items():
         all_data_list.append({
             'id': g['id'],
@@ -2762,10 +2805,10 @@ def alert_record_view(request):
             'department': g['department'],
             'waste_type': g['waste_type'],
             'alert_name': g['alert_name'],
-            'alert_type': f"{g['alert_type']}",
+            'alert_type': f"{g['alert_type'] }",
             'creator': f"{len(g['weigher_names'])} 人經手",
             'items': g['items'],
-            'link_url': f'/management/locate/{g['items'][0].id}/'
+            'link_url': f'/management/locate/{g['items'][0].id}/',
         })
 
     all_data_list.sort(key=lambda x: x['create_time'], reverse=(f_sort != 'oldest'))
@@ -2790,14 +2833,14 @@ def alert_record_view(request):
         standard = config.weighting_counts or 0
 
         percent = int((actual / standard) * 100) if standard > 0 else 0
-
-        dept_list.append({
-            'name': dept_name,
-            'actual': actual,
-            'standard': standard,
-            'percent': min(percent, 100),  
-            'status': 'danger' if actual < standard else 'normal'
-        })
+        if actual != standard:
+            dept_list.append({
+                'name': dept_name,
+                'actual': actual,
+                'standard': standard,
+                'percent': min(percent, 100),  
+                'status': 'danger' if actual < standard else 'normal'
+            })
 
     context = {
         'page_obj': page_obj,
@@ -2806,6 +2849,7 @@ def alert_record_view(request):
         'alert_json_data': alert_json_data,
         'current_page_size': f_size, 'current_sort': f_sort,
         'start_date': f_start, 'end_date': f_end, 'selected_weigher': f_weigher,
+        'selected_alert_name': f_alert_name, 'selected_alert_type': f_alert_type, 'selected_dept': f_dept,
         'waste_types': WasteType.objects.all(), 'departments': Department.objects.all(),
         'alert_settings': AlertConfig.objects.select_related('waste_type').all(),
         'dept_list': dept_list
@@ -2824,21 +2868,27 @@ def save_alert_settings(request):
         waste_type = data.get('waste_type')
         weight_max = data.get('weight_max')
         weight_min = data.get('weight_min')
-        frequency = data.get('frequency')
         weighting_counts = data.get('weighting_counts')
+        department = data.get('department')
 
-        if not waste_type or weight_max is None or weight_min is None or not frequency: 
+        if (waste_type and (weight_max is None or weight_min is None)) or (department and weighting_counts is None): 
             return JsonResponse({'status': 'error', 'message': '資料不完整'})
 
-        AlertConfig.objects.update_or_create(
-            waste_type_id=waste_type,
-            defaults={
-                'weight_max': weight_max,
-                'weight_min': weight_min,
-                'time_frequency': frequency,
-                'weighting_counts': weighting_counts
-            }
-        )
+        if(waste_type):
+            AlertConfig.objects.update_or_create(
+                waste_type_id=waste_type if waste_type else None,
+                defaults={
+                    'weight_max': weight_max,
+                    'weight_min': weight_min,
+                }
+            )
+        if(department):
+            AlertConfig.objects.update_or_create(
+                department_id=department if department else None,
+                defaults={
+                    'weighting_counts': weighting_counts,
+                }
+            )    
 
         return JsonResponse({'status': 'success', 'message': '設定儲存成功'})
     except Exception as e:
@@ -2902,7 +2952,7 @@ def random_transport_records(request):
         try:
             all_records = list(WasteRecord_New.objects.filter(transportrecord__isnull=True))
             random.shuffle(all_records)
-            for r in all_records[:50]: 
+            for r in all_records[:10]: 
                 tr = TransportRecord.objects.create(
                     clear_agency=clearAgency.objects.order_by('?').first(),
                     process_agency=processAgency.objects.order_by('?').first(),
@@ -2911,7 +2961,7 @@ def random_transport_records(request):
                 )
                 r.transportrecord = tr
                 r.save()
-            return JsonResponse({'status': 'success', 'message': '已隨機生成 50 筆運輸紀錄'})
+            return JsonResponse({'status': 'success', 'message': '已隨機生成 10 筆運輸紀錄'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': '只允許 POST 請求'})
@@ -2966,3 +3016,44 @@ def get_record_detail_api(request, record_id):
         }
     }
     return JsonResponse(data)
+
+def last_month_alert_trend(request):
+    today = timezone.now().date()
+    alert_settings = AlertConfig.objects.filter(is_active=True)
+
+    first_day_this_month = today.replace(day=1)
+    last_day_last_month = first_day_this_month - timedelta(days=1)
+    first_day_last_month = last_day_last_month.replace(day=1)
+    now = timezone.now()
+    month_threshold = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    weight_alert_q = Q(
+        Q(weight__gt=F('department__alert_configs__weight_max')) |
+        Q(weight__lt=F('department__alert_configs__weight_min'))
+    )
+
+    query = Q(transportrecord__isnull=True)
+    query &= Q(Q(weight_alert_q) | Q(create_time__lte=month_threshold))
+
+    qs = (
+        WasteRecord_New.objects
+        .filter(query, create_time__date__gte=first_day_last_month, create_time__date__lte=last_day_last_month
+        )
+        .annotate(date=TruncDate('create_time'))
+        .values('date')
+        .annotate(count=Count('id'))
+        .order_by('date')
+    )
+
+    result = {}
+    for i in range((last_day_last_month - first_day_last_month).days + 1):
+        d = first_day_last_month + timedelta(days=i)
+        result[str(d)] = 0
+
+    for item in qs:
+        result[str(item['date'])] = item['count']
+
+    return JsonResponse({
+        'dates': list(result.keys()),
+        'counts': list(result.values())
+    })

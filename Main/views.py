@@ -780,8 +780,9 @@ def delete_waste_types(request):
                     waste_type = WasteType.objects.get(id=waste_type_id)
                     
                     # Check if there are waste records using this waste type
-                    from WasteManagement.models import WasteRecord
-                    record_count = WasteRecord.objects.filter(waste_type=waste_type).count()
+                    from WasteManagement.models import WasteRecord_New
+
+                    record_count = WasteRecord_New.objects.filter(waste_type=waste_type).count()
                     
                     if record_count > 0:
                         errors.append(f"'{waste_type.name}' 仍有 {record_count} 筆廢棄物記錄，無法刪除")
@@ -924,8 +925,8 @@ def delete_departments(request):
             for department_id in department_ids:
                 try:
                     # Check if there are waste records for this department
-                    from WasteManagement.models import WasteRecord
-                    record_count = WasteRecord.objects.filter(
+                    from WasteManagement.models import WasteRecord_New
+                    record_count = WasteRecord_New.objects.filter(
                         department_id=department_id
                     ).count()
                     
