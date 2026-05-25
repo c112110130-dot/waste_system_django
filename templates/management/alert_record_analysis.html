@@ -1,0 +1,115 @@
+<div style="display: flex; gap: 20px;">
+<div class="column is-12-wide" style="display: flex; flex-direction: column; gap: 10px; padding: 10px; width: 100%; box-sizing: border-box;">
+<div style="display: flex; gap: 20px; margin-right: 20px; justify-content: flex-end;">
+    <div style="display: flex; align-items: center; margin-left: 10px; ">
+        <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px; color: #db2828;">
+            <span class="ts-icon is-chart-line-icon" style="color: #db2828;"></span> 警示趨勢
+        </div>
+    </div>
+    <switch style="display: flex; align-items: center; gap: 10px; margin-right: 10px; margin-left: auto;">
+        <label class="ts-switch">
+            <input type="checkbox" id="showAllYearormonth" onchange="toggleShowYearormonth(this)">
+            <span class="ts-slider"></span>
+        </label>
+        <span style="color: var(--my-text-secondary); font-size: 0.9rem;">月/年</span>
+    </switch>
+    <input type="month" id="monthPicker" value="{{ current_month }}" onchange="updateAlertTrend()" >
+    <div style="align-items: center; display: flex; gap: 10px;">
+        <button id="exportBtn" class="ts-button btn-batch-white is-outlined" data-dropdown="export-menu">
+            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出檔案
+            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
+        </button> 
+        <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
+            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel</button>
+            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF</button>
+            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG</button>
+        </div>
+    </div>
+    <button class="ts-button btn-batch-white is-outlined" style="margin-right: 10px;" onclick="printSelectedReport()">
+        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印
+    </button>
+</div>
+    <div class="column is-12-wide" style="display: flex; flex-direction: column; gap: 10px; padding: 10px; width: 100%; box-sizing: border-box;">
+        <div class="ts-container is-fluid" style="padding: 20px; background-color: var(--my-bg); border-radius: 12px; border: 1px solid var(--my-border); box-sizing: border-box; width: 1800px; height: 400px;">
+            <canvas id="alertTrendChart" style="margin-top: 20px;width: 1800px; height: 350px;"></canvas>
+        </div>
+    </div>
+</div>
+
+</div>
+<div style="display: flex; width: 100%; gap: 30px;margin: 30px;justify-content: flex-end;">
+    <div style="font-size: 1.2rem; font-weight: bold; color: #db2828; margin-bottom: 15px;">
+            <span class="ts-icon is-clock-rotate-left-icon"></span>
+            昨日過磅監控
+        </div>
+    <div style="width: 300px; margin-left: 0px;">
+        <div class="ts-input is-main">
+            <input type="text" id="dept-monitor-search" placeholder="搜尋部門...">
+        </div>
+    </div>
+    <div style="color: var(--my-text-secondary); margin-top: 5px;">
+        ⚠️ 有 {{ dept_list|length }} 個部門尚未完成規定過磅次數
+    </div>
+    <div class="rwd-group" style="margin-left: auto;margin-right: 50px;">
+        <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
+            {% if page_obj_2.has_previous %}
+                <a class="item" onclick="goToPage2(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
+                <a class="item" onclick="goToPage2('{{ page_obj_2.previous_page_number }}')" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+            {% endif %}
+
+            <span class="item is-text" style="padding: 0 8px; white-space: nowrap;">
+                第
+                <input type="number" class="page-jump-input" id="jump-page-input-bottom" value="{{ page_obj_2.number }}" min="1" max="{{ page_obj_2.paginator.num_pages|default:1 }}" title="輸入頁碼後按 Enter 跳轉" onkeypress="if(event.key === 'Enter') jumpToPage2('bottom')" style="width: 50px; height: 28px; text-align: center; margin: 0 8px; border: 1px solid var(--my-border); background: var(--my-bg-input); color: var(--my-text-main); border-radius: 4px; outline: none; box-sizing: border-box;">
+                / {{ page_obj_2.paginator.num_pages|default:1 }} 頁
+            </span>
+
+            {% if page_obj_2.has_next %}
+                <a class="item" onclick="goToPage2('{{ page_obj_2.next_page_number }}')" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage2('{{ page_obj_2.paginator.num_pages|default:1 }}')" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+            {% endif %}
+        </div>
+    </div>
+</div>  
+
+<div style="margin-top: 20px;">
+    <table class="ts-table dept-monitor-table">
+        <thead>
+            <tr>
+                <th style="text-align: center; width: 30%;">部門</th>
+                <th style="color: #db2828; width: 50%; text-align: center;">實際過磅次數</th>
+                <th style="width: 20%; text-align: center;">實際過磅次數 / 規定次數</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in page_obj_2.object_list %}
+            <tr>
+                <td style="text-align: right;">{{ d.name }}</td> 
+                <td>
+                    <div style="flex: 1; background: #eee; border-radius: 8px; overflow: hidden; width: 100%; height: 24px; display: flex; align-items: center;">
+                        <div style="
+                                    width: {{ d.percent }}%;
+                                    padding: 5px 10px;
+                                    color: white;
+                                    text-align: right;
+                            background-color: {% if d.status == 'danger' %}#e74c3c{% else %}#2ecc71{% endif %};
+                        ">
+                            {{ d.actual }}
+                        </div>
+                    </div>
+                </td>
+                <td style="text-align: center;">{{ d.actual }} / {{ d.standard }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script id="alert-data-json" type="application/json">
+    {{ alert_json_data|safe }}
+</script>

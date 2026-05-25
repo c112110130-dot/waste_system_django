@@ -19,7 +19,7 @@ def permission_name(value):
         'staff': '行政人員',
         'registrar': '登錄者',
         'importer': '匯入者',
-        'not-defined': '未知身份'
+        'outsider': '外部人員'
     }
     return translations.get(value, value.capitalize())
 

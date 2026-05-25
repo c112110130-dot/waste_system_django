@@ -62,7 +62,7 @@ const permission_types = {
     'staff': { name: '行政人員', color: 'color-staff' },
     'registrar': { name: '登錄者', color: 'color-registrar' },
     'importer': { name: '匯入者', color: 'color-importer' },
-    'not-defined': { name: '未知身份', color: 'color-not-defined' }
+    'outsider': { name: '外部人員', color: 'color-outsider' },
 };
 
 // Create account table safely
@@ -108,6 +108,7 @@ function createAccountTable(contentBox, data, perm, fullName, nameClass) {
     
     // Add rows
     tbody.appendChild(createRow('帳號ID', data.username, `ts-text monospace ${!data.username ? 'is-empty' : ''}`));
+    tbody.appendChild(createRow('代碼', data.code || '', ` ${!data.code ? 'is-empty' : ''}`));
     tbody.appendChild(createRow('姓名', fullName, nameClass));
     tbody.appendChild(createRow('身份', {
         element: true,
@@ -124,6 +125,8 @@ function createAccountTable(contentBox, data, perm, fullName, nameClass) {
 // Function to fetch account data
 function fetchAccountData(currentAccount, contentBox) {
     const url = `/account/manage/${currentAccount}/`; // API endpoint for current user data
+    
+
     fetch(url, {
         method: 'GET',
         headers: {
@@ -250,7 +253,8 @@ function changeTheme(theme) {
                     window.themeManager.applyTheme(theme);
                 }
             } else {
-                               
+                
+                
             }
         })
         .catch(error => {

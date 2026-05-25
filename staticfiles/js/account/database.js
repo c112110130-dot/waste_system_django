@@ -116,7 +116,7 @@ class DatabaseManager {
                     <input type="checkbox" value="${wasteType.id}">
                 </label>
             </td>
-            <td>${DOMUtils.escapeHtml(wasteType.name)}</td>
+            <td class="name-cell">${DOMUtils.escapeHtml(wasteType.name)}</td>
             <td class="unit-cell">${wasteType.unit_display}</td>
             <td class="action-cell">
                 <button class="ts-button is-warning is-start-icon btn-edit-waste-type" data-id="${wasteType.id}">
@@ -145,7 +145,6 @@ class DatabaseManager {
                     <select class="edit-unit">
                         <option value="metric_ton" ${wasteType.unit === 'metric_ton' ? 'selected' : ''}>公噸</option>
                         <option value="kilogram" ${wasteType.unit === 'kilogram' ? 'selected' : ''}>公斤</option>
-                        <option value="gram" ${wasteType.unit === 'gram' ? 'selected' : ''}>公克</option>
                     </select>
                 </div>
             </td>
@@ -155,6 +154,9 @@ class DatabaseManager {
                 </button>
                 <button type="button" class="ts-button is-negative is-icon btn-cancel-waste-type">
                     <span class="ts-icon is-xmark-icon"></span>
+                </button>
+                <button type="button" class="ts-button is-negative is-icon btn-delete-waste-type">
+                    <span class="ts-icon is-trash-icon"></span>
                 </button>
             </td>
         `;
@@ -210,7 +212,8 @@ class DatabaseManager {
                     <input type="checkbox" value="${department.id}">
                 </label>
             </td>
-            <td>${DOMUtils.escapeHtml(department.name)}</td>
+            <td class="code-cell">${DOMUtils.escapeHtml(department.code)}</td>
+            <td class="name-cell">${DOMUtils.escapeHtml(department.name)}</td>
             <td class="action-cell">
                 <button class="ts-button is-warning is-start-icon btn-edit-department" data-id="${department.id}">
                     <span class="ts-icon is-pencil-icon"></span>
@@ -229,6 +232,12 @@ class DatabaseManager {
             </td>
             <td>
                 <div class="ts-input is-solid is-fluid">
+                    <input type="text" class="edit-code" value="${DOMUtils.escapeHtml(department.code)}" 
+                           placeholder="輸入部門代碼">
+                </div>
+            </td>
+            <td>
+                <div class="ts-input is-solid is-fluid">
                     <input type="text" class="edit-name" value="${DOMUtils.escapeHtml(department.name)}" 
                            placeholder="輸入部門名稱，用 ; 分隔可以一次新增多個部門">
                 </div>
@@ -239,6 +248,9 @@ class DatabaseManager {
                 </button>
                 <button type="button" class="ts-button is-negative is-icon btn-cancel-department">
                     <span class="ts-icon is-xmark-icon"></span>
+                </button>
+                <button type="button" class="ts-button is-negative is-icon btn-delete-department">
+                    <span class="ts-icon is-trash-icon"></span>
                 </button>
             </td>
         `;
@@ -273,6 +285,17 @@ class DatabaseManager {
             } else if (e.target.closest('.btn-cancel-department')) {
                 this.cancelEditDepartment();
             }
+            else if (e.target.closest('.btn-delete-department')) {
+                const row = e.target.closest('tr');
+                const id = parseInt(row.dataset.id);
+                this.deleteDepartment(id);
+            }
+            else if (e.target.closest('.btn-delete-waste-type')) {
+                const row = e.target.closest('tr');
+                const id = parseInt(row.dataset.id);
+                this.deleteWasteType(id);
+            }
+
         });
         
         // Checkbox events
@@ -346,13 +369,9 @@ class DatabaseManager {
         const option2 = document.createElement('option');
         option2.value = 'kilogram';
         option2.textContent = '公斤';
-        const option3 = document.createElement('option');
-        option3.value = 'gram';
-        option3.textContent = '公克';
         
         unitSelect.appendChild(option1);
         unitSelect.appendChild(option2);
-        unitSelect.appendChild(option3);
         unitDiv.appendChild(unitSelect);
         unitCell.appendChild(unitDiv);
         
@@ -372,10 +391,12 @@ class DatabaseManager {
         const cancelIcon = document.createElement('span');
         cancelIcon.className = 'ts-icon is-xmark-icon';
         cancelButton.appendChild(cancelIcon);
+
         
+
         actionCell.appendChild(saveButton);
         actionCell.appendChild(cancelButton);
-        
+
         // Append all cells to row
         newRow.appendChild(checkboxCell);
         newRow.appendChild(nameCell);
@@ -497,6 +518,7 @@ class DatabaseManager {
                 if (result.success) {
                     NotificationUtils.showAlert('成功', result.message, 'success');
                     await this.loadData();
+                    window.location.reload(); 
                 } else {
                     NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
                 }
@@ -507,6 +529,34 @@ class DatabaseManager {
         });
     }
     
+    deleteWasteType(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此廢棄物種類嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/account/api/database/waste-type/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ ids: [id] })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    NotificationUtils.showAlert('成功', result.message, 'success');
+                    await this.loadData();
+                    
+                } else {
+                    NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                NotificationUtils.showAlert('錯誤', `刪除失敗: ${error.message}`, 'error');
+            }
+        });
+    }
+
     // Department methods
     startAddDepartment() {
         
@@ -539,6 +589,19 @@ class DatabaseManager {
         nameDiv.appendChild(nameInput);
         nameCell.appendChild(nameDiv);
         
+        // Create code input cell
+        const codeCell = document.createElement('td');
+        const codeDiv = document.createElement('div');
+        codeDiv.className = 'ts-input is-solid is-fluid';
+        codeDiv.style.width = '140px'; // Set a fixed width for code input to prevent layout issues
+        const codeInput = document.createElement('input');
+        codeInput.type = 'text';
+        codeInput.className = 'edit-code';
+        codeInput.placeholder = '輸入部門代碼';
+        codeDiv.appendChild(codeInput);
+        codeCell.appendChild(codeDiv);
+        
+
         // Create action cell
         const actionCell = document.createElement('td');
         actionCell.className = 'ts-wrap';
@@ -555,12 +618,14 @@ class DatabaseManager {
         const cancelIcon = document.createElement('span');
         cancelIcon.className = 'ts-icon is-xmark-icon';
         cancelButton.appendChild(cancelIcon);
-        
+
+
         actionCell.appendChild(saveButton);
         actionCell.appendChild(cancelButton);
-        
+
         // Append all cells to row
         newRow.appendChild(checkboxCell);
+        newRow.appendChild(codeCell);
         newRow.appendChild(nameCell);
         newRow.appendChild(actionCell);
         
@@ -607,8 +672,9 @@ class DatabaseManager {
         try {
             const editingRow = document.querySelector('.department-table tbody tr .btn-save-department').closest('tr');
             const nameInput = editingRow.querySelector('.edit-name');
-            
+            const codeInput = editingRow.querySelector('.edit-code');
             const name = nameInput.value.trim();
+            const code = codeInput.value.trim();
             
             if (!name) {
                 NotificationUtils.showAlert('錯誤', '請輸入部門名稱', 'error');
@@ -616,7 +682,7 @@ class DatabaseManager {
                 return;
             }
             
-            const payload = { name: name };
+            const payload = { name: name, code: code };
             
             if (this.editingDepartmentId !== 'new') {
                 payload.id = this.editingDepartmentId;
@@ -685,6 +751,34 @@ class DatabaseManager {
             }
         });
     }
+
+    deleteDepartment(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此部門嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/account/api/database/department/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ ids: [id] })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    NotificationUtils.showAlert('成功', result.message, 'success');
+                    await this.loadData();
+                    window.location.reload();
+                } else {
+                    NotificationUtils.showAlert('錯誤', `刪除失敗: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                NotificationUtils.showAlert('錯誤', `刪除失敗: ${error.message}`, 'error');
+            }
+        });
+    }
     
     // Utility methods
     getSelectedWasteTypeIds() {
@@ -711,11 +805,17 @@ class DatabaseManager {
         const canManageWasteTypes = !this.editingWasteTypeId;
         
         document.querySelectorAll('.btn-add-waste-type').forEach(btn => {
-            btn.style.display = canManageWasteTypes && !hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageWasteTypes && !hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (!hasSelection) ? 'inline-flex' : 'none';
         });
         
         document.querySelectorAll('.btn-delete-waste-types').forEach(btn => {
-            btn.style.display = canManageWasteTypes && hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageWasteTypes && hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (hasSelection) ? 'inline-flex' : 'none';
         });
     }
     
@@ -727,11 +827,17 @@ class DatabaseManager {
         const canManageDepartments = !this.editingDepartmentId;
         
         document.querySelectorAll('.btn-add-department').forEach(btn => {
-            btn.style.display = canManageDepartments && !hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageDepartments && !hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (!hasSelection) ? 'inline-flex' : 'none';
         });
         
         document.querySelectorAll('.btn-delete-departments').forEach(btn => {
-            btn.style.display = canManageDepartments && hasSelection ? 'inline-flex' : 'none';
+            const isEnabled = canManageDepartments && hasSelection;
+            btn.disabled = !isEnabled;
+            btn.classList.toggle('is-disabled', !isEnabled);
+            btn.style.display = (hasSelection) ? 'inline-flex' : 'none';
         });
     }
     
@@ -812,11 +918,14 @@ class DatabaseManager {
         rows.forEach(row => {
             if (row.dataset.id === 'new') return; // Skip editing row
             
-            const nameCell = row.querySelector('td:nth-child(2)');
+            const nameCell = row.querySelector('td:nth-child(3)');
             if (!nameCell) return;
-            
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell ? codeCell.textContent.toLowerCase() : '';
             const name = nameCell.textContent.toLowerCase();
-            const matches = !normalizedQuery || name.includes(normalizedQuery);
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
             row.style.display = matches ? '' : 'none';
         });
     }
@@ -903,4 +1012,5 @@ class DatabaseManager {
             NotificationUtils.showAlert('錯誤', '目前沒有部門資料。請先新增部門才能使用部門廢棄物管理功能。', 'error');
         }
     }
+    
 }

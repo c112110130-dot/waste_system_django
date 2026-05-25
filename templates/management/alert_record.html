@@ -19,10 +19,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
     /* ========================================= */
@@ -56,7 +57,7 @@
 
     .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
     .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
-    .sidebar-box { padding: 25px; }
+    .sidebar-box { padding: 25px; width: 17%;}
 
     label { color: var(--my-text-sub); font-size: 0.95rem; margin-bottom: 8px; display: block; font-weight: bold; }
     .ts-button { border-radius: 8px !important; font-size: 1rem !important; font-weight: bold !important; height: 42px !important; }
@@ -128,14 +129,71 @@
         .print-summary-box { display: block !important; text-align: right; padding: 15px 0; margin-top: 10px; font-size: 14pt; font-weight: bold; color: black !important; border-top: 2px solid #000; }
     }
     .print-header-title, .print-summary-box, .print-only-text { display: none; } 
+
+    .truncate-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+    }
+
+    .sub-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 0.95rem;
+        border: 1px solid var(--my-border);
+    }
+    .sub-table thead {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+    .sub-table th {
+        padding: 12px 8px;
+        text-align: left;
+        border-bottom: 2px solid var(--my-border);
+        color: var(--my-text-sub);
+    }
+    .sub-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--my-border);
+    }
+    .sub-table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    /* 讓 Modal 內的滾動條好看一點 */
+    #modalBody::-webkit-scrollbar {
+        width: 6px;
+    }
+    #modalBody::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 10px;
+    }
+    .ts-dropdown {
+        z-index: 9999 !important;
+    }
 </style>
 
+
 <div class="ts-container" style="--width: 1800px; padding: 23px 15px;">
-    
     <div class="print-header-title">警報紀錄報表</div>
-    <div class="daring-layout">
-        <div class="filter-sidebar">
-            <div class="dashboard-panel sidebar-box">
+            <div class="ts-grid is-relaxed is-3-columns stat-card-container">
+                <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-bell-icon"></span></div><div class="stat-info"><div class="stat-title">警報總數</div><div class="stat-value" id="cardTotalAlerts">0</div></div></div></div>
+                <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-weight-hanging-icon"></span></div><div class="stat-info"><div class="stat-title">重量異常警報</div><div class="stat-value" id="cardTotalWeightingAlerts">0</div></div></div></div>
+                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-weight-hanging-icon"></span></div><div class="stat-info"><div class="stat-title">清運逾期警報</div><div class="stat-value" id="cardTotalCollectionAlerts">0</div></div></div></div>
+            </div>
+    <div class="ts-container has-top-spaced-big" style="--width: auto; color: #1900ff; background-color: transparent; border: none; padding: 0;">
+                <div class="ts-tab is-large" style="background-color: transparent; border: none; color: #1900ff;">
+                    <a class="item is-active" id="table" style="color: #1900ff; font-weight: bold;" onclick="controltstab(event, 'table')">警報紀錄明細</a>
+                    <a class="item" id="analysis" style="color: #1900ff; font-weight: bold;" onclick="controltstab(event, 'analysis')">數據統計分析</a>
+                </div>
+            </div>
+    <div class="daring-layout" id="daring-layout">
+        <div class="dashboard-panel sidebar-box" id="dashboard-panel">
                 <div class="ts-header is-large is-heavy" style="margin-bottom: 20px; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
                     <span class="ts-icon is-filter-icon" style="color: #db2828;"></span> 條件篩選
                 </div>
@@ -157,28 +215,27 @@
                     </div>
                     <div>
                         <label>警報名稱</label>
-                        <select name="alert_name" class="ts-select">
+                        <select name="alert_name" class="ts-select" style="width: 50%;">
                             <option value="">全部警報名稱</option>
-                            <option value="超重" {% if selected_alert_name == '超重' %}selected{% endif %}>超重</option>
+                            <option value="重量超標" {% if selected_alert_name == '重量超標' %}selected{% endif %}>重量超標</option>
                             <option value="重量不足" {% if selected_alert_name == '重量不足' %}selected{% endif %}>重量不足</option>
-                            <option value="資料傳輸失敗" {% if selected_alert_name == '資料傳輸失敗' %}selected{% endif %}>資料傳輸失敗</option>
-                            <option value="通訊異常" {% if selected_alert_name == '通訊異常' %}selected{% endif %}>通訊異常</option>
+                            <option value="過磅未處理" {% if selected_alert_name == '過磅未處理' %}selected{% endif %}>過磅未處理</option>
                         </select>
                     </div>
                     <div>
                         <label>警報類型</label>
-                        <select name="alert_type" class="ts-select">
+                        <select name="alert_type" class="ts-select"style="width: 50%;">
                             <option value="">全部警報類型</option>
                             <option value="重量異常" {% if selected_alert_type == '重量異常' %}selected{% endif %}>重量異常</option>
-                            <option value="設備異常" {% if selected_alert_type == '設備異常' %}selected{% endif %}>設備異常</option>
+                            <option value="清運逾期" {% if selected_alert_type == '清運逾期' %}selected{% endif %}>清運逾期</option>
                         </select>
                     </div>
                     <div>
-                        <label>過磅人員</label>
-                        <select name="weigher" class="ts-select">
-                            <option value="">全部人員</option>
-                            {% for w in weighers %}
-                                <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>{{ w }}</option>
+                        <label>部門</label>
+                        <select name="department" class="ts-select"style="width: 50%;">
+                            <option value="">全部部門</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if selected_dept == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -190,20 +247,17 @@
                         <button type="button" class="ts-button is-secondary" onclick="clearAllFilters()" style="width: 50px; padding: 0;" title="重置">
                             <span class="ts-icon is-rotate-left-icon"></span>
                         </button>
+                        <button type="button" class="ts-button is-secondary" onclick="openSettingModal()" style="width: 50px; padding: 0;">
+                            <span class="ts-icon is-gear-icon"></span>
+                        </button>
                     </div>
                 </form>
             </div>
-        </div>
-
         <div class="main-content">
-            <div class="ts-grid is-relaxed is-3-columns stat-card-container">
-                <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-bell-icon"></span></div><div class="stat-info"><div class="stat-title">警報總數</div><div class="stat-value" id="cardTotalAlerts">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-triangle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">高嚴重度 (嚴重)</div><div class="stat-value" id="cardHighSeverity">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-circle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">中低嚴重度 (警告)</div><div class="stat-value" id="cardLowSeverity">0</div></div></div></div>
-            </div>
-
-            <div class="dashboard-panel batch-panel">
-                <div style="display: flex; align-items: center; gap: 15px;">
+            
+            
+            <div class="dashboard-panel batch-panel" id="batchPanel">
+                <div style="display: flex; align-items: center; gap: 10px;">
                     <div style="font-size: 1.2rem; font-weight: bold; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
                         <span class="ts-icon is-bolt-icon" style="color: #db2828;"></span> 批次操作
                     </div>
@@ -212,31 +266,22 @@
                         已選取: <strong id="batchCountBadge" style="color: #db2828; font-size: 1.3rem;">0</strong> 筆
                     </div>
                 </div>
-                
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div style="position: relative;">
-                        <button id="exportBtn" class="ts-button btn-batch-white" data-dropdown="export-menu">
-                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出報表
-                            <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
+                    <div>
+                        <button class="ts-button btn-batch-red" onclick="openBatchDelete()">
+                            <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> 刪除選取紀錄
                         </button>
-                        <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
-                            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel</button>
-                            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF</button>
-                            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG</button>
-                        </div>
                     </div>
-                    <button class="ts-button btn-batch-white" onclick="printSelectedReport()">
-                        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印
-                    </button>
-                    <button class="ts-button btn-batch-red" onclick="openBatchDelete()">
-                        <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> 刪除選取紀錄
-                    </button>
                 </div>
             </div>
-
-            <div class="dashboard-panel data-panel" id="table-container">
+            
+            <div class="dashboard-panel data-panel" id="table-container">    
                 {% include 'management/alert_record_table_content.html' %}
             </div>
+            <div class="dashboard-panel data-panel is-12-wide is-relaxed" id="analysis-container" style="display: none;">
+                {% include 'management/alert_record_analysis.html' %}
+            </div>
+
         </div>
     </div>
 </div>
@@ -264,6 +309,150 @@
     </div>
 </dialog>
 
+<dialog id="infoModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 500px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
+        <div class="ts-icon is-info-icon" style="font-size: 3rem; color: #2185d0; margin-bottom: 15px;"></div>
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.2rem;">訊息</div>
+        <p id="infoModalText" style="margin-bottom: 20px; color: var(--my-text-sub); line-height: 1.5;"></p>
+        <div id="infoTableContainer" style="margin-bottom: 20px; text-align: left;"></div>
+            <table style="width: 100%; margin-bottom: 20px;">
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">廢棄物種類</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">最大重量</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">最小重量</td>
+                </tr>    
+                {% for u in alert_settings %}
+                {% if u.waste_type is not None %}
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.waste_type }}</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.weight_max }} kg</td>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border);">{{ u.weight_min }} kg</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+            <table style="width: 100%; margin-bottom: 20px; ">
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">部門</td>
+                    <td style="text-align: center; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">每日過磅次數</td>
+                </tr>    
+                {% for u in alert_settings %}
+                {% if u.department is not None %}
+                <tr>
+                    <td style="text-align: left; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">{{ u.department }}</td>
+                    <td style="text-align: center; color: var(--my-text-sub); font-size: 0.95rem; padding: 8px; border-top: 1px solid var(--my-border); width: 50%; overflow: hidden; ">{{ u.weighting_counts }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+        <button type="button" class="ts-button is-fluid" onclick="document.getElementById('infoModal').close()">我知道了</button>
+    </div>
+</dialog>
+
+<dialog id="settingModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 850px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+    <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px;">
+        
+        <div class="ts-header is-heavy" style="margin-bottom: 20px; font-size: 1.25rem; color: #2185d0; display: flex; align-items: center; gap: 8px;">
+            <span class="ts-icon is-bell-icon"></span> 警報管理設定
+        </div>
+
+        <div class="ts-grid is-stacked">
+            <div class="column">
+                <div class="ts-header is-small is-heavy">
+                    <span class="ts-icon is-calendar-days-icon"></span> 清運週期監控
+                </div>
+                <div class="ts-text is-description" style="margin-top: 5px;">
+                    系統目前設定為：<b style="color: #db2828;">每個月 1 號</b> 自動標記上個月尚未載運之紀錄為「過磅未處理」。
+                </div>
+            </div>
+
+            <div class="ts-divider" style="margin: 15px 0;"></div>
+
+            <div class="column">
+                <div class="ts-header is-small is-heavy" style="margin-bottom: 12px;">
+                    <span class="ts-icon is-weight-hanging-icon"></span> 廢棄物產出量監控
+                </div>
+                
+                <div class="ts-grid is-middle-aligned">
+                    <div class="column is-4-wide">
+                        <div class="ts-select is-fluid">
+                            <select id="alert_waste_type">
+                                <option value="">選擇廢棄物種類</option>
+                                {% for type in waste_types %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-fluid">
+                            <input type="number" id="alert_weight_max" placeholder="最大重量 (kg)">
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-fluid">
+                            <input type="number" id="alert_weight_min" placeholder="最小重量 (kg)">
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div class="ts-text is-description" style="margin-top: 10px;">
+                    當特定廢棄物在指定時間內超過設定重量時，系統將自動標記為異常。
+                </div>
+            </div>
+            <div class="column">
+                <div class="ts-header is-small is-heavy" style="margin-bottom: 12px;">
+                    <span class="ts-icon is-clock-icon"></span> 過磅頻率異常監控
+                </div>
+                
+                <div class="ts-grid is-middle-aligned">
+                    <div class="column is-4-wide">
+                        <div class="ts-select is-fluid">
+                            <select id="alert_department">
+                                <option value="">選擇部門</option>
+                                {% for type in departments %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column is-4-wide">
+                        <div class="ts-input is-fluid">
+                            <input type="number" id="weighting_counts" placeholder="每日過磅次數標準">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ts-text is-description" style="margin-top: 10px;">
+                    當特定部門每日過磅次數低於設定標準時，系統將自動標記為「過磅次數過少」。
+                </div>
+                <div class="ts-text is-description" style="margin-top: 10px;">
+                    當特定部門每日過磅次數高於設定標準時，系統將自動標記為「過磅次數過多」。
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+            <button type="button" class="ts-button is-outlined" onclick="viewAlertSettings()">查看設置</button>
+            <button type="button" class="ts-button is-outlined" onclick="document.getElementById('settingModal').close()">取消</button>
+            <button type="button" class="ts-button is-primary" onclick="saveAlertSettings()">
+                <span class="ts-icon is-floppy-disk-icon"></span> 儲存設定
+            </button>
+        </div>
+    </div>
+</dialog>
+<dialog id="detailModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 1100px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div class="ts-content custom-modal-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; position: relative;">
+        <button class="ts-close" style="position: absolute; top: 15px; right: 15px;" onclick="document.getElementById('detailModal').close()"></button>
+        <div class="ts-header is-heavy" style="margin-bottom: 15px; font-size: 1.25rem;">
+            <span class="ts-icon is-list-icon"></span> 紀錄詳細資訊
+        </div>
+        <div id="modalBody" style="overflow-y: auto; max-height: 60vh;"></div>
+    </div>
+</dialog>
+
 <script>
     // ==========================================
     // 🌟 1. JSON 資料與卡片動畫引擎 🌟
@@ -282,8 +471,9 @@
             } catch(e) { console.error('JSON解析錯誤:', e); }
         }
 
-        // 計算卡片數據
         let totalAlerts = window.allFilteredData.length;
+        let totalWeightingAlerts = 0;
+        let totalCollectionAlerts = 0;
         let highSeverity = 0;
         let lowSeverity = 0;
 
@@ -293,10 +483,20 @@
             } else {
                 lowSeverity++;
             }
+
+            if (item.alert_type === '重量異常') {
+                totalWeightingAlerts++;
+            }
+
+            if (item.alert_type === '清運逾期') {
+                totalCollectionAlerts++;
+            }
         });
 
         // 觸發數字動畫
         animateValue("cardTotalAlerts", totalAlerts);
+        animateValue("cardTotalWeightingAlerts", totalWeightingAlerts);
+        animateValue("cardTotalCollectionAlerts", totalCollectionAlerts);
         animateValue("cardHighSeverity", highSeverity);
         animateValue("cardLowSeverity", lowSeverity);
     }
@@ -319,6 +519,7 @@
     // ==========================================
     function refreshTable(url) {
         const container = document.getElementById('table-container');
+
         if (!container) return;
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
@@ -330,7 +531,7 @@
             container.style.opacity = '1';
             container.style.pointerEvents = 'auto';
             
-            syncDataAndCards(); // 🌟 表格更新後，同步更新卡片動畫！
+            syncDataAndCards(); 
             
             window.history.pushState(null, '', url);
             updateUI(); 
@@ -339,6 +540,28 @@
             console.error(err); alert('更新失敗，請檢查網路連線。');
             container.style.opacity = '1'; container.style.pointerEvents = 'auto';
         });
+        window.location.href = url;
+    }
+    function refreshAnalysis(url) {
+        const container = document.getElementById('analysis-container');
+        if (!container) return;
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+
+        fetch(url, { headers: { 'x-requested-with': 'analysis' } })
+        .then(res => res.text())
+        .then(html => {
+            container.innerHTML = html;
+            container.style.opacity = '1';
+            container.style.pointerEvents = 'auto';
+            
+            window.history.pushState(null, '', url);
+        })
+        .catch(err => {
+            console.error(err); alert('更新失敗，請檢查網路連線。');
+            container.style.opacity = '1'; container.style.pointerEvents = 'auto';
+        });
+        window.location.href = url;
     }
 
     document.getElementById('searchForm').addEventListener('submit', function(e) {
@@ -370,6 +593,7 @@
         const selects = document.querySelectorAll('.top-pagination-bar select');
         if (selects.length >= 1) u.set('page_size', selects[0].value);
         u.set('sort_by', document.getElementById('hiddenSortInput').value || 'newest');
+        u.set('department', '');
         refreshTable(`${window.location.pathname}?${u.toString()}`); 
     }
     window.jumpToPage = function(pos) {
@@ -392,7 +616,11 @@
         const count = checkedBoxes.length;
         
         const badgeEl = document.getElementById('batchCountBadge');
-        if(badgeEl) badgeEl.innerText = count;
+        badgeEl.innerText = count;
+    }
+
+    window.openSettingModal = function() {
+        document.getElementById('settingModal').showModal();
     }
 
     window.openBatchDelete = function(){
@@ -466,7 +694,7 @@
             <div class="export-title">${titleText}</div>
             <div class="export-date">匯出日期：${dateStr}</div>
             <table class="export-table">
-                <thead><tr><th style="width: 60px; text-align: center;">序號</th><th>警示時間</th><th>過磅人員</th><th>警報名稱</th><th>警報類型</th><th style="text-align: center;">嚴重度</th></tr></thead>
+                <thead><tr><th style="width: 60px; text-align: center;">序號</th><th>警示時間</th><th>警報名稱</th><th>警報類型</th></tr></thead>
                 <tbody>`;
 
         let hasData = false; 
@@ -480,7 +708,7 @@
                     hasData = true; printCount++;
                     let isSevere = cols[6].innerHTML.includes('light-red') || cols[6].innerHTML.includes('嚴重');
                     let sevClass = isSevere ? 'text-red' : 'text-yellow'; let sevText = isSevere ? '嚴重' : '警告';
-                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${cols[2].innerText.trim().replace(/\n/g, ' ')}</td><td>${cols[3].innerText.trim()}</td><td>${cols[4].innerText.trim()}</td><td>${cols[5].innerText.trim()}</td><td style="text-align: center;" class="${sevClass}">${sevText}</td></tr>`;
+                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${cols[2].innerText.trim().replace(/\n/g, ' ')}</td><td>${cols[3].innerText.trim()}</td><td>${cols[4].innerText.trim()}</td><td>${cols[5].innerText.trim()}</td></tr>`;
                 }
             });
         } else {
@@ -490,7 +718,7 @@
                     printCount++;
                     let isSevere = item.severity === 'High' || (item.alert_name && item.alert_name.includes('失敗'));
                     let sevClass = isSevere ? 'text-red' : 'text-yellow'; let sevText = isSevere ? '嚴重' : '警告';
-                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${item.create_time}</td><td>${item.weigher}</td><td>${item.alert_name}</td><td>${item.alert_type}</td><td style="text-align: center;" class="${sevClass}">${sevText}</td></tr>`;
+                    html += `<tr><td style="text-align: center;">${printCount}</td><td>${item.create_time}</td><td>${item.alert_name}</td><td>${item.alert_type}</td></tr>`;
                 });
             }
         }
@@ -499,39 +727,371 @@
         return { wrapper, hasData, dateStr };
     }
 
-    window.exportToPDF = function() {
-        const { wrapper, hasData, dateStr } = createPrintableElement('警報紀錄報表');
-        if (!hasData) return alert("目前沒有資料可以匯出喔！");
-        const hiddenContainer = document.createElement('div');
-        hiddenContainer.style.cssText = 'width:0; height:0; overflow:hidden;';
-        hiddenContainer.appendChild(wrapper); document.body.appendChild(hiddenContainer);
-        html2pdf().set({ margin: 15, filename: `警報紀錄_${dateStr}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } }).from(wrapper).save().then(() => document.body.removeChild(hiddenContainer));
+    function saveAlertSettings() {
+        const data = {
+            waste_type: document.getElementById('alert_waste_type').value,
+            weight_max: document.getElementById('alert_weight_max').value,
+            weight_min: document.getElementById('alert_weight_min').value,
+            // frequency: document.getElementById('alert_frequency').value,
+            department: document.getElementById('alert_department').value,
+            weighting_counts: document.getElementById('weighting_counts').value
+        };
+        if ((!data.waste_type || !data.weight_max || !data.weight_min ) && (!data.department || !data.weighting_counts)) {
+            NotificationUtils.showAlert('請填寫設定！');
+            return;
+        }
+        const apiUrl = "{% url 'WasteManagement:api_save_alert_settings' %}"; 
+        
+        fetch(apiUrl, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'success') {
+                NotificationUtils.showAlert('設定已更新！','success');
+                document.getElementById('settingModal').close();
+                window.setTimeout(() => {
+                    const u = new URLSearchParams(window.location.search);
+                    refreshTable(`${window.location.pathname}?${u.toString()}`);
+                    window.location.href = "{% url 'WasteManagement:alert_record' %}";
+                }, 500);
+            }
+            if (res.status === 'error') {
+                NotificationUtils.showAlert('設定更新失敗：' + (res.message || '未知錯誤'), 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('儲存設定時發生錯誤，請稍後再試。');
+        });
     }
-
-    window.exportToPNG = function() {
-        const { wrapper, hasData, dateStr } = createPrintableElement('警報紀錄報表');
-        if (!hasData) return alert("目前沒有資料可以匯出喔！");
-        wrapper.style.position = 'absolute'; wrapper.style.left = '-5000px'; wrapper.style.top = '0'; document.body.appendChild(wrapper); 
-        html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-            let link = document.createElement('a'); link.download = `警報紀錄_${dateStr}.png`; link.href = canvas.toDataURL('image/png'); link.click(); document.body.removeChild(wrapper);
+    
+    viewAlertSettings = function() {
+        const apiUrl = "{% url 'WasteManagement:api_get_alert_settings' %}";
+        fetch(apiUrl, { headers: { 'x-requested-with': 'XMLHttpRequest' } })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && data.settings) {
+                const s = data.settings;
+                document.getElementById('alert_waste_type').value = s.waste_type || '';
+                document.getElementById('alert_weight_max').value = s.weight_max || '';
+                document.getElementById('alert_weight_min').value = s.weight_min || '';
+                // document.getElementById('alert_frequency').value = s.frequency || 'daily';
+                document.getElementById('infoModal').showModal();
+            } else {
+                alert('無法取得設定：' + (data.message || '未知錯誤'));
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('取得設定時發生錯誤，請稍後再試。');
         });
     }
 
-    window.exportToExcel = function() {
-        const { wrapper, hasData, dateStr } = createPrintableElement('警報紀錄報表');
-        if (!hasData) return alert("目前沒有資料可以匯出喔！");
-        const rows = [["警報紀錄報表"], ["匯出日期：", dateStr], [], ["序號", "警示時間", "過磅人員", "警報名稱", "警報類型", "嚴重度"]];
-        wrapper.querySelectorAll('tbody tr').forEach(tr => rows.push(Array.from(tr.querySelectorAll('td')).map(td => td.innerText)));
-        const ws = XLSX.utils.aoa_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄"); XLSX.writeFile(wb, `警報紀錄_${dateStr}.xlsx`);
+    async function viewRecordDetail(recordId) {
+        const modal = document.getElementById('detailModal');
+        
+        console.log("Fetching record:", recordId);
+
+        try {
+            const response = await fetch(`/api/waste_record/${recordId}/`);
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                const d = result.data;
+
+
+                document.getElementById('det_time').innerText = d.create_time;
+                document.getElementById('det_weight').innerText = d.weight;
+                document.getElementById('det_type').innerText = d.waste_type;
+                document.getElementById('det_dept').innerText = d.department;
+                document.getElementById('det_loc').innerText = d.location;
+                document.getElementById('det_user').innerText = d.weigher;
+
+
+                const statusEl = document.getElementById('det_status');
+                if (d.is_transported) {
+                    statusEl.innerHTML = `<span class="ts-text is-success" style="font-weight: bold;">已於 ${d.transport_time} 清運</span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="ts-text is-negative" style="font-weight: bold;">待清運中</span>`;
+                }
+
+                modal.showModal();
+            } else {
+                alert("無法取得資料：" + result.message);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("網路請求失敗，請稍後再試。");
+        }
+    }
+    window.openDetailModal = function(id) {
+        const tmpl = document.getElementById('tmpl-' + id);
+        if (tmpl) { document.getElementById('modalBody').innerHTML = tmpl.innerHTML; document.getElementById('detailModal').showModal(); }
+    }
+    function controltstab(e, tab) { 
+        if (tab === 'table') {
+            document.getElementById('table-container').style.display = '';
+            document.getElementById('batchPanel').style.display = '';
+            document.getElementById('dashboard-panel').style.display = '';
+            document.getElementById('analysis-container').style.display = 'none';
+        } else if (tab === 'analysis') {
+            document.getElementById('table-container').style.display = 'none';
+            document.getElementById('batchPanel').style.display = 'none';
+            document.getElementById('dashboard-panel').style.display = 'none';
+            document.getElementById('analysis-container').style.display = '';
+        }
+        const tabItems = document.querySelectorAll('.ts-tab .item');
+        tabItems.forEach(item => item.classList.remove('is-active'));
+        if (e && e.currentTarget) {
+            e.currentTarget.classList.add('is-active');
+        } else {
+            document.getElementById(tab).classList.add('is-active');
+        }
     }
 
-    window.printSelectedReport = function() {
-        const { wrapper, hasData } = createPrintableElement('警報紀錄報表');
-        if (!hasData) return alert("目前沒有資料可以列印喔！");
-        const iframe = document.createElement('iframe'); iframe.style.display = 'none'; document.body.appendChild(iframe);
-        const pri = iframe.contentWindow;
-        pri.document.open(); pri.document.write(`<html><head><style>body { font-family: sans-serif; margin: 0; padding: 20px; } @media print { @page { size: landscape A4; margin: 1cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>${wrapper.innerHTML}</body></html>`); pri.document.close();
-        pri.focus(); setTimeout(() => { pri.print(); document.body.removeChild(iframe); }, 300);
+let trendChart = null;
+
+function initTrendChart(labels, data) {
+    const ctx = document.getElementById('alertTrendChart').getContext('2d');
+    
+    if (trendChart) trendChart.destroy(); 
+
+    trendChart = new Chart(ctx, {
+        type: 'line', 
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '警報次數',
+                data: data,
+                borderColor: '#db2828', 
+                backgroundColor: 'rgba(219, 40, 40, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4, 
+                pointRadius: 4,
+                pointBackgroundColor: '#db2828'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false } 
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                    ticks: { stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+async function updateAlertTrend() {
+    const isYear = document.getElementById('showAllYearormonth').checked;
+    const dateValue = document.getElementById('monthPicker').value;
+
+    try {
+        const response = await fetch(`{% url 'WasteManagement:get_alert_trend_data' %}?type=${isYear ? 'year' : 'month'}&date=${dateValue}`, {
+            headers: { 'x-requested-with': 'XMLHttpRequest' }
+        });
+        const result = await response.json();
+        initTrendChart(result.labels, result.counts);
+    } catch (error) {
+        console.error("更新圖表失敗:", error);
     }
+}
+
+// 3. 切換開關時觸發
+function toggleShowYearormonth(el) {
+    const picker = document.getElementById('monthPicker');
+    if (el.checked) {
+        picker.type = "number"; 
+        picker.value = new Date().getFullYear(); 
+        picker.placeholder = "輸入年份 (如 2026)";
+        picker.style.width = '120px';
+    } else {
+        picker.type = "month";
+        const now = new Date();
+        picker.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; // 預設值為當月
+        picker.placeholder = "選擇年月";
+    }
+    updateAlertTrend();
+}
+
+document.addEventListener('DOMContentLoaded', updateAlertTrend);
+
+function goToPage2(pageNum) {
+    const activeTab = document.querySelector('.ts-tab .item.is-active')?.id.split('-').pop() ;
+    window.location.href = `?page2=${pageNum}&tab=${activeTab}`;
+}
+
+function jumpToPage2(pos) {
+    const input = document.getElementById(pos === 'bottom' ? 'jump-page-input-bottom' : 'jump-page-input-top');
+    if (input.value) {
+        goToPage2(input.value);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab) {
+        const tabTrigger = document.querySelector(`.ts-tab .item[id="${activeTab}"]`);
+        if (tabTrigger) {
+            tabTrigger.click(); 
+        }
+    }
+
+});
+
+function getCurrentPeriodText() {
+    const isYear = document.getElementById('showAllYearormonth').checked;
+    const dateValue = document.getElementById('monthPicker').value;
+
+    if (isYear) {
+        return `${dateValue}年`;
+    } else {
+        const [year, month] = dateValue.split('-');
+        return `${year}年${month}月`;
+    }
+}
+
+function getChartImage() {
+    const canvas = document.getElementById('alertTrendChart');
+    return canvas.toDataURL('image/png');
+}   
+function exportToPNG() {
+    const image = getChartImage();
+    const link = document.createElement('a');
+
+    const period = getCurrentPeriodText();
+    link.download = `警報趨勢_${period}.png`;
+    link.href = image;
+    link.click();
+}
+
+function exportToPDF() {
+    const image = getChartImage();
+    const period = getCurrentPeriodText();
+
+    const jspdfNamespace = window.jspdf || (window.jsPDF ? { jsPDF: window.jsPDF } : null);
+    const jsPDF = jspdfNamespace?.jsPDF;
+    if (!jsPDF) {
+        alert('PDF 匯出功能尚未載入，請重新整理頁面。');
+        return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    doc.setFontSize(18);
+    doc.text(`警報趨勢報表 (${period})`, 14, 22);
+    doc.addImage(image, 'PNG', 10, 30, 280, 150);
+
+    doc.save(`警報趨勢_${period}.pdf`);
+}
+
+
+function printSelectedReport() {
+    const image = getChartImage();
+    const period = getCurrentPeriodText();
+
+    const printWindow = window.open('', '_blank');
+
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>列印報表</title>
+        </head>
+        <body style="text-align:center;">
+            <h2>警報趨勢報表 (${period})</h2>
+            <img src="${image}" style="width:100%; max-width:1000px;" />
+        </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+function exportToExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert('Excel匯出功能不可用');
+        return;
+    }
+
+    const period = getCurrentPeriodText();
+
+    const wb = XLSX.utils.book_new();
+    const wsData = [];
+
+    wsData.push([`警報趨勢 (${period})`]);
+    wsData.push([]);
+
+    wsData.push(['時間', '警報次數']);
+
+
+    const labels = trendChart.data.labels;
+    const data = trendChart.data.datasets[0].data;
+
+    labels.forEach((label, index) => {
+        wsData.push([label, data[index]]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    ws['!cols'] = [
+        { width: 20 },
+        { width: 15 }
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, '警報趨勢');
+
+    const filename = `警報趨勢_${period}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const deptSearchInput = document.getElementById('dept-monitor-search');
+    
+    if (deptSearchInput) {
+        deptSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.dept-monitor-table tbody tr');
+
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(1)');
+                if (!nameCell) return;
+
+                const name = nameCell.textContent.toLowerCase();
+                
+                const matches = !query || name.includes(query);
+                
+                row.style.display = matches ? '' : 'none';
+            });
+        });
+    }
+});
+
+
+
 </script>
+<script id="alert-data-json" type="application/json">
+    {{ alert_json_data|safe }}
+</script>
+
 {% endblock %}
+

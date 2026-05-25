@@ -479,14 +479,14 @@ def change_password(request):
 @permission_required('moderator')
 def view_account_manage_list(request):
     # Define group name order and corresponding icons
-    permission_order = ['root', 'moderator', 'staff', 'registrar', 'importer', 'not-defined']
+    permission_order = ['root', 'moderator', 'staff', 'registrar', 'importer', 'outsider']
     permission_icons = {
         'root': 'gear',
         'moderator': 'user-shield',
         'staff': 'users',
         'registrar': 'file-pen',
         'importer': 'file-import',
-        'not-defined': 'question'
+        'outsider': 'truck',
     }
 
     # Query groups and sort in Python
@@ -507,8 +507,8 @@ def view_account_manage_list(request):
     # Find users without assigned groups
     users_without_group = [user for user in all_users if user not in users_with_groups]
 
-    # Add users without groups to 'not-defined'
-    permission_types['not-defined'] = users_without_group
+    # Add users without groups to 'outsider'
+    permission_types['outsider'] = users_without_group
 
     # Ensure all group names exist in dictionary, even if members are empty
     permission_types = {name: permission_types.get(name, []) for name in permission_order}
@@ -606,6 +606,13 @@ def view_account_register(request):
                 last_name=last_name,
                 password=password
             )
+            profile, created = UserProfile.objects.get_or_create(
+                user=user, 
+                defaults={'code': code}
+            )
+            if not created:
+                profile.code = code
+                profile.save()
             
 
             # Confirm group exists and assign
@@ -621,9 +628,9 @@ def view_account_register(request):
     user = request.user
     permission_options = []
     if user.groups.filter(name='root').exists():
-        permission_options = ['moderator', 'staff', 'registrar', 'importer']
+        permission_options = ['moderator', 'staff', 'registrar', 'importer', 'outsider']
     elif user.groups.filter(name='moderator').exists():
-        permission_options = ['staff', 'registrar', 'importer']
+        permission_options = ['staff', 'registrar', 'importer', 'outsider']
 
     return render(request, 'account/register.html', {'permission_options': permission_options})
 
@@ -773,8 +780,9 @@ def delete_waste_types(request):
                     waste_type = WasteType.objects.get(id=waste_type_id)
                     
                     # Check if there are waste records using this waste type
-                    from WasteManagement.models import WasteRecord
-                    record_count = WasteRecord.objects.filter(waste_type=waste_type).count()
+                    from WasteManagement.models import WasteRecord_New
+
+                    record_count = WasteRecord_New.objects.filter(waste_type=waste_type).count()
                     
                     if record_count > 0:
                         errors.append(f"'{waste_type.name}' 仍有 {record_count} 筆廢棄物記錄，無法刪除")
@@ -917,8 +925,8 @@ def delete_departments(request):
             for department_id in department_ids:
                 try:
                     # Check if there are waste records for this department
-                    from WasteManagement.models import WasteRecord
-                    record_count = WasteRecord.objects.filter(
+                    from WasteManagement.models import WasteRecord_New
+                    record_count = WasteRecord_New.objects.filter(
                         department_id=department_id
                     ).count()
                     

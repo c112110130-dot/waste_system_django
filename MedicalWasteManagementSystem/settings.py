@@ -71,6 +71,7 @@ else:
 ALLOWED_HOSTS = ['*']  # In production, set specific allowed hosts via environment variable
 # config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.dev',
     'https://*.ngrok-free.app',  # 允許所有 ngrok 免費網域
     'https://*.ngrok.io',        # 舊版 ngrok 網域 (備用)
 ]
@@ -81,9 +82,7 @@ CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
 SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.ngrok-free.app', 
-]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -100,6 +99,7 @@ INSTALLED_APPS = [
     'WasteManagement',
     'WastePrediction',
     'access_control',
+    
 ]
 
 MIDDLEWARE = [

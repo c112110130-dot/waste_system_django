@@ -1,0 +1,432 @@
+/* === Tocas UI Message 動畫 === */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+/* === 全螢幕佈局 (橫式) === */
+.station-container {
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 80px);
+    /* 扣掉頂部導航列 */
+    gap: 20px;
+    padding: 20px;
+    background-color: var(--my-bg-base);
+    box-sizing: border-box;
+    overflow: hidden;
+    /* 禁止外層捲動 */
+}
+
+/* === 左側：相機區 === */
+.left-panel {
+    flex: 1;
+    /* 佔 50% */
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    justify-content: center;
+    align-items: center;
+}
+
+/* 鏡頭畫面元素 */
+#reader {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+    /* 預設隱藏 */
+}
+
+/* 待機畫面 (省電模式) */
+.camera-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #1a1a1a;
+    z-index: 5;
+}
+
+/* 圓形開啟按鈕 */
+.btn-camera-start {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 4px solid #2185d0;
+    background: rgba(33, 133, 208, 0.1);
+    color: #2185d0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 0 20px rgba(33, 133, 208, 0.2);
+}
+
+.btn-camera-start:hover {
+    background: #2185d0;
+    color: white;
+    transform: scale(1.05);
+}
+
+.btn-camera-start i {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+/* 關閉鏡頭按鈕 (浮動於右上角) */
+.btn-camera-stop {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: none;
+}
+
+.btn-camera-stop:hover {
+    background: #db2828;
+    border-color: #db2828;
+}
+
+/* === 右側：操作區 === */
+.right-panel {
+    flex: 1;
+    /* 佔 50% */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-left: 10px;
+    overflow-y: auto;
+    /* 內容多時可捲動 */
+}
+
+/* 資訊卡片 */
+.info-card {
+    background-color: var(--my-bg-panel);
+    border: 1px solid var(--my-border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--my-border);
+    padding-bottom: 10px;
+}
+
+.header-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--my-text-sub);
+    letter-spacing: 1px;
+}
+
+.field-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    align-items: center;
+}
+
+.field-label {
+    color: var(--my-text-sub);
+    font-size: 0.9rem;
+}
+
+.field-value {
+    color: var(--my-text-main);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* 重量顯示區 */
+.weight-display-container {
+    background: var(--my-bg-input);
+    border: 2px solid var(--my-border);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    margin-top: 10px;
+}
+
+.big-input {
+    width: 100%;
+    height: 80px;
+    font-size: 3.5rem;
+    text-align: center;
+    background: transparent;
+    color: #fbbd08;
+    border: none;
+    font-weight: bold;
+    outline: none;
+    cursor: default;
+}
+
+/* 移除數字輸入框的上下箭頭 */
+.big-input::-webkit-outer-spin-button,
+.big-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.big-input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.unit-tag {
+    position: absolute;
+    right: 20px;
+    bottom: 25px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--my-text-sub);
+}
+
+/* 按鈕樣式 */
+.btn-large {
+    width: 100%;
+    height: 60px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    color:white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, background 0.2s;
+    gap: 10px;
+}
+
+.btn-large:active {
+    transform: scale(0.98);
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #21ba45, #19a53a);
+    
+}
+
+.btn-record {
+    background: #8a8bc1;
+}
+
+.btn-refactor {
+    background: #2185d0;
+}
+
+/* 藍牙按鈕 */
+.btn-bluetooth {
+    background: #8a8bc1;
+    border: 1px solid var(--my-border);
+    color: var(--my-text-main);
+    font-size: 0.9rem;
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-bluetooth:hover {
+    background: #4b5a8f;
+}
+
+.btn-bluetooth.connected {
+    background: rgba(33, 186, 69, 0.1);
+    color: #21ba45;
+    border-color: #21ba45;
+}
+
+
+.scanning-animation {
+    text-align: center;
+    padding: 20px;
+    color: var(--my-text-sub);
+}
+
+/* RWD: 手機直立時自動變回直式 */
+@media (max-width: 768px) {
+    .station-container {
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .left-panel {
+        height: 300px;
+        flex: none;
+    }
+
+    .right-panel {
+        flex: none;
+    }
+}
+
+/* 狀態指示燈亮起顏色 */
+.ts-badge.is-active {
+    background-color: #fbbd08 !important;
+    color: black !important;
+    opacity: 1 !important;
+}
+
+/* 核心功能按鈕矩陣 */
+.control-grid-main {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.btn-op {
+    background: var(--my-bg-input);
+    border: 1px solid var(--my-border);
+    color: var(--my-text-main);
+    padding: 12px 0;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    border-top: 3px solid #2185d0;
+    box-shadow: 0 2px 5px rgba(33, 133, 208, 0.2);
+}
+
+.btn-op:active {
+    transform: scale(0.95);
+    background: var(--my-border);
+}
+
+
+/* 說明按鈕定位 */
+.help-header {
+    display: flex;
+    justify-content: flex-end;
+    /* 將按鈕推至最右邊 */
+    margin-bottom: 10px;
+}
+
+.btn-help {
+    background: transparent;
+    border: 1px solid var(--my-border);
+    color: var(--my-text-sub);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-help:hover {
+    background: var(--my-bg-input);
+    color: var(--my-text-main);
+    border-color: var(--my-text-sub);
+}
+
+/* 簡易懸浮視窗 (Modal) 樣式 */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    /* 預設隱藏 */
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.custom-modal {
+    background: var(--my-bg-panel);
+    border: 1px solid var(--my-border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 1.0);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    cursor: pointer;
+    color: var(--my-text-sub);
+}
+
+.modal-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: var(--my-text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-content-text {
+    color: var(--my-text-main);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.modal-content-text ul {
+    padding-left: 20px;
+    margin-top: 10px;
+}

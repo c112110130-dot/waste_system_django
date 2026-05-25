@@ -110,7 +110,10 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // Update username span now that DOM is ready
                 themeManager.updateUsernameSpan(themeManager.initialActualTheme);
+
+                // Setup system theme change listener if needed
                 if (themeManager.initialTheme === 'system') {
                     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
                         themeManager.applyTheme('system');
@@ -128,39 +131,53 @@
                             <span class="ts-icon is-house-icon"></span>
                             <span class="ts-text is-bold">主頁面</span>
                         </a>
+                        {% if user_is_over_reg or user_is_over_imp %}
                         <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-management">
                             <span class="ts-icon is-folder-open-icon"></span>
                             <span class="ts-text is-bold">廢棄物管理</span>
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
                         </a>
-                        <div class="ts-dropdown" id="dropdown-management" data-position="bottom-start" style="z-index: 9999;">        
+                        <div class="ts-dropdown" id="dropdown-management" data-position="bottom-start" style="z-index: 9999;"> 
+                            {% if not user_is_outsider and not user_is_registrar %}       
                             <button class="item" data-href="{% url 'transportation:transportation_index' %}">聯單管理</button>
-                            <button class="item" data-href="{% url 'WasteManagement:database_index' %}">廢棄物管理(院內)</button>
-                            <button class="item" data-href="{% url 'WasteManagement:db_department_index' %}">廢棄物管理(部門)</button>
+                            {% endif %}
+                            {% if user_is_over_reg %}
+                            <button class="item" data-href="{% url 'management:database_index' %}">廢棄物管理(院內)</button>
+                            <button class="item" data-href="{% url 'management:db_department_index' %}">廢棄物管理(部門)</button> 
+                            {% endif %}
                         </div>
+                        {% endif %}
+                        {% if user_is_over_out %}
                         <a class="item tab-item" href="javascript:void(0);" data-dropdown="dropdown-report">
                             <span class="ts-icon is-chart-pie-icon"></span>
                             <span class="ts-text is-bold">報表與紀錄</span>
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.9em;"></span>
                         </a>
                         <div class="ts-dropdown" id="dropdown-report" data-position="bottom-start" style="z-index: 9999;">
-                            <button class="item" data-href="{% url 'WasteManagement:visualize_index' %}">廢棄物報表管理(院內)</button>
-                            <button class="item" data-href="{% url 'WasteManagement:visualize_department_index' %}">廢棄物報表管理(部門)</button>
-                            <button class="item" data-href="{% url 'WasteManagement:settlement_view' %}">廢棄物過磅記錄檢視</button>
-                            <button class="item" data-href="{% url 'WasteManagement:transportation_view' %}">廢棄物載運紀錄檢視</button>
+                            {% if not user_is_outsider %}
+                            <button class="item" data-href="{% url 'management:visualize_index' %}">廢棄物報表管理(院內)</button>
+                            <button class="item" data-href="{% url 'management:visualize_department_index' %}">廢棄物報表管理(部門)</button>
+                            {% endif %}
+                            <button class="item" data-href="{% url 'management:settlement_view' %}">廢棄物過磅紀錄管理</button>
+                            <button class="item" data-href="{% url 'management:transportation_view' %}">廢棄物載運紀錄管理</button>
                         </div>
+                        {% endif %}
+                        {% if user_is_over_imp or user_is_over_reg %}
                         <a class="item tab-item {% if '/prediction' in request.path %}is-active{% endif %}" href="/prediction/">
                             <span class="ts-icon is-chart-line-icon"></span>
                             <span class="ts-text is-bold">廢棄物預測</span>
                         </a>
-                        <a class="item tab-item {% if '/management/mobile/' in request.path %}is-active{% endif %}" href="/WasteManagement/mobile/">
+                        {% endif %}
+                        {% if user_is_over_mod or user_is_outsider %}
+                        <a class="item tab-item {% if '/management/mobile/' in request.path %}is-active{% endif %}" href="/management/mobile/">
                             <span class="ts-icon is-mobile-screen-icon"></span>
                             <span class="ts-text is-bold">行動裝置登記</span>
                         </a>
-                        <a class="item tab-item {% if '/management/qrcode/' in request.path %}is-active{% endif %}" href="{% url 'WasteManagement:qrcode_print' %}">
+                        <a class="item tab-item {% if '/management/qrcode/' in request.path %}is-active{% endif %}" href="{% url 'management:qrcode_print' %}">
                             <span class="ts-icon is-qrcode-icon"></span>
                             <span class="ts-text is-bold">QR code列印</span>
                         </a>
+                        {% endif %}
                     </div>
                     <style>
                         /* 抓取 class 含有 'is-qrcode-icon' 的圖示 */
@@ -188,8 +205,7 @@
                             <span class="ts-icon is-ellipsis-vertical-icon"></span>
                         </button>
                         <div class="ts-dropdown is-start-icon is-relaxed" id="dropdown" data-position="bottom-end" style="--min-width: 15rem" >
-                            <div style="padding-left: 1em; padding-top: 0.2em; padding-bottom: 0.2em"> 
-                                <span class="ts-text is-small is-start-aligned monospace color-{{ permission_hi }}
+                            <div style="padding-left: 1em; padding-top: 0.2em; padding-bottom: 0.2em"> <span class="ts-text is-small is-start-aligned monospace color-{{ permission_hi }}
                                 {% if not is_system_theme %}
                                     {% if is_light_mode %}is-mark color-{{ permission_hi }}-inverted{% elif is_dark_mode %}color-{{ permission_hi }}{% endif %}
                                 {% endif %}
@@ -215,20 +231,26 @@
                                     <span class="ts-icon is-file-lines-icon"></span>
                                     廢棄物種類和部門管理
                                 </button>
-                                <button class="item" data-href="{% url 'WasteManagement:location_management' %}">
-                                    <span class="ts-icon is-location-dot-icon"></span>
-                                    秤重定點和處理清運機構管理
-                                </button>
-                                <button class="item" data-href="/WasteManagement/alert_record/">
+                            {% endif %}
+                            {% if user_is_over_mod %}
+                            <button class="item" data-href="{% url 'management:location_management' %}">
+                            <span class="ts-icon is-location-dot-icon"></span>
+                                定點機構管理
+                            </button>
+                            {% endif %}
+                            {% if user_is_over_mod %}
+                                <button class="item" data-href="{% url 'management:alert_record' %}">
                                     <span class="ts-icon is-bell-icon"></span>
                                     警報紀錄管理
                                 </button>
+                            {% endif %}
+                            {% if user_is_over_mod %}
                                 <button class="item" data-href="{% url 'account:manage' %}">
                                     <span class="ts-icon is-users-gear-icon"></span>
                                     系統帳號管理
                                 </button>
                             {% endif %}
-                            {% if user.is_staff %}
+                            {% if user_is_over_mod %}
                                 <button class="item" data-href="{% url 'admin:index' %}">
                                     <span class="ts-icon is-python-icon"></span>
                                     Django Administration
@@ -240,21 +262,29 @@
                             </button>
                         </div>
                     {% else %}
+                        <span class="ts-text is-large has-end-spaced-large">
+                            您正在以訪客身份使用中，按下右邊的按鈕登入帳號&emsp;<span class="ts-icon is-arrow-right-icon"></span>
+                        </span>
                         <button class="ts-button is-start-icon is-primary" data-href="{% url 'account:login' %}">
                             <span class="ts-icon is-arrow-right-to-bracket-icon"></span>
-                            登出
+                            登入
                         </button>
                     {% endif %}
                 {% endblock %}
             </div>
         </div>
 
+        {% block headline %}{% endblock %}
+
         <div style="padding-top: 2em">
             {% block content %}{% endblock %}
         </div>
 
+        {% block description %}{% endblock %}
+
         <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // Handle data-href buttons
                 document.addEventListener('click', function(event) {
                     const target = event.target.closest('[data-href]');
                     if (target && target.dataset.href) {
@@ -263,6 +293,7 @@
                 });
             });
         </script>
+
         {% block scripts %}{% endblock %}
     </body>
 </html>

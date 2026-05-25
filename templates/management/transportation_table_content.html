@@ -130,11 +130,6 @@
     </div>
     
     <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; justify-content: flex-end;">
-        <div style="display: flex; align-items: center;">
-            <span id="weightLabelBottom" style="font-size: 0.95rem; color: var(--my-text-main);">清單總重量：</span>
-            <span id="displayTotalWeightBottom" style="color: #db2828; font-weight: bold; font-size: 1.15rem; margin: 0 6px;">0.000</span>
-            <span style="font-size: 0.9rem; color: var(--my-text-sub);">kg</span>
-        </div>
 
         <div style="width: 1px; height: 20px; background: var(--my-border);"></div>
 
@@ -190,7 +185,7 @@
                 <td style="font-family: monospace;">#{{ item.id }}</td>
                 <td>{{ item.department.name }}</td><td>{{ item.location.name }}</td>
                 <td>{{ item.create_time|date:"Y-m-d H:i" }}</td>
-                <td style="text-align: right; font-weight: bold; color: #db2828;">{{ item.weight|floatformat:3 }}</td>
+                <td style="text-align: left; font-weight: bold; color: #db2828;">{{ item.weight|floatformat:3 }}</td>
                 <td>{{ item.creator.username }}</td>
             </tr>
             {% empty %}

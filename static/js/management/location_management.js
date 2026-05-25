@@ -25,6 +25,11 @@ class LocationManager {
             else if (e.target.closest('.btn-save-location')) this.saveLocation(e);
             else if (e.target.closest('.btn-cancel-location')) this.cancelEditLocation();
             else if (e.target.closest('.btn-delete-locations')) this.deleteSelectedLocations();
+            else if (e.target.closest('.btn-delete-location')) {
+                const row = e.target.closest('tr');
+                const id = parseInt(row.dataset.id);
+                this.deleteLocation(id);
+            }
             
             // 機構
             else if (e.target.closest('.btn-add-agency')) this.startAddAgency();
@@ -32,14 +37,30 @@ class LocationManager {
             else if (e.target.closest('.btn-save-agency')) this.saveAgency(e);
             else if (e.target.closest('.btn-cancel-agency')) this.cancelEditAgency();
             else if (e.target.closest('.btn-delete-agencies')) this.deleteSelectedAgencies();
+            else if (e.target.closest('.btn-delete-agency')) {
+                const id = e.target.closest('tr').dataset.id;
+                console.log('Deleting agency with ID:', id);
+                this.deleteAgency(id);
+            }
+
         });
         
         // 搜尋
-        const locSearch = document.querySelector('input[placeholder*="搜尋定點"]');
-        if (locSearch) locSearch.addEventListener('input', (e) => this.searchTable('.location-table', e.target.value));
+        // const locSearch = document.querySelector('input[placeholder*="搜尋定點..."]');
+        // if (locSearch) locSearch.addEventListener('input', (e) => this.searchTable('.location-table', e.target.value));
+        const LocationSearch = document.querySelector('input[placeholder*="搜尋定點"]');
+        if (LocationSearch) {
+            LocationSearch.addEventListener('input', (e) => {
+                this.searchLocationTable(e.target.value);
+            });
+        }
         
         const agencySearch = document.querySelector('input[placeholder*="搜尋機構"]');
-        if (agencySearch) agencySearch.addEventListener('input', (e) => this.searchTable('.agency-table', e.target.value));
+        if (agencySearch) {
+            agencySearch.addEventListener('input', (e) => {
+                this.searchAgencyTable(e.target.value);
+            });
+        }
         
         // 核取方塊 (包含全選功能)
         document.addEventListener('change', (e) => {
@@ -80,7 +101,7 @@ class LocationManager {
             </td>
             <td class="action-cell" style="text-align: right;">
                 <button type="button" class="ts-button is-positive is-icon is-small btn-save-location"><span class="ts-icon is-check-icon"></span></button>
-                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
+                <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
             </td>
         `;
         tbody.insertBefore(newRow, tbody.firstChild);
@@ -111,7 +132,8 @@ class LocationManager {
             </div>`;
         actionCell.innerHTML = `
             <button type="button" class="ts-button is-positive is-icon is-small btn-save-location"><span class="ts-icon is-check-icon"></span></button>
-            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>          
+            <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-location"><span class="ts-icon is-xmark-icon"></span></button>   
+            <button type="button" class="ts-button is-negative is-icon is-small btn-delete-location"><span class="ts-icon is-trash-icon"></span></button>       
         `;
         
         
@@ -142,7 +164,7 @@ class LocationManager {
         if (!nameInput.value.trim()) return alert('請輸入定點名稱');
         
         try {
-            const response = await fetch('/dashboard/api/location/save/', {
+            const response = await fetch('/management/api/location/save/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                 body: JSON.stringify({ id: row.dataset.id, code: codeInput.value.trim(), name: nameInput.value.trim() })
@@ -151,7 +173,10 @@ class LocationManager {
                 await NotificationUtils.showAlert('成功', `成功儲存定點資料`, 'success');
                 window.location.reload();
             }
-            else alert('儲存失敗');
+            else {
+                const result = await response.json();
+                await NotificationUtils.showAlert('失敗', result.error, 'error');
+            }
         } catch (error) { alert(`發生錯誤: ${error.message}`); }
     }
 
@@ -164,7 +189,7 @@ class LocationManager {
         }
         NotificationUtils.showConfirm('確認刪除', `確定要刪除選定的 ${ids.length} 個定點嗎？此操作無法復原。`, async () => {
             try {
-                const response = await fetch('/dashboard/api/location/delete/', {
+                const response = await fetch('/management/api/location/delete/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                     body: JSON.stringify({ ids: ids })
@@ -173,11 +198,40 @@ class LocationManager {
                     await NotificationUtils.showAlert('成功', `成功刪除 ${ids.length} 筆定點資料`, 'success');
                     window.location.reload();     
                 } else {
-                    alert('刪除失敗');
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
                 }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });
     }
+
+    deleteLocation(id) {
+    NotificationUtils.showConfirm('確認刪除', '確定要刪除此定點嗎？此操作無法復原。', async () => {
+        try {
+            const response = await fetch('/management/api/location/delete/', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': this.getCSRFToken() 
+                },
+                body: JSON.stringify({ ids: [id] })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                await NotificationUtils.showAlert('成功', `成功刪除定點資料`, 'success');
+                window.location.reload();
+            } else {
+                await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error || '原因不明'}`, 'error');
+            }
+        } catch (error) {   
+            alert(`發生錯誤: ${error.message}`); 
+            window.location.reload();
+        }
+    });
+}
+
 
     // ==========================================
     // 機構管理
@@ -202,7 +256,7 @@ class LocationManager {
             </td>
             <td class="action-cell" style="text-align: right; white-space: nowrap;">
                 <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>    
-                <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button> 
+                <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button> 
             </td>
         `;
         tbody.insertBefore(newRow, tbody.firstChild);
@@ -248,8 +302,8 @@ class LocationManager {
         `;
         actionCell.innerHTML = `
             <button type="button" class="ts-button is-positive is-icon is-small btn-save-agency"><span class="ts-icon is-check-icon"></span></button>
-            <button type="button" class="ts-button is-secondary is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
-            
+            <button type="button" class="ts-button is-negative is-icon is-small btn-cancel-agency"><span class="ts-icon is-xmark-icon"></span></button>
+            <button type="button" class="ts-button is-negative is-icon is-small btn-delete-agency"><span class="ts-icon is-trash-icon"></span></button>
         `;
         const codeInput = row.querySelector('.edit-code');
         if (codeInput) codeInput.focus();
@@ -284,7 +338,7 @@ class LocationManager {
         if (!nameInput.value.trim()) return alert('請輸入機構名稱');
         
         try {
-            const response = await fetch('/dashboard/api/agency/save/', {
+            const response = await fetch('/management/api/agency/save/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                 body: JSON.stringify({ id: row.dataset.id, code: codeInput.value.trim(), name: nameInput.value.trim(), type: typeSelect.value })
@@ -294,7 +348,10 @@ class LocationManager {
                 window.location.reload();
                 
                 }
-            else alert('儲存失敗');
+            else {
+                const result = await response.json();
+                await NotificationUtils.showAlert('失敗', `儲存失敗: ${result.error}`, 'error');
+            }
         } catch (error) { alert(`發生錯誤: ${error.message}`); }
     }
 
@@ -307,7 +364,7 @@ class LocationManager {
         }
         NotificationUtils.showConfirm('確認刪除', `確定要刪除選定的 ${ids.length} 個機構嗎？此操作無法復原。`, async () => {
             try {
-                const response = await fetch('/dashboard/api/agency/delete/', {
+                const response = await fetch('/management/api/agency/delete/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
                     body: JSON.stringify({ ids: ids })
@@ -316,7 +373,29 @@ class LocationManager {
                     await NotificationUtils.showAlert('成功', `成功刪除 ${ids.length} 筆機構資料`, 'success'); 
                     window.location.reload();
                 }
-                else alert('刪除失敗');
+                else {
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
+                }
+            } catch (error) { alert(`發生錯誤: ${error.message}`); }
+        });
+    }
+
+    deleteAgency(id) {
+        NotificationUtils.showConfirm('確認刪除', '確定要刪除此機構嗎？此操作無法復原。', async () => {
+            try {
+                const response = await fetch('/management/api/agency/delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken() },
+                    body: JSON.stringify({ ids: [id] })
+                });
+                if ((await response.json()).success) {
+                    await NotificationUtils.showAlert('成功', `成功刪除機構資料`, 'success');
+                    window.location.reload();
+                } else {
+                    const result = await response.json();
+                    await NotificationUtils.showAlert('失敗', `刪除失敗: ${result.error}`, 'error');
+                }
             } catch (error) { alert(`發生錯誤: ${error.message}`); }
         });
     }
@@ -328,14 +407,54 @@ class LocationManager {
         const rows = document.querySelectorAll(`${tableSelector} tbody tr`);
         const normalizedQuery = query.toLowerCase().trim();
         rows.forEach(row => {
-            if (row.dataset.id === 'new') return;
-            const codeCell = row.querySelector('td:nth-child(2)');
+            if (row.dataset.id === 'new') return; // Skip editing row
+            
             const nameCell = row.querySelector('td:nth-child(3)');
-            if (!codeCell || !nameCell) return;
             if (!nameCell) return;
-            row.style.display = (!normalizedQuery || nameCell.textContent.toLowerCase().includes(normalizedQuery)) ? '' : 'none';
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell.textContent.toLowerCase();
+            const name = nameCell.textContent.toLowerCase();
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
+            row.style.display = matches ? '' : 'none';
         });
     }
+    searchLocationTable(query) {
+        const rows = document.querySelectorAll('.location-table tbody tr');
+        const normalizedQuery = query.toLowerCase().trim();
+        rows.forEach(row => {
+            if (row.dataset.id === 'new') return; // Skip editing row
+            
+            const nameCell = row.querySelector('td:nth-child(3)');
+            if (!nameCell) return;
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell.textContent.toLowerCase();
+            const name = nameCell.textContent.toLowerCase();
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+    searchAgencyTable(query) {
+        const rows = document.querySelectorAll('.agency-table tbody tr');
+        const normalizedQuery = query.toLowerCase().trim();
+        rows.forEach(row => {
+            if (row.dataset.id === 'new') return; // Skip editing row
+
+            const nameCell = row.querySelector('td:nth-child(3)');
+            if (!nameCell) return;
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (!codeCell) return;
+
+            const code = codeCell.textContent.toLowerCase();
+            const name = nameCell.textContent.toLowerCase();
+            const matches = !normalizedQuery || name.includes(normalizedQuery) || code.includes(normalizedQuery);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+
 
     updateLocationButtons() {
         const hasSelection = document.querySelectorAll('.location-table tbody input[type="checkbox"]:checked').length > 0;

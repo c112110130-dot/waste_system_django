@@ -54,11 +54,27 @@
 
 /* 鏡頭畫面元素 */
 #reader {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: none;
-    /* 預設隱藏 */
+    width: 100% !important;
+    max-width: 500px; /* 或者你希望的最大寬度 */
+    margin: 0 auto;
+    background-color: #000; /* 沒鏡頭時顯示黑色 */
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+/* 強制將產生的影片與掃描框置中 */
+#reader video {
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover; /* 讓影片填滿容器 */
+}
+
+/* 如果有產生內建的控制按鈕，將它們也置中 */
+#reader__scan_region {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* 待機畫面 (省電模式) */
