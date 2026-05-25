@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='wastetype',
             name='unit',
-            field=models.CharField(choices=[('metric_ton', '公噸'), ('kilogram', '公斤'), ('gram', '公克')], default='metric_ton', max_length=50),
+            field=models.CharField(choices=[('metric_ton', '公噸'), ('kilogram', '公斤')], default='metric_ton', max_length=50),
         ),
     ]

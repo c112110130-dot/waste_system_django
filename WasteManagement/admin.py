@@ -162,6 +162,23 @@ class WasteRecordAdmin(admin.ModelAdmin):
         """Optimize queryset with select_related"""
         return super().get_queryset(request).select_related('department', 'waste_type')
 
+class LocationPointAdmin(admin.ModelAdmin):
+    search_fields = ('name',)
+    ordering = ('name',)
+
+
+class clearAgencyAdmin(admin.ModelAdmin):
+    search_fields = ('name',)
+    ordering = ('name',)
+
+
+class processAgencyAdmin(admin.ModelAdmin):
+    search_fields = ('name',)
+    ordering = ('name',)
+
+
+
+
 
 # Custom admin actions
 @admin.action(description='啟用選中的部門')
@@ -172,6 +189,7 @@ def activate_departments(modeladmin, request, queryset):
 @admin.action(description='停用選中的部門')
 def deactivate_departments(modeladmin, request, queryset):
     queryset.update(is_active=False)
+
 
 
 # Add custom actions to DepartmentAdmin
@@ -186,11 +204,10 @@ admin.site.register(PharmaceuticalGlassProductionAndDisposalCosts, Pharmaceutica
 admin.site.register(PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenue,
                     PaperIronAluminumCanPlasticAndGlassProductionAndRecyclingRevenueAdmin)
 
+admin.site.register(LocationPoint, LocationPointAdmin)
+admin.site.register(clearAgency, clearAgencyAdmin)
+admin.site.register(processAgency, processAgencyAdmin)
+admin.site.register(TransportRecord)
 admin.site.register(WasteRecord_New)
 
-admin.site.register(LocationPoint)
-
-
-admin.site.register(clearAgency)
-admin.site.register(processAgency)
-admin.site.register(TransportRecord)
+admin.site.register(AlertConfig)
