@@ -2409,8 +2409,9 @@ def transportation_view(request):
 def mobile_station_view(request):
     locations_list = list(LocationPoint.objects.values('id', 'name'))
     context = {
-        # 這裡傳 list 給模板
         'locations': locations_list,
+        'departments': list(Department.objects.values('id', 'name')),
+        'waste_types': list(WasteType.objects.values('id', 'name')),
     }
     return render(request, 'management/mobile/station.html', context)
 
@@ -2441,7 +2442,7 @@ def record_waste_api(request):
 
         # 寫入資料庫邏輯
         loc_id = LocationPoint.objects.get(id=loc_id)
-        dept_id = Department.objects.get(code=dept)
+        dept_id = Department.objects.get(name=dept)
         waste_type = WasteType.objects.get(name=waste_type)
         WasteRecord_New.objects.create(
             location=loc_id,
@@ -2625,6 +2626,7 @@ def api_delete_agency(request):
 def qrcode_print_view(request):
     departments_list = Department.objects.all()
     waste_types_list = WasteType.objects.all()
+
     if request.user.is_authenticated:
         full_name = f"{request.user.first_name}{request.user.last_name}".strip()
         current_user = full_name if full_name else request.user.username
@@ -2634,7 +2636,7 @@ def qrcode_print_view(request):
     context = {
         'departments': departments_list,
         'waste_types': waste_types_list,
-        'current_user': current_user
+        'current_user': current_user,
     }
     return render(request, 'management/qrcode_print.html', context)
 

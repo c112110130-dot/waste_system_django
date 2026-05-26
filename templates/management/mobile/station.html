@@ -86,8 +86,7 @@
                 </button>
             </div>
             
-            <div style="control-grid-main; margin-top: 10px;">
-                
+            <div style="control-grid-main; margin-top: 10px;">                
                 <button class="btn-large btn-submit" id="btn-submit-record">
                     <span class="ts-icon is-cloud-arrow-up-icon"></span>確認上傳 (Upload)
                 </button>
@@ -147,14 +146,14 @@
         </div>
     </div>
 </div>
-
 {{ locations|json_script:"locations-data" }}
+{{ departments|json_script:"departments-data" }}
+{{ waste_types|json_script:"waste-types-data" }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 讀取 Django 傳過來的 JSON 資料
         const locationsDataElement = document.getElementById('locations-data');
         const locations = locationsDataElement ? JSON.parse(locationsDataElement.textContent) : [];
-
+        
         // 初始化模組
         StationMobile.init({
             locations: locations,
@@ -176,6 +175,7 @@
     const modal = document.getElementById('inputName');
     modal.style.display = show ? 'flex' : 'none';
     }
+    
 </script>
 <script type="module" src="{% static 'js/management/station-mobile-utils.js' %}"></script>
 {% endblock %}

@@ -278,6 +278,7 @@ const StationMobile = (function () {
           const value = pair.substring(colonIndex + 1).trim();
 
           // 映射常見的欄位名稱
+
           if (key === 'dept') qrData.dept = value;
           if (key === 'type') qrData.type = value;
           if (key === 'clea') qrData.cleaner = value;
@@ -285,10 +286,35 @@ const StationMobile = (function () {
         }
       });
     }
-
+    
     // Map QR code fields to expected field names
-    const dept = qrData.dept || '---';
-    const wasteType = qrData.type || '---';
+    let deptName = qrData.dept || '---';
+    let wasteTypeName = qrData.type || '---';
+
+    try {
+      const deptDataEl = document.getElementById('departments-data');
+      const wasteDataEl = document.getElementById('waste-types-data'); 
+
+        
+      if (deptDataEl) {
+        const deptList = JSON.parse(deptDataEl.textContent);
+        const scannedId = String(qrData.dept).trim();
+        const foundDept = deptList.find(d => String(d.id).trim() === scannedId);
+        if (foundDept) deptName = foundDept.name;
+      }
+      
+      if (wasteDataEl) {
+        const wasteList = JSON.parse(wasteDataEl.textContent);
+        const scannedId = String(qrData.type).trim();
+        const foundWaste = wasteList.find(w => String(w.id).trim() === scannedId);
+        if (foundWaste) wasteTypeName = foundWaste.name;
+      }
+    } catch (err) {
+      console.warn("無法解析對照表 JSON:", err);
+    }
+
+    const dept = deptName;
+    const wasteType = wasteTypeName;
     const cleaner = qrData.cleaner || '---';
     const time = qrData.time || '---';
 
@@ -306,6 +332,7 @@ const StationMobile = (function () {
 
     checkSubmitReady();
   }
+  
 
   function displayMessage(msg, type = 'warning', duration = 1500) {
     // Map type to Tocas message state and color
@@ -600,8 +627,8 @@ const StationMobile = (function () {
     const wasteType = inputWasteType ? inputWasteType.innerText.trim() : '';
     const cleaner = inputCleaner ? inputCleaner.innerText.trim() : '';
     const time = inputTime ? inputTime.innerText.trim() : '';
-
-    const weight = inputWeight ? parseFloat(inputWeight.value) : 0;
+    const weight = currentUnit && inputWeight ? (currentUnit.innerText === 'G' ? parseFloat(inputWeight.value) : parseFloat(inputWeight.value) * 1000) : 0;
+    // const weight = inputWeight ? parseFloat(inputWeight.value) : 0;
     const locSel = document.getElementById('select_loc_id');
     const locId = locSel ? locSel.value : '';
 

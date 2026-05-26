@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}醫療廢棄物暨資源管理系統 - QR code列印{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - QR code列印{% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/qrcode_print.css' %}">
 {% endblock %}
@@ -81,7 +81,7 @@
                                     <select id="select-dept" onchange="updatePreview()">
                                         <option value="" disabled selected>請選擇產出部門</option>
                                         {% for dept in departments %}
-                                        <option value="{{ dept.code }}">{{ dept.code }}</option>
+                                        <option value="{{ dept.name }}">{{ dept.name }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -164,13 +164,19 @@
     }
 
     function generateQRCode() {
-        const typeVal = document.getElementById('select-type').value || '未選擇';
-        const deptVal = document.getElementById('select-dept').value || '未選擇';
-        const userVal = document.getElementById('preview-user').innerText;
+        let typeVal = document.getElementById('select-type').value || '未選擇';
+        let deptVal = document.getElementById('select-dept').value || '未選擇';
+        {% for type in waste_types %}
+            if (typeVal === '{{ type.name }}') typeVal = '{{ type.id }}';
+        {% endfor %}
+        {% for dept in departments %}
+            if (deptVal === '{{ dept.name }}') deptVal = '{{ dept.id }}';
+        {% endfor %}
 
+        const userVal = document.getElementById('preview-user').innerText;
         const qrDataString = `dept:${deptVal},type:${typeVal},clea:${userVal},time:${currentCompactTime}`;
         const encodedData = encodeURIComponent(qrDataString);
-        
+
         const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=1&data=${encodedData}`;
         
         const qDiv = document.getElementById('qrcode-img');

@@ -47,8 +47,8 @@
     /* 🌟 版面核心佈局 🌟 */
     .daring-layout { display: flex; gap: 25px; align-items: flex-start; margin-top: 10px; }
     
-    .filter-sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 20px; z-index: 10; }
-    .filter-sidebar .ts-select, .filter-sidebar .ts-input input, .filter-sidebar .flatpickr-input { 
+    .sidebar-box { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; position: sticky; top: 20px; z-index: 10; }
+    .sidebar-box .ts-select, .sidebar-box .ts-input input, .sidebar-box .flatpickr-input { 
         height: 42px !important; font-size: 1rem !important; width: 100% !important;
         background-color: var(--my-bg-input) !important; border: 1px solid var(--my-border) !important;
         color: var(--my-text-main) !important; border-radius: 6px !important; padding-left: 12px !important; box-sizing: border-box;
@@ -57,7 +57,7 @@
 
     .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
     .dashboard-panel { background-color: var(--my-bg-panel); border: 1px solid var(--my-border); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
-    .sidebar-box { padding: 25px; width: 17%;}
+    .sidebar-box { padding: 25px; }
 
     label { color: var(--my-text-sub); font-size: 0.95rem; margin-bottom: 8px; display: block; font-weight: bold; }
     .ts-button { border-radius: 8px !important; font-size: 1rem !important; font-weight: bold !important; height: 42px !important; }
@@ -194,8 +194,8 @@
             </div>
     <div class="daring-layout" id="daring-layout">
         <div class="dashboard-panel sidebar-box" id="dashboard-panel">
-                <div class="ts-header is-large is-heavy" style="margin-bottom: 20px; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
-                    <span class="ts-icon is-filter-icon" style="color: #db2828;"></span> 條件篩選
+                 <div class="ts-header is-large is-heavy" style="margin-bottom: 20px; color: var(--my-text-main); display: flex; align-items: center; gap: 8px;">
+                    <span class="ts-icon is-filter-icon" style="color: #2185d0;"></span> 條件篩選
                 </div>
                 <form method="get" id="searchForm" style="display: flex; flex-direction: column; gap: 15px;">
                     <input type="hidden" name="sort_by" id="hiddenSortInput" value="{{ current_sort }}">
@@ -241,7 +241,7 @@
                     </div>
                     
                     <div style="display: flex; gap: 10px; margin-top: 5px; justify-content: flex-start;">
-                        <button type="submit" class="ts-button is-primary" style="width: 120px;">
+                        <button type="submit" class="ts-button is-primary" style="width: 30%;">
                             <span class="ts-icon is-magnifying-glass-icon" style="margin-right: 5px;"></span> 查詢
                         </button>
                         <button type="button" class="ts-button is-secondary" onclick="clearAllFilters()" style="width: 50px; padding: 0;" title="重置">
@@ -917,7 +917,7 @@ function toggleShowYearormonth(el) {
         picker.type = "number"; 
         picker.value = new Date().getFullYear(); 
         picker.placeholder = "輸入年份 (如 2026)";
-        picker.style.width = '120px';
+        picker.style.width = 'height: 42px; font-size: 1rem; width: 150px; background-color: var(--my-bg-input); border: 1px solid var(--my-border); color: var(--my-text-main); border-radius: 6px; padding-left: 12px; box-sizing: border-box;';
     } else {
         picker.type = "month";
         const now = new Date();
@@ -992,9 +992,7 @@ function exportToPDF() {
 
     const doc = new jsPDF({ orientation: 'landscape' });
 
-    doc.setFontSize(18);
-    doc.text(`警報趨勢報表 (${period})`, 14, 22);
-    doc.addImage(image, 'PNG', 10, 30, 280, 150);
+    doc.addImage(image, 'PNG', 5, 50, 290, 80);
 
     doc.save(`警報趨勢_${period}.pdf`);
 }

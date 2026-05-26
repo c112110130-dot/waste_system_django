@@ -425,7 +425,7 @@ class WasteRecord_New(models.Model):
     @property
     def can_delete(self):
         return not self.is_transported and not self.is_overweight and not self.is_underweight
-    weight = models.DecimalField(max_digits=5,decimal_places=2)
+    weight = models.DecimalField(max_digits=10,decimal_places=2)
     department = models.ForeignKey(
         Department,
         on_delete=models.CASCADE,
