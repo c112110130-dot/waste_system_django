@@ -1,21 +1,22 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物報表生成(院內){% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統 - 廢棄物報表生成(實體){% endblock %}
 {% block stylesheet %}
     <link rel="stylesheet" href="{% static 'css/management/color-picker.css' %}">
     <link rel="stylesheet" href="{% static 'css/management/visualize.css' %}">
 {% endblock %}
 {% block content %}
+    
     <!-- Chart Select -->
-    <div class="ts-container has-top-padded-large" style="--width: 1800px; padding: 30px 15px;">
-        <div style="margin-bottom: 30px;">
-            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main, #333);">
-                <div style="background: #00b5ad; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0, 181, 173, 0.3);">
-                    <span class="ts-icon is-chart-column-icon"></span>
+    <div class="ts-container has-top-padded-large" style="--width: 1650px">
+        <div style="margin-bottom: 30px; display: flex; align-items: center; gap: 12px;">
+            <div class="ts-header is-big is-heavy" style="display: flex; align-items: center; gap: 12px; color: var(--my-text-main);">
+                <div style="background: #af3b3b; width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(33, 133, 208, 0.3);">
+                    <span class="ts-icon is-chart-simple-icon"></span>
                 </div>
                 <div>
-                    廢棄物報表生成 (院內)
-                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">自訂圖表參數、檢視數據趨勢，並匯出院內廢棄物產出視覺化報表</div>
+                    廢棄物報表管理(院內)
+                    <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">根據多個設定製作院內的報表</div>
                 </div>
             </div>
         </div>

@@ -3,8 +3,6 @@
 #     kilogram: 公斤
 #     new_taiwan_dollar: 新台幣(NTD/TWD)
 
-import json
-import os
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import timedelta
@@ -201,7 +199,6 @@ class WasteType(models.Model):
     UNIT_CHOICES = [
         ('metric_ton', '公噸'),
         ('kilogram', '公斤'),
-        ('gram', '公克'),
     ]
     
     id = models.AutoField(primary_key=True)
@@ -226,6 +223,9 @@ class WasteType(models.Model):
     def get_unit_display_name(self):
         """Get unit display name in Chinese"""
         return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
+
+
+
 
 class WasteRecord(models.Model):
     """Waste record entity - Core transaction table (depends on Department and WasteType)"""
@@ -255,6 +255,8 @@ class WasteRecord(models.Model):
     def __str__(self):
         return f"{self.date} - {self.department.name} - {self.waste_type.name}"
     
+
+
 class DepartmentWasteConfiguration:
     """Dynamic configuration management system"""
 
@@ -262,7 +264,6 @@ class DepartmentWasteConfiguration:
     UNIT_TRANSLATION = {
         'metric_ton': {'display': '公噸', 'symbol': 'T'},
         'kilogram': {'display': '公斤', 'symbol': 'kg'},
-        'gram': {'display': '公克', 'symbol': 'g'}
     }
 
     # Default department list
@@ -308,6 +309,7 @@ class DepartmentWasteConfiguration:
         for i, dept_name in enumerate(cls.DEFAULT_DEPARTMENTS):
             Department.objects.get_or_create(
                 name=dept_name,
+                code=dept_name,  # Use name as code for simplicity
                 defaults={'display_order': i + 1}
             )
 
@@ -343,28 +345,28 @@ class LocationPoint(models.Model):
     code = models.CharField(max_length=100)       # 定點代碼
     name = models.CharField(max_length=100)       # 定點名稱
     created_time = models.DateTimeField(auto_now_add=True)     # 建立時間   
-
-    class Meta:
-        db_table = 'location' 
-        verbose_name = "定點"
-
-    def __str__(self):
-        return f"{self.code} - {self.name}" 
-
     class Meta:
         db_table = 'location' # 資料庫裡的表格名稱
         verbose_name = "定點"
+        verbose_name_plural = "定點"
 
 class clearAgency(models.Model):
     id = models.AutoField(primary_key=True)        #清理機構ID
     code = models.CharField(max_length=100)        #清理機構代碼
     name = models.CharField(max_length=100)        #清理機構名稱
+    DEFAULT_AGENCIES = ['嘉德技術開發股份有限公司', '環碩環保工程股份有限公司', '運鴻環保股份有限公司','信利環保工程股份有限公司','三裕運輸股份有限公司']
     class Meta:
         db_table = 'clear_agency' # 資料庫裡的表格名稱
         verbose_name = "清理機構"
+        verbose_name_plural = "清理機構"
 
-    def __str__(self):
-        return self.name
+    def initialize_default_agencies(self):
+        """Initialize default clear agencies - call this in migration or management command"""
+        for agency_name in self.DEFAULT_AGENCIES:
+            clearAgency.objects.get_or_create(
+                name=agency_name,
+                code=agency_name[:3]  # Use first 3 characters as code for simplicity
+            )
 
 class processAgency(models.Model):
     id = models.AutoField(primary_key=True)      #處理機構ID
@@ -373,9 +375,7 @@ class processAgency(models.Model):
     class Meta:
         db_table = 'process_agency' # 資料庫裡的表格名稱
         verbose_name = "處理機構"
-
-    def __str__(self):
-        return self.name
+        verbose_name_plural = "處理機構"
 
 class TransportRecord(models.Model):
     id = models.AutoField(primary_key=True)          
@@ -393,21 +393,11 @@ class TransportRecord(models.Model):
         processAgency,
         on_delete=models.CASCADE
     ) #處理機構ID
-    settle_time = models.DateTimeField(auto_now_add=True)
-    
+    settle_time = models.DateTimeField(default=timezone.now, verbose_name="結算時間") #結算時間
     @property
     def total_weight(self):
         result = self.wasterecord_new_set.aggregate(total=Sum('weight'))
         return round(result['total'], 2) if result['total'] is not None else 0
-    
-    @property
-    def items(self):
-        return self.wasterecord_new_set.all()
-    
-    @property
-    def item_count(self):
-        return self.wasterecord_new_set.count()
-        
     @property
     def items(self):
         return self.wasterecord_new_set.all()
@@ -417,36 +407,24 @@ class TransportRecord(models.Model):
     class Meta:
         db_table = 'transport_record' # 資料庫裡的表格名稱
         verbose_name = "載運紀錄"
-
-    def __str__(self):
-        return f"載運單 #{self.id} ({self.settle_time.strftime('%Y-%m-%d')})"
+        verbose_name_plural = "載運紀錄"
 
 class WasteRecord_New(models.Model):
     id = models.AutoField(primary_key=True)
-    is_transported = models.BooleanField(default=False)
+    def is_transported(self):
+        return self.transportrecord is not None
     
-class WasteRecord_New(models.Model):
-    id = models.AutoField(primary_key=True)
-    is_transported = models.BooleanField(default=False)
-    @property
-    def is_expired(self):
-        if hasattr(self, 'TransportRecord_id') and self.TransportRecord_id:
-            return False
-        if self.is_transported:
-            return False
-        if not self.create_time:
-            return False
-        if timezone.now() > self.create_time + timedelta(days=3):
-            return True
+    def is_overweight(self):
+        if self.waste_type and self.weight:
+            return self.weight > 100
         return False
-        
+    def is_underweight(self):
+        if self.waste_type and self.weight:
+            return self.weight < 0.1
+        return False
     @property
     def can_delete(self):
-        return not self.is_transported and not self.is_expired
-        
-    @property
-    def can_delete(self):
-        return not self.is_transported and not self.is_expired
+        return not self.is_transported and not self.is_overweight and not self.is_underweight
     weight = models.DecimalField(max_digits=5,decimal_places=2)
     department = models.ForeignKey(
         Department,
@@ -464,12 +442,12 @@ class WasteRecord_New(models.Model):
     )
     waste_type = models.ForeignKey(
         WasteType,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True, blank=True,
         related_name='extension_types'
     )  # 廢棄物種類（外來鍵）
     creator = models.ForeignKey(
-        settings.AUTH_USER_MODEL, # 這會自動連到系統的使用者表
+        settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE,
         related_name='created_records',
         verbose_name="過磅人員"
@@ -483,15 +461,38 @@ class WasteRecord_New(models.Model):
         verbose_name="更新人員"
     )
 
-    create_time = models.DateTimeField(auto_now_add=True, verbose_name="過磅時間")
-    update_time = models.DateTimeField(auto_now=True, verbose_name="更新時間")
-    
+    create_time = models.DateTimeField(default=timezone.now, verbose_name="過磅時間")
+    update_time = models.DateTimeField(default=timezone.now, verbose_name="更新時間")
     class Meta:
         db_table = 'waste_record' # 資料庫裡的表格名稱
-        verbose_name = "廢棄物紀錄"
+        verbose_name = "新廢棄物紀錄"
+        verbose_name_plural = "新廢棄物紀錄"
+
+class AlertConfig(models.Model):
+    ALERT_TYPES = (
+        ('overdue', '清運逾期'),
+        ('volume', '產出量異常'),
+    )
+    
+    FREQUENCY_CHOICES = (
+        ('daily', '每日'),
+        ('weekly', '每週'),
+        ('monthly', '每月'),
+    )
+
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='alert_configs', null=True, blank=True)
+    waste_type = models.ForeignKey(WasteType, on_delete=models.CASCADE, related_name='alert_configs', null=True, blank=True)
+
+    weight_min = models.FloatField(null=True, blank=True, help_text="重量最小限制 (kg)",default=1)
+    weight_max = models.FloatField(null=True, blank=True, help_text="重量最大限制 (kg)",default=100)
+    
+    time_frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
+    overdue_hours = models.IntegerField(null=True, blank=True, help_text="逾期小時數",default=24)
+    weighting_counts = models.IntegerField(null=True, blank=True, help_text="每日過磅次數標準",default=3)
+
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.create_time.strftime('%Y-%m-%d %H:%M')} - {self.department.name} ({self.weight}kg)"
-    class Meta:
-        db_table = 'waste_record' # 資料庫裡的表格名稱
-        verbose_name = "廢棄物紀錄"
+        return f"AlertConfig for {self.department.name if self.department else 'All Departments'} {self.waste_type.name if self.waste_type else 'All Types'} - {self.get_time_frequency_display()}"
+    
+    

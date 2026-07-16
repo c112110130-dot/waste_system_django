@@ -2,19 +2,26 @@
 Django settings for waste_system project.
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+from dotenv import load_dotenv  # 🌟 新增這一行：用來讀取 .env 檔案
+
+# 🌟 新增這一行：正式載入同目錄下的 .env 環境變數設定
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+a^*m%x&vk(&+z=w4i14kx^@t0^zwz_m=zt@9dv5dt$#z)i8ee'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-fallback-key-for-development-xxxxx')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+# 🌟 1. 優先從 .env 讀取 ALLOWED_HOSTS 字串，讀不到就用預設值
+allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost')
+
+# 🌟 2. 將字串用逗號切開成陣列，並自動「削掉」你剛剛在 .env 裡留下的多餘空格
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
 
 # Application definition
 INSTALLED_APPS = [

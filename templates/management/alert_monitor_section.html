@@ -1,0 +1,72 @@
+<!-- templates/management/alert_monitor_section.html -->
+<div id="monitor-header-container" style="display: flex; width: 100%; gap: 30px; margin: 30px; justify-content: flex-end;">
+    <div style="font-size: 1.2rem; font-weight: bold; color: #db2828; margin-bottom: 15px;">
+        <span class="ts-icon is-clock-rotate-left-icon"></span> 昨日過磅監控
+    </div>
+    <div style="width: 300px; margin-left: 0px;">
+        <div class="ts-input is-main">
+            <input type="text" id="dept-monitor-search" placeholder="搜尋部門...">
+        </div>
+    </div>
+    <div style="color: var(--my-text-secondary); margin-top: 5px;">
+        ⚠️ 有 {{ dept_list|length }} 個部門尚未完成規定過磅次數
+    </div>
+    <div class="rwd-group" style="margin-left: auto; margin-right: 50px;">
+        <div class="ts-pagination is-small is-secondary" style="display: flex; align-items: center;">
+            {% if page_obj_2.has_previous %}
+                <a class="item" onclick="goToPage2(1)" title="第一頁" style="cursor: pointer;"><span class="ts-icon is-angles-left-icon"></span></a>
+                <a class="item" onclick="goToPage2('{{ page_obj_2.previous_page_number }}')" title="上一頁" style="cursor: pointer;"><span class="ts-icon is-angle-left-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angles-left-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angle-left-icon"></span></span>
+            {% endif %}
+
+            <span class="item is-text" style="padding: 0 8px; white-space: nowrap;">
+                第
+                <input type="number" class="page-jump-input" id="jump-page-input-bottom" value="{{ page_obj_2.number }}" min="1" max="{{ page_obj_2.paginator.num_pages|default:1 }}" title="輸入頁碼後按 Enter 跳轉" onkeypress="if(event.key === 'Enter') jumpToPage2('bottom')" style="width: 50px; height: 28px; text-align: center; margin: 0 8px; border: 1px solid var(--my-border); background: var(--my-bg-input); color: var(--my-text-main); border-radius: 4px; outline: none; box-sizing: border-box;">
+                / {{ page_obj_2.paginator.num_pages|default:1 }} 頁
+            </span>
+
+            {% if page_obj_2.has_next %}
+                <a class="item" onclick="goToPage2('{{ page_obj_2.next_page_number }}')" title="下一頁" style="cursor: pointer;"><span class="ts-icon is-angle-right-icon"></span></a>
+                <a class="item" onclick="goToPage2('{{ page_obj_2.paginator.num_pages|default:1 }}')" title="最末頁" style="cursor: pointer;"><span class="ts-icon is-angles-right-icon"></span></a>
+            {% else %}
+                <span class="item is-disabled"><span class="ts-icon is-angle-right-icon"></span></span>
+                <span class="item is-disabled"><span class="ts-icon is-angles-right-icon"></span></span>
+            {% endif %}
+        </div>
+    </div>
+</div>  
+
+<div id="monitor-table-container" style="margin-top: 20px;">
+    <table class="ts-table dept-monitor-table">
+        <thead>
+            <tr>
+                <th style="text-align: center; width: 30%;">部門</th>
+                <th style="color: #db2828; width: 50%; text-align: center;">實際過磅次數</th>
+                <th style="width: 20%; text-align: center;">實際過磅次數 / 規定次數</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in page_obj_2.object_list %}
+            <tr>
+                <td style="text-align: right;">{{ d.name }}</td> 
+                <td>
+                    <div style="flex: 1; background: #eee; border-radius: 8px; overflow: hidden; width: 100%; height: 24px; display: flex; align-items: center;">
+                        <div style="
+                                    width: {{ d.percent }}%;
+                                    padding: 5px 10px;
+                                    color: white;
+                                    text-align: right;
+                            background-color: {% if d.status == 'danger' %}#e74c3c{% else %}#2ecc71{% endif %};
+                        ">
+                            {{ d.actual }}
+                        </div>
+                    </div>
+                </td>
+                <td style="text-align: center;">{{ d.actual }} / {{ d.standard }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物過磅紀錄檢視{% endblock %}
+{% block title %}醫療廢棄物暨資源管理系統整合應用 - 廢棄物過磅紀錄管理{% endblock %}
 {% block stylesheet %}
-    <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/dashboard/settlement.css' %}"> -->
 {% endblock %}
 {% block content %}
 
@@ -13,7 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
     /* ========================================= */
     /* 1. 智慧顏色與佈局變數                     */
@@ -85,6 +85,15 @@
         .daring-layout { flex-direction: column; }
         .filter-sidebar { width: 100%; position: static; }
     }
+    @keyframes highlightFade {
+        0% { background-color: #fff9c4; } /* 淺黃色 */
+        100% { background-color: transparent; }
+    }
+
+    .row-highlight {
+        animation: highlightFade 3s ease-in-out;
+        border: 2px solid #fbbd08 !important; /* 加個金邊更明顯 */
+    }
 </style>
 
 <div class="ts-container" style="--width: 1800px; padding: 23px 15px;">
@@ -96,8 +105,8 @@
                 <span class="ts-icon is-clipboard-list-icon"></span>
             </div>
             <div>
-                廢棄物過磅紀錄檢視
-                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">檢視、匯出及結算院內廢棄物過磅數據資料</div>
+                廢棄物過磅紀錄管理
+                <div class="ts-text is-description" style="font-weight: normal; margin-top: 4px; font-size: 0.95rem;">管理、匯出及結算部門廢棄物過磅紀錄</div>
             </div>
         </div>
     </div>
@@ -140,8 +149,8 @@
                         <select name="weigher" class="ts-select">
                             <option value="">全部人員</option>
                             {% for w in weighers %}
-                                <option value="{{ w.id }}" {% if selected_weigher == w.id|stringformat:"i" %}selected{% endif %}>
-                                    {{ w }}
+                                <option value="{{ w.user.id }}"  {% if selected_weigher == w.user.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ w.user }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -158,7 +167,7 @@
         <div class="main-content">
             <div class="ts-grid is-relaxed is-4-columns stat-card-container">
                 <div class="column"><div class="stat-card card-green"><div class="stat-icon"><span class="ts-icon is-clipboard-list-icon"></span></div><div class="stat-info"><div class="stat-title">總過磅筆數</div><div class="stat-value" id="cardTotalCount">0</div></div></div></div>
-                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-calendar-day-icon"></span></div><div class="stat-info"><div class="stat-title">昨日過磅總重 (kg)</div><div class="stat-value">{{ yesterday_total_weight|default:"0.000"|floatformat:3 }}</div></div></div></div>
+                <div class="column"><div class="stat-card card-yellow"><div class="stat-icon"><span class="ts-icon is-calendar-day-icon"></span></div><div class="stat-info"><div class="stat-title">昨日過磅總重 (kg)</div><div class="stat-value" id="cardYesterdayTotal">{{ yesterday_total|default:"0.000"|floatformat:3 }}</div></div></div></div>
                 <div class="column"><div class="stat-card card-blue"><div class="stat-icon"><span class="ts-icon is-truck-fast-icon"></span></div><div class="stat-info"><div class="stat-title">已載運重量 (kg)</div><div class="stat-value" id="cardTransportedWeight">0.000</div></div></div></div>
                 <div class="column"><div class="stat-card card-red"><div class="stat-icon"><span class="ts-icon is-triangle-exclamation-icon"></span></div><div class="stat-info"><div class="stat-title">未載運重量 (kg)</div><div class="stat-value" id="cardPendingWeight">0.000</div></div></div></div>
             </div>
@@ -175,22 +184,27 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <!-- {% if user_is_root %}
+                    <button class="ts-button is-outlined" onclick="generateFakeData()">
+                        <span class="ts-icon is-check-icon" style="margin-right: 6px;"></span> 建立假資料
+                    </button>
+                    {% endif %} -->
                     <button class="ts-button btn-batch-green" onclick="openSettlementModal()">
                         <span class="ts-icon is-calculator-icon" style="margin-right: 6px;"></span> 建立載運單 (結算)
                     </button>
                     <div style="position: relative;">
                         <button id="exportBtn" class="ts-button btn-batch-white" data-dropdown="export-menu">
-                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出報表清單
+                            <span class="ts-icon is-file-export-icon" style="margin-right: 6px;"></span> 匯出檔案
                             <span class="ts-icon is-angle-down-icon" style="margin-left: 6px; font-size: 0.8em;"></span>
                         </button>
                         <div class="ts-dropdown" id="export-menu" data-position="bottom-end" style="z-index: 9999;">
-                            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span> 匯出 Excel</button>
-                            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span> 匯出 PDF</button>
-                            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span> 匯出 PNG</button>
+                            <button class="item" onclick="exportToExcel()"><span class="ts-icon is-file-excel-icon" style="color: #21ba45; width: 20px;"></span>匯出 Excel</button>
+                            <button class="item" onclick="exportToPDF()"><span class="ts-icon is-file-pdf-icon" style="color: #db2828; width: 20px;"></span>匯出 PDF</button>
+                            <button class="item" onclick="exportToPNG()"><span class="ts-icon is-image-icon" style="color: #2185d0; width: 20px;"></span>匯出 PNG</button>
                         </div>
                     </div>
                     <button class="ts-button btn-batch-white" onclick="printSelectedReport()">
-                        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印報表
+                        <span class="ts-icon is-print-icon" style="margin-right: 6px;"></span> 直接列印
                     </button>
                     <button class="ts-button btn-batch-red" onclick="openBatchDelete()">
                         <span class="ts-icon is-trash-can-icon" style="margin-right: 6px;"></span> 刪除選取紀錄
@@ -256,13 +270,9 @@
 
 <dialog id="warningModal" style="padding: 0; border: none; border-radius: 12px; background: transparent; max-width: 400px; width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
     <div class="ts-content" style="background-color: var(--my-bg-panel); color: var(--my-text-main); border: 1px solid var(--my-border); border-radius: 12px; padding: 25px; text-align: center;">
-        
         <div class="ts-icon is-circle-exclamation-icon" style="font-size: 3rem; color: #f2c037; margin-bottom: 15px;"></div>
-        
-        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.2rem; display: flex; justify-content: center; align-items: center;">提示</div>
-        
+        <div class="ts-header is-heavy" style="margin-bottom: 10px; font-size: 1.2rem;">提示</div>
         <p id="warningModalText" style="margin-bottom: 20px; color: var(--my-text-sub); line-height: 1.5;"></p>
-        
         <button type="button" class="ts-button is-fluid" onclick="document.getElementById('warningModal').close()">我知道了</button>
     </div>
 </dialog>
@@ -284,36 +294,62 @@
         </div>
     </div>
 </dialog>
-
+{{ all_filtered_data|json_script:"all-data-json" }}
 <script>
     // --- 🌟 AJAX 更新引擎 🌟 ---
     function refreshTable(url) {
         const container = document.getElementById('table-container');
+        const newDataElement = document.getElementById('all-data-json');
         container.style.opacity = '0.5';
-        container.style.pointerEvents = 'none';
-
+        if (newDataElement) {
+            try {
+                // 關鍵：使用 .textContent 獲取標籤內部的純文字數據
+                const rawData = newDataElement.textContent.trim(); 
+                
+                // 防呆：確保獲取到的不是以 < 開頭的 HTML
+                if (rawData.startsWith('<')) {
+                    console.error("抓取到的數據包含 HTML 標籤，解析失敗。內容為:", rawData);
+                } else {
+                    const newData = JSON.parse(rawData);
+                    updateStatCardsWithData(newData);
+                }
+            } catch (e) {
+                console.error("JSON 解析失敗:", e);
+            }
+        }
         fetch(url, { headers: { 'x-requested-with': 'XMLHttpRequest' } })
-        .then(res => res.text())
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
+            return res.text();
+        })
         .then(html => {
+            // 1. 更新 HTML
             container.innerHTML = html;
             container.style.opacity = '1';
-            container.style.pointerEvents = 'auto';
 
-            // 同步更新貼紙卡片數字
-            const newDataElement = document.getElementById('new-data-json');
+            // 2. 尋找數據節點 (由 json_script 產生)
+            const newDataElement = document.getElementById('all-data-json');
             if (newDataElement) {
-                const newData = JSON.parse(newDataElement.textContent);
-                updateStatCardsWithData(newData);
+                try {
+                    // json_script 產生的內容在 textContent 中
+                    const newData = JSON.parse(newDataElement.textContent);
+                    updateStatCardsWithData(newData);
+                } catch (e) {
+                    console.error("JSON 解析失敗，請檢查數據內容:", e);
+                }
+            } else {
+                console.warn("警告：在回傳的 HTML 中找不到 id='all-data-json' 的元素");
             }
+
             window.history.pushState(null, '', url);
             updateUI(); 
         })
         .catch(err => {
-            console.error(err);
-            alert('更新失敗，請檢查網路連線。');
+            console.error("AJAX 發生錯誤:", err);
+            alert('更新失敗: ' + err.message);
             container.style.opacity = '1';
-            container.style.pointerEvents = 'auto';
         });
+        window.location.href = url; // 強制更新瀏覽器地址列
     }
 
     // 🌟 修正：查詢時會一併帶上目前的 page_size 與 sort_by
@@ -357,12 +393,21 @@
     });
 
     window.updateStatCards = function() {
-        const dataElement = document.getElementById('new-data-json');
+        // 1. 取得 json_script 生成的內容
+        const dataElement = document.getElementById('all-data-json');
+        
         if (dataElement) {
-            const initialData = JSON.parse(dataElement.textContent);
-            updateStatCardsWithData(initialData);
+            try {
+                // 2. 直接解析，不需要處理引號或轉義問題
+                const initialData = JSON.parse(dataElement.textContent);
+                updateStatCardsWithData(initialData);
+            } catch (e) {
+                console.error("JSON 解析失敗:", e);
+            }
+        } else {
+            console.warn("找不到 all-data-json 數據節點");
         }
-    }
+    };
 
     function updateStatCardsWithData(dataList) {
         let totalW = 0, transW = 0, pendW = 0;
@@ -370,9 +415,19 @@
             let w = parseFloat(item.weight) || 0; totalW += w;
             if (item.status === '已載運') transW += w; else pendW += w;
         });
+        
         document.getElementById('cardTotalCount').innerText = dataList.length;
         document.getElementById('cardTransportedWeight').innerText = transW.toFixed(3);
         document.getElementById('cardPendingWeight').innerText = pendW.toFixed(3);
+        // document.getElementById('cardYesterdayTotal').innerText = dataList.reduce((sum, item) => {
+        //     const date = new Date(item.weigh_time);
+        //     const yesterday = new Date();
+        //     yesterday.setDate(yesterday.getDate() - 6);
+        //     if (date.toDateString() === yesterday.toDateString()) {
+        //         return sum + (parseFloat(item.weight) || 0);
+        //     }
+        //     return sum;
+        // }, 0).toFixed(3);
     }
 
     window.updateUI = function() {
@@ -411,6 +466,7 @@
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
+        // 🌟 核心改變：我們只組裝 HTML「字串」，不掛載到畫面上，徹底阻絕本機螢幕干擾
         let html = `
             <div id="print-wrapper" style="width: 1040px; padding: 20px; background: white; color: black; font-family: sans-serif; box-sizing: border-box;">
                 <style>
@@ -442,7 +498,7 @@
                 html += `<tr><td>${cols[1].innerText}</td><td>${w.toFixed(3)}</td><td>${cols[3].innerText}</td><td>${cols[4].innerText}</td><td>${cols[5].innerText}</td><td>${cols[6].innerText}</td><td>${cols[7].innerText}</td></tr>`;
             });
         } else {
-            const allData = JSON.parse(document.getElementById('new-data-json').textContent || '[]');
+            const allData = JSON.parse(document.getElementById('all-data-json').textContent || '[]');
             if (allData.length > 0) hasData = true;
             allData.forEach(item => {
                 let w = parseFloat(item.weight) || 0; printWeight += w;
@@ -454,51 +510,99 @@
         return { htmlString: html, hasData, dateStr: dateStr.replace(/[: ]/g, '') };
     }
 
+    // 1. Excel (無畫面問題)
     window.exportToExcel = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); if(!res.hasData) return alert("無資料可匯出");
         const rows = [["過磅時間", "重量 (kg)", "狀態", "種類", "部門", "定點", "過磅人員"]];
+        
+        // 為了 Excel，我們建一個臨時的 DOM 來抓取字串內的表格
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = res.htmlString;
         tempDiv.querySelectorAll('tbody tr').forEach(tr => { rows.push(Array.from(tr.querySelectorAll('td')).map(td => td.innerText)); });
+        
         const ws = XLSX.utils.aoa_to_sheet(rows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄"); XLSX.writeFile(wb, `過磅紀錄_${res.dateStr}.xlsx`);
     }
 
     window.exportToPDF = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); 
         if(!res.hasData) return alert("無資料可匯出");
-        const opt = { margin: 10, filename: `過磅紀錄_${res.dateStr}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
+
+        const opt = {
+            margin:       10, 
+            filename:     `過磅紀錄_${res.dateStr}.pdf`,
+            image:        { type: 'jpeg', quality: 1 },
+            html2canvas:  { scale: 1, useCORS: true }, 
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+        };
+
         html2pdf().set(opt).from(res.htmlString).save();
     }
 
     window.exportToPNG = function() {
         const res = getExportData('醫療廢棄物過磅紀錄'); 
         if(!res.hasData) return alert("無資料可匯出");
+        
         const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed'; iframe.style.top = '-9999px'; iframe.style.left = '-9999px'; iframe.style.width = '1200px'; iframe.style.height = '2000px'; 
+        iframe.style.position = 'fixed'; 
+        iframe.style.top = '-9999px'; 
+        iframe.style.left = '-9999px'; 
+        iframe.style.width = '1200px';  // 強制給予大空間
+        iframe.style.height = '2000px'; 
         document.body.appendChild(iframe);
+
         const doc = iframe.contentWindow.document;
-        doc.open(); doc.write(`<html><body style="margin:0; padding:0; background:white;">${res.htmlString}</body></html>`); doc.close();
+        doc.open();
+        doc.write(`<html><body style="margin:0; padding:0; background:white;">${res.htmlString}</body></html>`);
+        doc.close();
+
+        // 等待 Iframe 渲染完成後再截圖
         setTimeout(() => {
             const target = doc.getElementById('print-wrapper');
             html2canvas(target, { scale: 2, useCORS: true }).then(canvas => {
-                const link = document.createElement('a'); link.download = `過磅紀錄_${res.dateStr}.png`; link.href = canvas.toDataURL(); link.click(); 
-                document.body.removeChild(iframe);
+                const link = document.createElement('a'); 
+                link.download = `過磅紀錄_${res.dateStr}.png`; 
+                link.href = canvas.toDataURL(); 
+                link.click(); 
+                document.body.removeChild(iframe); // 截圖完拆除 Iframe
             });
         }, 300);
     }
 
+    // 🌟 4. 列印 (使用隱形 Iframe) 🌟
     window.printSelectedReport = function() {
         const res = getExportData('醫療廢棄物過磅紀錄');
         if(!res.hasData) return alert("無資料可列印");
+
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none'; 
         document.body.appendChild(iframe);
+
         const pri = iframe.contentWindow;
         pri.document.open();
-        pri.document.write(`<html><head><title>列印報表</title><style>body { font-family: sans-serif; margin: 0; padding: 20px; } @media print { @page { size: landscape A4; margin: 1cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body>${res.htmlString}</body></html>`);
+        pri.document.write(`
+            <html>
+            <head>
+                <title>列印報表</title>
+                <style>
+                    body { font-family: sans-serif; margin: 0; padding: 20px; }
+                    @media print {
+                        @page { size: landscape A4; margin: 1cm; }
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${res.htmlString}
+            </body>
+            </html>
+        `);
         pri.document.close();
         pri.focus();
-        setTimeout(() => { pri.print(); document.body.removeChild(iframe); }, 300);
+
+        setTimeout(() => {
+            pri.print();
+            document.body.removeChild(iframe);
+        }, 300);
     }
 
     window.openSettlementModal = function() {
@@ -527,20 +631,61 @@
         window.pendingDeleteIds = ids; 
         document.getElementById('deleteModalText').innerText = `確定要刪除選取的 ${ids.length} 筆資料嗎？`; 
         document.getElementById('deleteModal').showModal();
+        
     }
 
-    // 🌟 尋回的單筆刪除函式 🌟
-    window.deleteRecord = function(id) {
-        window.pendingDeleteIds = [id];
-        document.getElementById('deleteModalText').innerText = '確定要刪除這筆過磅紀錄嗎？';
+    // 匯出 / 列印 (完全放行，不阻擋)
+    window.toggleAll = function(src) { 
+        document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = src.checked); 
+        updateUI(); 
+    }
+
+    // =====================================================================
+    // 🌟 新增：攔截結算表單，改用背景送出以保留 page_size 狀態 🌟
+    // =====================================================================
+    document.addEventListener("DOMContentLoaded", function() {
+        const settlementForm = document.getElementById('settlementForm');
+        if (settlementForm) {
+            settlementForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // 🛑 阻止傳統跳轉
+
+                // 關閉彈窗
+                document.getElementById('settlementModal').close();
+
+                // 在背景送出資料
+                fetch(this.action, {
+                    method: 'POST',
+                    body: new FormData(this),
+                    redirect: 'follow'
+                })
+                .then(() => {
+                    NotificationUtils.showAlert('成功!','載運單已建立。', 'success');
+                    setTimeout(() => {
+                        window.location.hash = ''; 
+                        refreshTable(window.location.href);
+                    }, 1000);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('結算時發生錯誤，請稍後再試。');
+                    window.location.reload();
+                });
+            });
+        }
+    });
+    window.deleteRecord = function(id){
+        window.pendingDeleteIds=[id];
+        document.getElementById('deleteModalText').innerText = `確定要刪除這筆資料嗎？`; 
         document.getElementById('deleteModal').showModal();
     }
-
-    // 🌟 尋回的執行刪除函式 (呼叫後端 API) 🌟
+    window.closeDeleteModal = function(){
+        window.pendingDeleteIds=null;
+        document.getElementById('deleteModal').close();
+    }
+    
     window.executeBatchDelete = function() {
         if (!window.pendingDeleteIds || window.pendingDeleteIds.length === 0) return;
         
-        // 🌟 換成這行！呼叫專門刪除過磅資料的 API
         fetch("{% url 'WasteManagement:delete_data' %}", {
             method: 'POST',
             headers: {
@@ -552,7 +697,10 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                window.location.reload(); // 成功後重新整理頁面
+                NotificationUtils.showAlert('成功!', '刪除成功！', 'success');
+                setTimeout(() => {
+                    refreshTable(window.location.href);
+                }, 1000);
             } else {
                 alert('刪除失敗：' + (data.message || '未知錯誤'));
                 document.getElementById('deleteModal').close();
@@ -564,17 +712,46 @@
             document.getElementById('deleteModal').close();
         });
     }
+    generateFakeData = function() {
+        if (!confirm("確定要生成假資料嗎？這將會新增 100 筆隨機過磅紀錄。")) return;
+        fetch("{% url 'WasteManagement:generate_fake_data' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                NotificationUtils.showAlert('成功!', '已生成 100 筆假資料！', 'success');
+                setTimeout(() => {
+                    refreshTable(window.location.href);
+                }, 1000);
+            } else {
+                alert('生成失敗：' + (data.message || '未知錯誤'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('系統發生錯誤，請稍後再試。');
+        });
+    }
 
     document.addEventListener("DOMContentLoaded", function() {
-        const settlementForm = document.getElementById('settlementForm');
-        if (settlementForm) {
-            settlementForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                document.getElementById('settlementModal').close();
-                fetch(this.action, { method: 'POST', body: new FormData(this), redirect: 'follow' })
-                .then(() => { window.location.reload(); })
-                .catch(err => { console.error(err); alert('結算時發生錯誤，請稍後再試。'); window.location.reload(); });
-            });
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id');
+
+        if (targetId) {
+            const targetRow = document.querySelector(`tr[data-id="${targetId}"]`);
+            
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                targetRow.classList.add('row-highlight');
+                
+            } else {
+                
+            }
         }
     });
 </script>

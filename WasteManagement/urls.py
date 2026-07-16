@@ -1,8 +1,8 @@
 from django.urls import path
 from . import views
 
-# 🌟 統一設定為 'WasteManagement' 以相容所有 HTML 範本
-app_name = 'WasteManagement'
+# 🌟 統一設定為 'management' 以相容所有 HTML 範本
+app_name = 'management'
 
 urlpatterns = [
     # 頁面 UI
@@ -34,6 +34,13 @@ urlpatterns = [
     path('api/visualize_dept/config/', views.visualize_department_config, name='visualize_department_config'),
     path('api/location/save/', views.api_save_location, name='api_save_location'),
     
-    # 🌟 核心修正：補齊警報紀錄刪除的 API 路徑 🌟
     path('api/delete_alert_records/', views.api_delete_alert_records, name='api_delete_alert_records'),
+    path('api/save_alert_settings/', views.save_alert_settings, name='api_save_alert_settings'),
+    path('api/get_alert_settings/', views.get_alert_settings, name='api_get_alert_settings'),
+    
+    # 修正後的名稱
+    path('api/last_month_alert_trend/', views.last_month_alert_trend, name='get_alert_trend_data'),
+    
+    # 請確保加上這條，以便補齊下方的監控表格更新功能
+    path('api/get_alert_table/', views.get_alert_table, name='get_alert_table'),
 ]
